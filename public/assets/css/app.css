@@ -1,0 +1,91 @@
+/* Definições da Sidebar */
+.sidebar {
+    width: 250px; /* Largura da sua sidebar */
+    height: 100vh;
+    position: fixed; /* Fixa ela na esquerda */
+    top: 0;
+    left: 0;
+    background-color: #212529; /* Cor padrão dark do Bootstrap, ajuste se necessário */
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+/* Definições do Conteúdo (Onde as Views carregam) */
+.content {
+    margin-left: 250px; /* Deve ser exatamente a largura da sidebar */
+    padding: 20px;
+    min-height: 100vh;
+    background-color: #f8f9fa; /* Um cinza claro para destacar o fundo */
+}
+
+/* Ajuste para telas pequenas (Mobile) */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+    .content {
+        margin-left: 0;
+    }
+}
+
+/* 🔥 REMOVE SUBLINHADO GLOBAL DA SIDEBAR */
+.sidebar a {
+    text-decoration: none !important;
+}
+
+/* 🔥 BOTÕES PRINCIPAIS */
+.menu-link {
+    display: block;
+    padding: 12px 15px;
+    margin: 5px 10px; /* espaçamento lateral */
+    color: #adb5bd;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    border-radius: 8px; /* 🔥 borda arredondada */
+}
+
+/* HOVER */
+.menu-link:hover {
+    background: #2c2c3e;
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* 🔥 ITEM ATIVO (QUANDO ABRE) */
+.menu-link[aria-expanded="true"] {
+    background: #2c2c3e;
+    color: #fff;
+    border-left: 3px solid #0d6efd;
+    border-radius: 8px;
+}
+
+/* 🔽 SUBMENU */
+.submenu a {
+    padding: 10px 30px;
+    display: block;
+    color: #adb5bd;
+    font-size: 14px;
+    text-decoration: none !important; /* 🔥 remove sublinhado */
+}
+
+/* HOVER SUBMENU */
+.submenu a:hover {
+    background: #343a40;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* ANIMAÇÃO SUAVE */
+.collapse {
+    transition: all 0.2s ease;
+}
+
+/* Aplica altura padrão de ~15 linhas para todos os CKEditors */
+.ck-editor__editable_inline {
+    min-height: 350px !important; /* Aproximadamente 15-18 linhas de texto */
+    max-height: 600px; /* Evita que fique gigante */
+}
+
