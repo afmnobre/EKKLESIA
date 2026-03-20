@@ -99,10 +99,11 @@ class SociedadesController extends Controller
 		);
 
 		// 3. Carrega a view gerenciar.php
-		$this->view('paginas/sociedades/gerenciar', [
-			'sociedade' => $sociedade,
-			'membrosAptos' => $membrosAptos
-		]);
+        // No seu método gerenciar, altere a última parte para:
+        $this->view('sociedades/gerenciar', [
+            'sociedade' => $sociedade,
+            'membrosAptos' => $membrosAptos
+        ]);
 	}
 
 	public function buscarAptos($idSociedade)
@@ -144,5 +145,41 @@ class SociedadesController extends Controller
 		exit;
 	}
 
+	public function buscarLideranca($idSociedade)
+	{
+		$idIgreja = $_SESSION['usuario_igreja_id'];
+
+		// Mapeamento de Sociedade para Cargo de Líder
+		// IDs das sociedades no seu banco podem variar, ajuste conforme necessário
+		$sociedade = $this->model->getById($idSociedade, $idIgreja);
+		$cargoId = 0;
+
+		if (strpos($sociedade['sociedade_nome'], 'UPH') !== false) $cargoId = 18;
+		elseif (strpos($sociedade['sociedade_nome'], 'SAF') !== false) $cargoId = 17;
+		elseif (strpos($sociedade['sociedade_nome'], 'UMP') !== false) $cargoId = 12;
+		elseif (strpos($sociedade['sociedade_nome'], 'UPA') !== false) $cargoId = 13;
+		elseif (strpos($sociedade['sociedade_nome'], 'UCP') !== false) $cargoId = 14;
+
+		$membros = $this->model->getMembrosParaLideranca($idIgreja, $cargoId);
+
+		header('Content-Type: application/json');
+		echo json_encode(['membros' => $membros, 'cargo_id' => $cargoId]);
+		exit;
+	}
+
+	public function salvarLider()
+	{
+		$idIgreja = $_SESSION['usuario_igreja_id'];
+		$idSociedade = $_POST['sociedade_id'];
+		$idMembro = $_POST['membro_id'];
+		$idCargo = $_POST['cargo_id'];
+
+		if ($this->model->salvarLider($idIgreja, $idSociedade, $idMembro, $idCargo)) {
+			echo json_encode(['success' => true]);
+		} else {
+			echo json_encode(['success' => false, 'message' => 'Erro ao salvar líder.']);
+		}
+		exit;
+	}
 
 }

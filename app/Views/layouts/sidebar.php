@@ -26,7 +26,6 @@
         <a class="menu-link" data-bs-toggle="collapse" href="#sociedades">🏛️ Sociedades</a>
         <div class="collapse submenu" id="sociedades">
             <a href="<?= url('sociedades') ?>">📋 Sociedades Cadastradas</a>
-            <a href="<?= url('sociedades/gerenciar') ?>">⚙️ Gerenciar Sociedades</a>
             <hr class="text-white-50">
             <a href="<?= url('sociedades/orcamentos') ?>">💰 Orçamentos</a>
             <a href="<?= url('sociedadesEventos') ?>">🎉 Eventos</a>

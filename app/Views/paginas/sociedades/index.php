@@ -42,14 +42,23 @@
                                     <?= $soc['sociedade_status'] ?>
                                 </span>
                             </td>
-                            <td class="text-end pe-4">
-                                <button class="btn btn-sm btn-info text-white shadow-sm" onclick='window.abrirGerenciador(<?= json_encode($soc) ?>)'>
+							<td class="text-end pe-4">
+                                <a href="<?= url('sociedades/gerenciar/' . $soc['sociedade_id']) ?>"
+                                    class="btn btn-sm btn-info text-white shadow-sm"
+                                    title="Gerenciar Sócios">
                                     <i class="bi bi-person-plus-fill"></i>
-                                </button>
-                                <button class="btn btn-sm btn-light border shadow-sm" onclick='window.editarSociedade(<?= json_encode($soc) ?>)'>
-                                    <i class="bi bi-pencil-square text-primary"></i>
-                                </button>
-                            </td>
+                                </a>
+
+								<button class="btn btn-sm btn-warning text-dark shadow-sm"
+										onclick="window.abrirModalLider(<?= $soc['sociedade_id'] ?>, '<?= $soc['sociedade_nome'] ?>')">
+									<i class="bi bi-star-fill"></i>
+								</button>
+
+								<button class="btn btn-sm btn-light border shadow-sm"
+										onclick='window.editarSociedade(<?= json_encode($soc) ?>)'>
+									<i class="bi bi-pencil-square text-primary"></i>
+								</button>
+							</td>
                         </tr>
                         <?php endforeach; else: ?>
                         <tr><td colspan="6" class="text-center py-4">Nenhuma sociedade cadastrada.</td></tr>
@@ -117,7 +126,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalGerenciarSocios" tabindex="-1" aria-hidden="true">
+<!--<div class="modal fade" id="modalGerenciarSocios" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-info text-white">
@@ -161,6 +170,34 @@
         </div>
     </div>
 </div>
+-->
+<div class="modal fade" id="modalDefinirLider" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Definir Líder: <span id="nomeSociedadeLider"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="idSociedadeLider">
+                <input type="hidden" id="idCargoLider">
+
+                <p class="text-muted small">Selecione o membro que ocupará o cargo de liderança. Apenas um líder é permitido por sociedade.</p>
+
+                <div class="list-group" id="listaMembrosLider" style="max-height: 400px; overflow-y: auto;">
+                    <div class="text-center p-3">
+                        <div class="spinner-border text-primary" role="status"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="window.salvarLiderSociedade()">Salvar Líder</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
 // --- FUNÇÕES DE SOCIEDADE (CADASTRO/EDIÇÃO) ---
@@ -228,4 +265,54 @@ window.filtrarMembrosAptos = function() {
         linha.style.display = linha.innerText.toLowerCase().includes(busca) ? '' : 'none';
     });
 };
+
+window.abrirModalLider = function(idSociedade, nomeSociedade) {
+    const container = document.getElementById('listaMembrosLider');
+    document.getElementById('nomeSociedadeLider').innerText = nomeSociedade;
+    document.getElementById('idSociedadeLider').value = idSociedade;
+
+    container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary"></div></div>';
+
+    const modalLider = new bootstrap.Modal(document.getElementById('modalDefinirLider'));
+    modalLider.show();
+
+    fetch(`<?= url('sociedades/buscarLideranca/') ?>${idSociedade}`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('idCargoLider').value = data.cargo_id;
+            container.innerHTML = '';
+
+            data.membros.forEach(m => {
+                const checked = m.tem_vinculo > 0 ? 'checked' : '';
+                container.innerHTML += `
+                    <label class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <input class="form-check-input me-2" type="radio" name="membro_lider_id" value="${m.membro_id}" ${checked}>
+                            ${m.membro_nome}
+                        </div>
+                    </label>
+                `;
+            });
+        });
+};
+
+window.processarSalvarLider = function() {
+    const socId = document.getElementById('idSociedadeLider').value;
+    const cargoId = document.getElementById('idCargoLider').value;
+    const membroId = document.querySelector('input[name="membro_lider_id"]:checked')?.value;
+
+    if(!membroId) return alert('Selecione um membro.');
+
+    const fd = new FormData();
+    fd.append('sociedade_id', socId);
+    fd.append('cargo_id', cargoId);
+    fd.append('membro_id', membroId);
+
+    fetch(`<?= url('sociedades/salvarLider') ?>`, { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+            if(res.success) location.reload();
+            else alert(res.message);
+        });
+}
 </script>

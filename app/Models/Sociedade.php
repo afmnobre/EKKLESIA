@@ -126,4 +126,56 @@ class Sociedade
 		}
 	}
 
+	/**
+	 * Busca todos os membros da igreja e marca quem já possui o cargo de líder desta sociedade
+	 */
+	public function getMembrosParaLideranca($igrejaId, $cargoId)
+	{
+		$sql = "SELECT
+					m.membro_id,
+					m.membro_nome,
+					m.membro_status,
+					(SELECT COUNT(*) FROM membros_cargos_vinculo v
+					 WHERE v.vinculo_membro_id = m.membro_id
+					 AND v.vinculo_cargo_id = ?) as tem_vinculo
+				FROM membros m
+				WHERE m.membro_igreja_id = ?
+				AND m.membro_status = 'Ativo'
+				ORDER BY m.membro_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$cargoId, $igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+	/**
+	 * Salva o líder: remove o antigo e insere o novo (Garante 1 líder por cargo)
+	 */
+	public function salvarLider($igrejaId, $sociedadeId, $membroId, $cargoId)
+	{
+		try {
+			$this->db->beginTransaction();
+
+			// 1. Remove qualquer líder atual deste cargo específico nesta igreja
+			// (Isso garante que só exista 1 Líder de UPH, 1 de SAF, etc)
+			$sqlDel = "DELETE FROM membros_cargos_vinculo WHERE vinculo_cargo_id = ?";
+			$this->db->prepare($sqlDel)->execute([$cargoId]);
+
+			// 2. Insere o novo vínculo
+			$sqlIns = "INSERT INTO membros_cargos_vinculo (vinculo_membro_id, vinculo_cargo_id) VALUES (?, ?)";
+			$this->db->prepare($sqlIns)->execute([$membroId, $cargoId]);
+
+			// 3. Atualiza o ID do líder na tabela sociedades (opcional para performance)
+			$sqlUp = "UPDATE sociedades SET sociedade_lider = ? WHERE sociedade_id = ? AND sociedade_igreja_id = ?";
+			$this->db->prepare($sqlUp)->execute([$membroId, $sociedadeId, $igrejaId]);
+
+			$this->db->commit();
+			return true;
+		} catch (\Exception $e) {
+			$this->db->rollBack();
+			return false;
+		}
+	}
+
+
 }
