@@ -105,6 +105,35 @@
         color: #0d6efd !important;
     }
 }
+
+/* Container invisível que será transformado em imagem */
+#carteirinha-export {
+    width: 150mm; /* 146mm + 4mm sangria */
+    height: 106mm; /* 102mm + 4mm sangria */
+    padding: 2mm;  /* A sangria propriamente dita */
+    background: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    left: -9999px; /* Escondido da visão do usuário */
+    top: 0;
+}
+
+.cartao-wrapper {
+    display: flex;
+    width: 146mm;
+    height: 102mm;
+    border: 1px dashed #ccc; /* Linha guia de dobra/corte */
+}
+
+.lado-carteirinha {
+    width: 73mm;
+    height: 102mm;
+    position: relative;
+    overflow: hidden;
+}
+
 </style>
 
 
@@ -481,30 +510,47 @@
 
 	<div class="modal fade" id="modalCarteirinha" tabindex="-1" aria-hidden="true">
 		<div class="modal-dialog modal-xl">
-			<div class="modal-content">
-				<div class="modal-header border-0">
-					<h5 class="modal-title fw-bold">Visualização da Carteirinha</h5>
+			<div class="modal-content border-0 shadow-lg">
+				<div class="modal-header bg-light border-0">
+					<h5 class="modal-title fw-bold text-primary"><i class="bi bi-card-checklist me-2"></i>Visualização da Carteirinha</h5>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
-				<div class="modal-body bg-dark p-4 d-flex justify-content-center" id="conteudoModalCarteirinha">
+
+				<div class="modal-body bg-dark p-4 d-flex flex-column align-items-center" id="conteudoModalCarteirinha">
 					<div class="text-center text-white py-5">
 						<div class="spinner-border text-primary" role="status"></div>
 						<p class="mt-2">Carregando dados do membro...</p>
 					</div>
 				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-					<button type="button" class="btn btn-success" id="btnImprimirAjax">
-						<i class="bi bi-printer me-2"></i>Imprimir Carteirinha
+
+				<div class="modal-footer bg-light border-0">
+					<button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Fechar</button>
+					<button type="button" class="btn btn-success px-4 shadow-sm" id="btnBaixarImagem" onclick="window.gerarImagemRG()">
+						<i class="bi bi-download me-2"></i>Baixar Imagem (Tamanho RG)
+					</button>
+					<button type="button" class="btn btn-primary px-4 shadow-sm" id="btnImprimirAjax">
+						<i class="bi bi-printer me-2"></i>Imprimir Direto
 					</button>
 				</div>
 			</div>
 		</div>
 	</div>
 
+	<div id="carteirinha-print-area" style="position: absolute; left: -9999px; top: 0; background: #fff; padding: 2mm;">
+		<div id="wrapper-rg-aberto" style="width: 146mm; height: 102mm; display: flex; overflow: hidden; background: #fff;">
+			<div id="print-verso" style="width: 73mm; height: 102mm; position: relative; border-right: 1px dashed #ccc;">
+				</div>
+			<div id="print-frente" style="width: 73mm; height: 102mm; position: relative;">
+				</div>
+		</div>
+	</div>
 
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-// Mantendo sua função de CEP
+/**
+ * 1. UTILITÁRIOS: BUSCA DE CEP
+ */
 window.buscarCep = function(id) {
     var campoCep = document.getElementById('cep_' + id);
     var campoRua = document.getElementById('rua_' + id);
@@ -512,11 +558,12 @@ window.buscarCep = function(id) {
     var campoUf  = document.getElementById('uf_' + id);
     var campoMsg = document.getElementById('msg_' + id);
     var cep = campoCep.value.replace(/\D/g, '');
+
     if (cep.length === 8) {
         campoMsg.innerHTML = '<span class="text-primary fw-bold">🔍 BUSCANDO...</span>';
         fetch('https://viacep.com.br/ws/' + cep + '/json/')
-            .then(function(response) { return response.json(); })
-            .then(function(dados) {
+            .then(response => response.json())
+            .then(dados => {
                 if (!("erro" in dados)) {
                     campoRua.value = dados.logradouro;
                     campoCid.value = dados.localidade;
@@ -527,193 +574,194 @@ window.buscarCep = function(id) {
                     campoMsg.innerHTML = '<span class="text-danger fw-bold">❌ CEP NÃO ENCONTRADO</span>';
                 }
             })
-            .catch(function() {
+            .catch(() => {
                 campoMsg.innerHTML = '<span class="text-danger fw-bold">⚠️ ERRO DE CONEXÃO</span>';
             });
     }
 };
 
+/**
+ * 2. GESTÃO DA CARTEIRINHA (MODAL E AJAX)
+ */
 document.addEventListener('DOMContentLoaded', function() {
-    if (typeof carteirinhaScriptLoaded === 'undefined') {
-        var carteirinhaScriptLoaded = true;
 
-        document.addEventListener('click', function(e) {
-            const btn = e.target.closest('.btn-gerar-carteirinha');
-            if (btn) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
+    if (window.carteirinhaIniciada) return;
+    window.carteirinhaIniciada = true;
 
-                const membroId = btn.getAttribute('data-id');
-                const container = document.getElementById('conteudoModalCarteirinha');
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-gerar-carteirinha');
+        if (btn) {
+            e.preventDefault();
+            const membroId = btn.getAttribute('data-id');
+            const containerModal = document.getElementById('conteudoModalCarteirinha');
+            const btnBaixar = document.getElementById('btnBaixarImagem');
 
-                container.innerHTML = '<div class="text-center text-white py-5"><div class="spinner-border text-primary"></div><p>Carregando...</p></div>';
+            containerModal.innerHTML = '<div class="text-center text-white py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Carregando dados completos...</p></div>';
+            if(btnBaixar) btnBaixar.disabled = true;
 
-                const modalEl = document.getElementById('modalCarteirinha');
-                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-                modal.show();
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCarteirinha'));
+            modal.show();
 
-                fetch(`<?= url('membros/get_dados_carteirinha/') ?>${membroId}`)
-                    .then(response => response.text())
-                    .then(text => {
-                        const jsonStart = text.indexOf('{');
-                        const cleanJson = text.substring(jsonStart);
+            fetch(`<?= url('membros/get_dados_carteirinha/') ?>${membroId}`)
+                .then(response => response.text())
+                .then(text => {
+                    const jsonStart = text.indexOf('{');
+                    const cleanJson = text.substring(jsonStart);
+                    const dados = JSON.parse(cleanJson);
 
-                        try {
-                            const dados = JSON.parse(cleanJson);
-                            if(dados.error) throw new Error(dados.error);
+                    if(dados.error) throw new Error(dados.error);
 
-							// ... dentro do seu try { const dados = JSON.parse(cleanJson); ... }
+                    // Renderiza o layout completo
+                    window.renderizarCarteirinhaCompleta(dados);
 
-							const membro = dados.membro;
-							const igreja = dados.igreja;
-							const urlFotoMembro = `<?= url('assets/uploads/') ?>${membro.igreja_id}/${membro.registro}/${membro.foto}`;
+                    if(btnBaixar) btnBaixar.disabled = false;
+                })
+                .catch(err => {
+                    console.error("Erro:", err);
+                    containerModal.innerHTML = `<div class="alert alert-danger">Erro ao carregar: ${err.message}</div>`;
+                });
+        }
+    });
 
-							container.innerHTML = `
-							<style>
-								.carteirinha-container {
-									width: 21cm;
-									height: 7.4cm;
-									position: relative;
-									background-image: url('<?= url('assets/img/Documento.png') ?>');
-									background-size: 100% 100%;
-									margin: 0 auto;
-									color: #000;
-									font-family: 'Arial', sans-serif;
-								}
-								.lado { width: 10.2cm; height: 6.8cm; position: absolute; top: 0.3cm; }
-								.frente { left: 0.2cm; }
-								.verso { right: 0.2cm; }
+    window.renderizarCarteirinhaCompleta = function(dados) {
+        const membro = dados.membro;
+        const igreja = dados.igreja;
+        const urlFotoMembro = membro.foto
+            ? `<?= url('assets/uploads/') ?>${membro.igreja_id}/${membro.registro}/${membro.foto}`
+            : '';
 
-								/* FRENTE */
-								.logo-ipb { position: absolute; top: 0.4cm; left: 0.4cm; width: 1.3cm; }
-								.cabecalho-frente { position: absolute; top: 0.45cm; left: 1.8cm; width: 6.5cm; line-height: 1; }
-								.cabecalho-frente h1 { font-size: 11pt; margin: 0; font-weight: bold; white-space: nowrap; }
-								.cabecalho-frente p { font-size: 8.5pt; margin: 0; }
+        // CSS compartilhado para garantir posicionamento absoluto no modal e na exportação
+        const layoutStyles = `
+            <style id="style-dinamico-carteirinha">
+                .carteirinha-container { width: 21cm; height: 7.4cm; position: relative; background-image: url('<?= url('assets/img/Documento.png') ?>'); background-size: 100% 100%; margin: 0 auto; color: #000; font-family: Arial, sans-serif; overflow: hidden; }
+                .lado { width: 10.2cm; height: 6.8cm; position: absolute; top: 0.3cm; }
+                .frente { left: 0.2cm; }
+                .verso { right: 0.2cm; }
+                .logo-ipb { position: absolute; top: 0.4cm; left: 0.4cm; width: 1.3cm; }
+                .cabecalho-txt { position: absolute; top: 0.45cm; left: 1.8cm; line-height: 1.1; text-align: left; }
+                .cabecalho-txt h1 { font-size: 11pt; margin: 0; font-weight: bold; }
+                .cabecalho-txt p { font-size: 8.5pt; margin: 0; }
+                .num-reg { position: absolute; top: 0.4cm; right: 0.4cm; font-size: 8.5pt; border: 1px solid #000; padding: 1px 4px; font-weight: bold; background: #fff; }
+                .foto-box { position: absolute; top: 1.8cm; left: 0.4cm; width: 2.8cm; height: 3.5cm; border: 1px solid #000; overflow: hidden; background: #fff; }
+                .foto-box img { width: 100%; height: 100%; object-fit: cover; }
+                .dados-membro { position: absolute; top: 1.8cm; left: 3.4cm; width: 6.4cm; text-align: left; }
+                .info-label { font-size: 6.5pt; text-transform: uppercase; color: #444; display: block; margin-top: 2px; }
+                .info-valor { font-size: 9.5pt; font-weight: bold; display: block; border-bottom: 0.5px solid #eee; margin-bottom: 2px; white-space: nowrap; overflow: hidden; }
+                .flex-row { display: flex; justify-content: space-between; gap: 5px; }
+                .footer-frente { position: absolute; bottom: 0.2cm; left: 3.4cm; right: 0.4cm; text-align: center; font-size: 8.5pt; font-weight: bold; font-style: italic; color: #004a2f; }
+                .texto-certificacao { position: absolute; top: 1.8cm; left: 0.5cm; right: 0.5cm; font-size: 8.5pt; text-align: justify; line-height: 1.2; }
+                .versiculo { position: absolute; top: 3.2cm; left: 0.5cm; right: 2.5cm; font-size: 8.5pt; font-style: italic; text-align: left; }
+                .contatos-verso { position: absolute; bottom: 0.4cm; left: 0.5cm; width: 6.5cm; font-size: 7pt; line-height: 1.2; text-align: left; }
+                .qrcode-box { position: absolute; top: 3.8cm; right: 0.5cm; width: 1.6cm; height: 1.6cm; }
+                .assinatura-area { position: absolute; bottom: 0.4cm; right: 0.5cm; width: 4.5cm; border-top: 1px solid #000; text-align: center; font-size: 7.5pt; padding-top: 2px; }
+            </style>
+        `;
 
-								/* ID/Registro no canto superior direito reduzido */
-								.num-reg { position: absolute; top: 0.4cm; right: 0.4cm; font-size: 8.5pt; border: 1px solid #000; padding: 1px 4px; font-weight: bold; }
+        const htmlConteudo = `
+            <div class="membro-nome-display d-none">${membro.nome}</div>
+            <div id="printArea" class="carteirinha-container">
+                <div class="lado frente">
+                    <img src="<?= url('assets/img/logo_ipb.png') ?>" class="logo-ipb">
+                    <div class="cabecalho-txt">
+                        <h1>IGREJA PRESBITERIANA</h1>
+                        <p>${igreja.nome}</p>
+                    </div>
+                    <div class="num-reg">Nº ${membro.registro}</div>
+                    <div class="foto-box">
+                        ${urlFotoMembro ? `<img src="${urlFotoMembro}" crossorigin="anonymous">` : '<div style="padding-top:1.3cm; text-align:center; font-size:7pt;">SEM FOTO</div>'}
+                    </div>
+                    <div class="dados-membro">
+                        <span class="info-label">Nome do Membro:</span>
+                        <span class="info-valor" style="font-size: 10.5pt;">${membro.nome}</span>
+                        <div class="flex-row">
+                            <div style="flex:1"><span class="info-label">Batismo:</span><span class="info-valor">${membro.data_batismo || '--/--/----'}</span></div>
+                            <div style="flex:1"><span class="info-label">Nascimento:</span><span class="info-valor">${membro.data_nascimento || '--/--/----'}</span></div>
+                        </div>
+                        <span class="info-label">Pastor:</span><span class="info-valor">${igreja.pastor}</span>
+                        <span class="info-label">Sociedade / Cargo:</span><span class="info-valor">${membro.cargo}</span>
+                    </div>
+                    <div class="footer-frente">Igreja Presbiteriana do Jardim Girassol</div>
+                </div>
+                <div class="lado verso">
+                    <img src="<?= url('assets/img/logo_ipb.png') ?>" class="logo-ipb">
+                    <div class="cabecalho-txt">
+                        <h1>IGREJA PRESBITERIANA</h1>
+                        <p>${igreja.nome}</p>
+                    </div>
+                    <div class="texto-certificacao">
+                        Este documento certifica que o portador é membro comungante da Igreja Presbiteriana do Jardim Girassol, jurisdicionada à Igreja Presbiteriana do Brasil.
+                    </div>
+                    <div class="versiculo">
+                        "Tudo faço por causa do evangelho, para ser também participante dele."<br><strong>1 Coríntios 9:23</strong>
+                    </div>
+                    <div class="qrcode-box">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${membro.registro}" style="width:100%;">
+                    </div>
+                    <div class="contatos-verso">
+                        📍 ${igreja.endereco}<br>📱 ${igreja.contatos}
+                    </div>
+                    <div class="assinatura-area">Assinatura do portador</div>
+                </div>
+            </div>
+        `;
 
-								.foto-box {
-									position: absolute; top: 1.8cm; left: 0.4cm;
-									width: 2.8cm; height: 3.5cm;
-									border: 1px solid #000; overflow: hidden; background: #fff;
-								}
-								.foto-box img { width: 100%; height: 100%; object-fit: cover; }
+        // 1. Injeta no Modal para visualização com o CSS
+        document.getElementById('conteudoModalCarteirinha').innerHTML = layoutStyles + htmlConteudo;
 
-								.dados-membro { position: absolute; top: 1.8cm; left: 3.4cm; width: 6.4cm; }
-								.info-label { font-size: 6.5pt; text-transform: uppercase; color: #444; display: block; margin-top: 2px; }
-								.info-valor { font-size: 9.5pt; font-weight: bold; display: block; border-bottom: 0.5px solid #eee; margin-bottom: 2px; }
+        // 2. Injeta na área oculta para o html2canvas ler (resolvendo imagem em branco)
+        const areaPrint = document.getElementById('carteirinha-print-area');
+        if(areaPrint) {
+            areaPrint.innerHTML = layoutStyles + `<div style="padding: 2mm; background: #fff;">${htmlConteudo}</div>`;
+        }
+    };
 
-								/* Datas Lado a Lado */
-								.flex-row { display: flex; justify-content: space-between; gap: 5px; }
-								.flex-col { flex: 1; }
-
-								/* Texto centralizado no rodapé da frente */
-								.footer-frente { position: absolute; bottom: 0.2cm; left: 3.4cm; right: 0.4cm; text-align: center; font-size: 8.5pt; font-weight: bold; font-style: italic; color: #004a2f; }
-
-								/* VERSO */
-								.cabecalho-verso { position: absolute; top: 0.4cm; left: 1.8cm; line-height: 1; }
-								.cabecalho-verso h1 { font-size: 11pt; margin: 0; font-weight: bold; }
-								.texto-certificacao { position: absolute; top: 1.8cm; left: 0.5cm; right: 0.5cm; font-size: 8.5pt; text-align: justify; line-height: 1.2; }
-								.versiculo { position: absolute; top: 3.2cm; left: 0.5cm; right: 2.5cm; font-size: 8.5pt; font-style: italic; }
-								.contatos { position: absolute; bottom: 0.4cm; left: 0.5cm; width: 6.5cm; font-size: 7pt; line-height: 1.2; }
-								.qrcode-box { position: absolute; top: 3.8cm; right: 0.5cm; width: 1.6cm; height: 1.6cm; }
-								.assinatura-area { position: absolute; bottom: 0.4cm; right: 0.5cm; width: 4.5cm; border-top: 1px solid #000; text-align: center; font-size: 7.5pt; padding-top: 2px; }
-							</style>
-
-							<div id="printArea" class="carteirinha-container">
-								<div class="lado frente">
-									<img src="<?= url('assets/img/logo_ipb.png') ?>" class="logo-ipb">
-									<div class="cabecalho-frente">
-										<h1>IGREJA PRESBITERIANA</h1>
-										<p>${igreja.nome}</p>
-									</div>
-									<div class="num-reg">Nº ${membro.registro}</div>
-
-									<div class="foto-box">
-										${membro.foto ? `<img src="${urlFotoMembro}">` : '<div style="padding-top:1.3cm; text-align:center; font-size:7pt;">SEM FOTO</div>'}
-									</div>
-
-									<div class="dados-membro">
-										<span class="info-label">Nome do Membro:</span>
-										<span class="info-valor" style="font-size: 10pt;">${membro.nome}</span>
-
-										<div class="flex-row">
-											<div class="flex-col">
-												<span class="info-label">Data de Batismo:</span>
-												<span class="info-valor">${membro.data_batismo || '--/--/----'}</span>
-											</div>
-											<div class="flex-col">
-												<span class="info-label">Nascimento:</span>
-												<span class="info-valor">${membro.data_nascimento || '--/--/----'}</span>
-											</div>
-										</div>
-
-										<span class="info-label">Pastor:</span>
-										<span class="info-valor">${igreja.pastor}</span>
-
-										<span class="info-label">Sociedade / Cargo:</span>
-										<span class="info-valor" style="font-size: 8.5pt; height: 0.8cm; overflow: hidden;">${membro.cargo}</span>
-									</div>
-
-									<div class="footer-frente">
-										Igreja Presbiteriana do Jardim Girassol
-									</div>
-								</div>
-
-								<div class="lado verso">
-									<img src="<?= url('assets/img/logo_ipb.png') ?>" class="logo-ipb">
-									<div class="cabecalho-verso">
-										<h1 style="font-size: 10pt;">IGREJA PRESBITERIANA</h1>
-										<p style="margin:0; font-size: 8pt;">${igreja.nome}</p>
-									</div>
-
-									<div class="texto-certificacao">
-										Este documento certifica que o portador é membro comungante da Igreja Presbiteriana do Jardim Girassol, jurisdicionada à Igreja Presbiteriana do Brasil.
-									</div>
-
-									<div class="versiculo">
-										"Tudo faço por causa do evangelho, para ser também participante dele."<br>
-										<strong>1 Coríntios 9:23</strong>
-									</div>
-
-									<div class="qrcode-box">
-										 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${membro.registro}" style="width:100%;">
-									</div>
-
-									<div class="contatos">
-                                        📍 ${igreja.endereco}<br>
-                                        📱 ${igreja.contatos}
-                                    </div>
-
-									<div class="assinatura-area">
-										Assinatura do portador
-									</div>
-								</div>
-							</div>
-							`;
-                        } catch (err) {
-                            console.error("Erro no processamento:", err);
-                            container.innerHTML = `<div class="alert alert-danger">Erro ao carregar dados.</div>`;
-                        }
-                    });
-            }
-        });
-    }
-
-    // Lógica de Impressão (Mantenha o resto do seu código de Iframe igual)
+    // IMPRESSÃO DIRETA
     document.getElementById('btnImprimirAjax').addEventListener('click', function() {
         const printArea = document.getElementById('printArea');
-        if(!printArea) return;
-        const content = printArea.innerHTML;
+        const style = document.getElementById('style-dinamico-carteirinha');
+        if(!printArea || !style) return;
+
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         document.body.appendChild(iframe);
         const pri = iframe.contentWindow;
         pri.document.open();
-        pri.document.write(`<html><head><style>@page { size: landscape; margin: 0; } body { margin: 0; }</style></head><body>${content}</body></html>`);
+        pri.document.write(`<html><head>${style.outerHTML}<style>@page { size: landscape; margin: 0; } body { margin: 0; }</style></head><body>${printArea.outerHTML}</body></html>`);
         pri.document.close();
         setTimeout(() => { pri.focus(); pri.print(); iframe.remove(); }, 500);
     });
 });
+
+/**
+ * 3. DOWNLOAD DE IMAGEM
+ */
+window.gerarImagemRG = function() {
+    const btn = document.getElementById('btnBaixarImagem');
+    const areaPrint = document.getElementById('carteirinha-print-area');
+    const nomeMembro = document.querySelector('.membro-nome-display')?.innerText || 'carteirinha';
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
+    btn.disabled = true;
+
+    html2canvas(areaPrint, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `RG_MEMBRO_${nomeMembro.replace(/\s+/g, '_')}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }).catch(err => {
+        console.error("Erro no Download:", err);
+        alert("Erro ao processar imagem.");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+};
 </script>
