@@ -27,17 +27,16 @@
         <div class="collapse submenu" id="sociedades">
             <a href="<?= url('sociedades') ?>">📋 Sociedades Cadastradas</a>
             <hr class="text-white-50">
-            <a href="<?= url('sociedades/orcamentos') ?>">💰 Orçamentos</a>
+            <a href="<?= url('sociedades/orcamentos') ?>">💰 Orçamentos (em produção)</a>
             <a href="<?= url('sociedadesEventos') ?>">🎉 Eventos</a>
             <a href="<?= url('dashboardSociedades') ?>">📊 Dashboard</a>
         </div>
 
         <a class="menu-link" data-bs-toggle="collapse" href="#escola">📚 Escola Dominical</a>
         <div class="collapse submenu" id="escola">
-            <a href="<?= url('classes') ?>">📋 Classes Cadastradas</a>
-            <a href="<?= url('classes/create') ?>">➕ Cadastro de Classes</a>
-            <a href="<?= url('classes/presencas') ?>">✅ Presenças</a>
-            <a href="<?= url('classes/dashboard') ?>">📊 Dashboard</a>
+            <a href="<?= url('escolaDominical') ?>">📋 Classes</a>
+            <a href="<?= url('escolaDominical/configuracoes') ?>">➕ Cadastro de Classes</a>
+            <a href="<?= url('escolaDominical/dashboard') ?>">📊 Dashboard</a>
         </div>
 
         <a class="menu-link" data-bs-toggle="collapse" href="#financeiro">💵 Financeiro</a>

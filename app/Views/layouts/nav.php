@@ -45,7 +45,7 @@
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="<?= url('sociedades') ?>">Sociedades Cadastradas</a></li>
                         <li><a class="dropdown-item" href="<?= url('sociedades/create') ?>">Cadastro de Sociedades</a></li>
-                        <li><a class="dropdown-item" href="<?= url('sociedades/orcamentos') ?>">Orçamentos</a></li>
+                        <li><a class="dropdown-item" href="<?= url('sociedades/orcamentos') ?>">Orçamentos(EM PRODUCAO)</a></li>
                         <li><a class="dropdown-item" href="<?= url('sociedades/eventos') ?>">Eventos</a></li>
                         <li><a class="dropdown-item" href="<?= url('sociedades/dashboard') ?>">Dashboard</a></li>
                     </ul>
