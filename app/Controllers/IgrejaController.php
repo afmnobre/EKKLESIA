@@ -16,16 +16,34 @@ class IgrejaController extends Controller
     }
 
     // LISTAR
-    public function index()
-    {
-        $igrejaId = $_SESSION['usuario_igreja_id'];
+	public function index()
+	{
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+		$igreja = $this->model->getByIgreja($igrejaId);
+		$redes = $this->model->getRedesSociais($igrejaId);
 
-        $igreja = $this->model->getByIgreja($igrejaId);
+		// Buscar lista de membros para o modal de seleção de pastor
+		$db = \App\Core\Database::getInstance();
+		$stMembros = $db->prepare("SELECT membro_id, membro_nome FROM membros WHERE membro_igreja_id = ? ORDER BY membro_nome");
+		$stMembros->execute([$igrejaId]);
+		$membros = $stMembros->fetchAll(\PDO::FETCH_ASSOC);
 
-        $this->view('igreja/index', [
-            'igreja' => $igreja
-        ]);
-    }
+		// Buscar nome do pastor atual
+		$pastorNome = "Não definido";
+		if (!empty($igreja['igreja_pastor_id'])) {
+			$stP = $db->prepare("SELECT membro_nome FROM membros WHERE membro_id = ?");
+			$stP->execute([$igreja['igreja_pastor_id']]);
+			$p = $stP->fetch();
+			$pastorNome = $p['membro_nome'] ?? "Não definido";
+		}
+
+		$this->view('igreja/index', [
+			'igreja' => $igreja,
+			'redes'  => $redes,
+			'membros' => $membros,
+			'pastorNome' => $pastorNome
+		]);
+	}
 
 
     // EDITAR FORM
@@ -65,5 +83,44 @@ class IgrejaController extends Controller
         }
         exit;
     }
+
+	public function salvarRedeSocial()
+	{
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$dados = [
+				'igreja_id' => $_SESSION['usuario_igreja_id'],
+				'nome'      => $_POST['rede_nome'],
+				'usuario'   => $_POST['rede_usuario'],
+				'status'    => $_POST['rede_status'] ?? 'ativo'
+			];
+
+			$this->model->addRedeSocial($dados);
+			header("Location: " . url('igreja?sucesso_rede=1'));
+			exit;
+		}
+	}
+
+	public function excluirRedeSocial($id)
+	{
+		$this->model->deleteRedeSocial($id, $_SESSION['usuario_igreja_id']);
+		header("Location: " . url('igreja?excluido=1'));
+		exit;
+	}
+
+	public function salvarPastor()
+	{
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$igrejaId = $_SESSION['usuario_igreja_id'];
+			$membroId = $_POST['pastor_id'] ?: null;
+
+			if ($this->model->updatePastor($igrejaId, $membroId)) {
+				header("Location: " . url('igreja?sucesso_pastor=1'));
+			} else {
+				header("Location: " . url('igreja?erro_pastor=1'));
+			}
+			exit;
+		}
+	}
+
 }
 

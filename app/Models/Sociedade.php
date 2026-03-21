@@ -14,13 +14,19 @@ class Sociedade
         $this->db = Database::getInstance();
     }
 
-    public function getAll($igrejaId)
-    {
-        $sql = "SELECT * FROM sociedades WHERE sociedade_igreja_id = ? ORDER BY sociedade_nome ASC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$igrejaId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+	public function getAll($igrejaId)
+	{
+		// Fazemos um JOIN com a tabela membros usando a coluna sociedade_lider
+		$sql = "SELECT s.*, m.membro_nome as nome_lider
+				FROM sociedades s
+				LEFT JOIN membros m ON s.sociedade_lider = m.membro_id
+				WHERE s.sociedade_igreja_id = ?
+				ORDER BY s.sociedade_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
 
     public function insert($data)
     {
@@ -156,16 +162,17 @@ class Sociedade
 		try {
 			$this->db->beginTransaction();
 
-			// 1. Remove qualquer líder atual deste cargo específico nesta igreja
-			// (Isso garante que só exista 1 Líder de UPH, 1 de SAF, etc)
-			$sqlDel = "DELETE FROM membros_cargos_vinculo WHERE vinculo_cargo_id = ?";
-			$this->db->prepare($sqlDel)->execute([$cargoId]);
+			// 1. Remove qualquer líder anterior deste CARGO nesta igreja
+			$sqlDel = "DELETE v FROM membros_cargos_vinculo v
+					  INNER JOIN membros m ON v.vinculo_membro_id = m.membro_id
+					  WHERE v.vinculo_cargo_id = ? AND m.membro_igreja_id = ?";
+			$this->db->prepare($sqlDel)->execute([$cargoId, $igrejaId]);
 
 			// 2. Insere o novo vínculo
 			$sqlIns = "INSERT INTO membros_cargos_vinculo (vinculo_membro_id, vinculo_cargo_id) VALUES (?, ?)";
 			$this->db->prepare($sqlIns)->execute([$membroId, $cargoId]);
 
-			// 3. Atualiza o ID do líder na tabela sociedades (opcional para performance)
+			// 3. ATUALIZA A TABELA SOCIEDADES (Para o LEFT JOIN do getAll funcionar)
 			$sqlUp = "UPDATE sociedades SET sociedade_lider = ? WHERE sociedade_id = ? AND sociedade_igreja_id = ?";
 			$this->db->prepare($sqlUp)->execute([$membroId, $sociedadeId, $igrejaId]);
 

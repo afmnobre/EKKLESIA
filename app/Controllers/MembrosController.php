@@ -297,4 +297,101 @@ class MembrosController extends Controller
 		exit;
 	}
 
+	public function get_dados_carteirinha($id) {
+		if (session_status() === PHP_SESSION_NONE) {
+			session_start();
+		}
+
+		if (ob_get_length()) ob_clean();
+		header('Content-Type: application/json');
+
+		try {
+			$db = \App\Core\Database::getInstance();
+			$membroModel = new \App\Models\Membro();
+
+			$igrejaId = $_SESSION['igreja_id'] ?? null;
+
+			if (!$igrejaId) {
+				$stmt = $db->prepare("SELECT membro_igreja_id FROM membros WHERE membro_id = ?");
+				$stmt->execute([$id]);
+				$res = $stmt->fetch(\PDO::FETCH_ASSOC);
+				$igrejaId = $res['membro_igreja_id'] ?? 0;
+			}
+
+			// 1. Buscar Dados do Membro
+			$membro = $membroModel->getById($id, $igrejaId);
+
+			if (!$membro) {
+				echo json_encode(['error' => 'Membro não encontrado.']);
+				exit;
+			}
+
+			// 2. Lógica das Datas
+			$dataNasc = (!empty($membro['membro_data_nascimento']) && $membro['membro_data_nascimento'] != '0000-00-00')
+						? date('d/m/Y', strtotime($membro['membro_data_nascimento']))
+						: '--/--/----';
+
+			$dataBat = (!empty($membro['membro_data_batismo']) && $membro['membro_data_batismo'] != '0000-00-00')
+						? date('d/m/Y', strtotime($membro['membro_data_batismo']))
+						: '--/--/----';
+
+			// 3. Buscar Dados da Igreja + Nome do Pastor (JOIN com a tabela membros)
+			$stmtIgreja = $db->prepare("
+				SELECT i.*, p.membro_nome as pastor_nome
+				FROM igrejas i
+				LEFT JOIN membros p ON i.igreja_pastor_id = p.membro_id
+				WHERE i.igreja_id = ?
+			");
+			$stmtIgreja->execute([$igrejaId]);
+			$igrejaData = $stmtIgreja->fetch(\PDO::FETCH_ASSOC);
+
+			// 4. Buscar Redes Sociais Ativas (Tabela Auxiliar)
+			$stmtRedes = $db->prepare("
+				SELECT rede_nome, rede_usuario
+				FROM igrejas_redes_sociais
+				WHERE rede_igreja_id = ? AND rede_status = 'ativo'
+			");
+			$stmtRedes->execute([$igrejaId]);
+			$redes = $stmtRedes->fetchAll(\PDO::FETCH_ASSOC);
+
+			// Montar string de contatos (Ex: @igreja | (11) 9999-9999)
+			$contatosArray = [];
+			foreach ($redes as $r) {
+				$contatosArray[] = $r['rede_usuario'];
+			}
+			$contatosStr = implode(' | ', $contatosArray);
+
+			// 5. Buscar Foto e Cargos do Membro
+			$stmtFoto = $db->prepare("SELECT membro_foto_arquivo FROM membros_fotos WHERE membro_foto_membro_id = ?");
+			$stmtFoto->execute([$id]);
+			$foto = $stmtFoto->fetch(\PDO::FETCH_ASSOC);
+			$cargosStr = $membroModel->getCargosNomesByMembro($id);
+
+			// 6. Montar JSON Final
+			$json = [
+				'membro' => [
+					'id'              => $membro['membro_id'],
+					'igreja_id'       => $igrejaId,
+					'registro'        => $membro['membro_registro_interno'] ?? '000',
+					'nome'            => mb_strtoupper($membro['membro_nome'] ?? ''),
+					'data_nascimento' => $dataNasc,
+					'data_batismo'    => $dataBat,
+					'foto'            => $foto ? $foto['membro_foto_arquivo'] : null,
+					'cargo'           => mb_strtoupper($cargosStr ?: 'MEMBRO')
+				],
+				'igreja' => [
+					'nome'     => mb_strtoupper($igrejaData['igreja_nome'] ?? ''),
+					'endereco' => $igrejaData['igreja_endereco'] ?? '',
+					'pastor'   => mb_strtoupper($igrejaData['pastor_nome'] ?? 'NÃO INFORMADO'),
+					'contatos' => $contatosStr
+				]
+			];
+
+			echo json_encode($json);
+
+		} catch (\Exception $e) {
+			echo json_encode(['error' => 'Erro interno: ' . $e->getMessage()]);
+		}
+		exit;
+	}
 }

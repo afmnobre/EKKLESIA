@@ -64,6 +64,7 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group shadow-sm border">
+                                    <button class="btn btn-white btn-sm btn-gerar-carteirinha" data-id="<?= $membro['membro_id'] ?>" title="Imprimir Carteirinha">🆔</button>
                                     <button class="btn btn-white btn-sm" data-bs-toggle="modal" data-bs-target="#modalEndereco<?= $membro['membro_id'] ?>" title="Endereço">📍</button>
                                     <button class="btn btn-white btn-sm" data-bs-toggle="modal" data-bs-target="#modalFoto<?= $membro['membro_id'] ?>" title="Foto">📸</button>
 

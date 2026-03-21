@@ -29,7 +29,7 @@
             <hr class="text-white-50">
             <a href="<?= url('sociedades/orcamentos') ?>">💰 Orçamentos</a>
             <a href="<?= url('sociedadesEventos') ?>">🎉 Eventos</a>
-            <a href="<?= url('sociedades/dashboard') ?>">📊 Dashboard</a>
+            <a href="<?= url('dashboardSociedades') ?>">📊 Dashboard</a>
         </div>
 
         <a class="menu-link" data-bs-toggle="collapse" href="#escola">📚 Escola Dominical</a>

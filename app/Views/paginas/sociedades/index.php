@@ -10,23 +10,35 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="ps-4">Sociedade</th>
+					<thead class="bg-light">
+						<tr>
+							<th class="ps-4">Sociedade</th>
+                            <th>Liderança</th>
                             <th>Tipo</th>
-                            <th>Público (Gênero)</th>
-                            <th>Faixa Etária</th>
-                            <th>Status</th>
-                            <th class="text-end pe-4">Ações</th>
-                        </tr>
-                    </thead>
+							<th>Público (Gênero)</th>
+							<th>Faixa Etária</th>
+							<th>Status</th>
+							<th class="text-end pe-4">Ações</th>
+						</tr>
+					</thead>
                     <tbody>
                         <?php if (!empty($sociedades)): foreach ($sociedades as $soc): ?>
                         <tr>
-                            <td class="ps-4">
-                                <div class="fw-bold text-dark"><?= $soc['sociedade_nome'] ?></div>
-                            </td>
-                            <td><?= $soc['sociedade_tipo'] ?></td>
+							<td class="ps-4">
+								<div class="fw-bold text-dark"><?= $soc['sociedade_nome'] ?></div>
+							</td>
+
+							<td>
+								<?php if (!empty($soc['nome_lider'])): ?>
+									<span class="badge bg-light text-dark border">
+										<i class="bi bi-person-badge text-primary me-1"></i>
+										<?= $soc['nome_lider'] ?>
+									</span>
+								<?php else: ?>
+									<span class="text-muted small italic">Sem líder definido</span>
+								<?php endif; ?>
+							</td>
+							<td><?= $soc['sociedade_tipo'] ?></td>
                             <td>
                                 <span class="badge bg-outline-secondary border text-dark">
                                     <?= $soc['sociedade_genero'] ?>
@@ -172,27 +184,40 @@
 </div>
 -->
 <div class="modal fade" id="modalDefinirLider" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-md">
-        <div class="modal-content">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Definir Líder: <span id="nomeSociedadeLider"></span></h5>
+                <h5 class="modal-title">
+                    <i class="bi bi-star-fill me-2"></i>Definir Líder: <span id="nomeSociedadeLider"></span>
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="idSociedadeLider">
                 <input type="hidden" id="idCargoLider">
 
-                <p class="text-muted small">Selecione o membro que ocupará o cargo de liderança. Apenas um líder é permitido por sociedade.</p>
+                <p class="text-muted small">Selecione o membro que ocupará o cargo de liderança nesta sociedade.</p>
 
-                <div class="list-group" id="listaMembrosLider" style="max-height: 400px; overflow-y: auto;">
-                    <div class="text-center p-3">
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="text" id="buscaLiderModal" class="form-control border-start-0 ps-0"
+                           placeholder="Digite o nome do membro..."
+                           onkeyup="window.filtrarLideresModal()">
+                </div>
+
+                <div class="list-group shadow-sm" id="listaMembrosLider" style="max-height: 350px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.5rem;">
+                    <div class="text-center p-4">
                         <div class="spinner-border text-primary" role="status"></div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="window.salvarLiderSociedade()">Salvar Líder</button>
+                <button type="button" class="btn btn-primary px-4" onclick="window.processarSalvarLider()">
+                    <i class="bi bi-check-lg me-1"></i> Confirmar Líder
+                </button>
             </div>
         </div>
     </div>
@@ -299,9 +324,11 @@ window.abrirModalLider = function(idSociedade, nomeSociedade) {
 window.processarSalvarLider = function() {
     const socId = document.getElementById('idSociedadeLider').value;
     const cargoId = document.getElementById('idCargoLider').value;
-    const membroId = document.querySelector('input[name="membro_lider_id"]:checked')?.value;
+    const radioChecked = document.querySelector('input[name="membro_lider_id"]:checked');
 
-    if(!membroId) return alert('Selecione um membro.');
+    if(!radioChecked) return alert('Por favor, selecione um membro da lista.');
+
+    const membroId = radioChecked.value;
 
     const fd = new FormData();
     fd.append('sociedade_id', socId);
@@ -311,8 +338,44 @@ window.processarSalvarLider = function() {
     fetch(`<?= url('sociedades/salvarLider') ?>`, { method: 'POST', body: fd })
         .then(r => r.json())
         .then(res => {
-            if(res.success) location.reload();
-            else alert(res.message);
-        });
+            if(res.success) {
+                location.reload(); // Recarrega para mostrar o nome na tabela
+            } else {
+                alert('Erro ao salvar: ' + res.message);
+            }
+        })
+        .catch(err => alert('Erro na requisição.'));
 }
+
+
+// Função para filtrar dinamicamente (chamada pelo onkeyup)
+window.filtrarLideresModal = function() {
+    const termo = document.getElementById('buscaLiderModal').value.toLowerCase();
+    const itens = document.querySelectorAll('#listaMembrosLider .list-group-item');
+
+    itens.forEach(item => {
+        // Pega o texto do nome do membro dentro da label
+        const nomeMembro = item.textContent.toLowerCase();
+
+        if (nomeMembro.includes(termo)) {
+            item.classList.remove('d-none'); // Mostra
+            item.classList.add('d-flex');    // Mantém o layout flex
+        } else {
+            item.classList.add('d-none');    // Esconde
+            item.classList.remove('d-flex');
+        }
+    });
+};
+
+// Atualize sua função de abrir o modal para limpar a busca anterior
+const originalAbrirModalLider = window.abrirModalLider;
+window.abrirModalLider = function(idSociedade, nomeSociedade) {
+    // Limpa o campo de busca ao abrir
+    const campoBusca = document.getElementById('buscaLiderModal');
+    if(campoBusca) campoBusca.value = '';
+
+    // Chama a função original que já existia
+    originalAbrirModalLider(idSociedade, nomeSociedade);
+};
+
 </script>

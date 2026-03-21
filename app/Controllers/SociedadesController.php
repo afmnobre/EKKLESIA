@@ -172,12 +172,33 @@ class SociedadesController extends Controller
 		$idIgreja = $_SESSION['usuario_igreja_id'];
 		$idSociedade = $_POST['sociedade_id'];
 		$idMembro = $_POST['membro_id'];
-		$idCargo = $_POST['cargo_id'];
 
-		if ($this->model->salvarLider($idIgreja, $idSociedade, $idMembro, $idCargo)) {
+		// 1. Buscamos a sociedade para saber o nome dela e definir o cargo certo
+		$sociedade = $this->model->getById($idSociedade, $idIgreja);
+		$cargoId = 0;
+
+		if (!$sociedade) {
+			echo json_encode(['success' => false, 'message' => 'Sociedade não encontrada.']);
+			exit;
+		}
+
+		// 2. Mesma lógica que você já usa no buscarLideranca()
+		if (strpos($sociedade['sociedade_nome'], 'UPH') !== false) $cargoId = 18;
+		elseif (strpos($sociedade['sociedade_nome'], 'SAF') !== false) $cargoId = 17;
+		elseif (strpos($sociedade['sociedade_nome'], 'UMP') !== false) $cargoId = 12;
+		elseif (strpos($sociedade['sociedade_nome'], 'UPA') !== false) $cargoId = 13;
+		elseif (strpos($sociedade['sociedade_nome'], 'UCP') !== false) $cargoId = 14;
+
+		if ($cargoId === 0) {
+			echo json_encode(['success' => false, 'message' => 'Não foi possível identificar o cargo para esta sociedade.']);
+			exit;
+		}
+
+		// 3. Salva no banco (Lembre-se de usar o Model atualizado que limpa os vínculos antigos)
+		if ($this->model->salvarLider($idIgreja, $idSociedade, $idMembro, $cargoId)) {
 			echo json_encode(['success' => true]);
 		} else {
-			echo json_encode(['success' => false, 'message' => 'Erro ao salvar líder.']);
+			echo json_encode(['success' => false, 'message' => 'Erro ao salvar líder no banco de dados.']);
 		}
 		exit;
 	}
