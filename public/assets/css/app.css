@@ -1,21 +1,21 @@
 /* Definições da Sidebar */
 .sidebar {
-    width: 250px; /* Largura da sua sidebar */
+    width: 250px;
     height: 100vh;
-    position: fixed; /* Fixa ela na esquerda */
+    position: fixed;
     top: 0;
     left: 0;
-    background-color: #212529; /* Cor padrão dark do Bootstrap, ajuste se necessário */
+    background-color: #212529;
     overflow-y: auto;
     z-index: 1000;
 }
 
-/* Definições do Conteúdo (Onde as Views carregam) */
+/* Definições do Conteúdo */
 .content {
-    margin-left: 250px; /* Deve ser exatamente a largura da sidebar */
+    margin-left: 250px;
     padding: 20px;
     min-height: 100vh;
-    background-color: #f8f9fa; /* Um cinza claro para destacar o fundo */
+    background-color: #f8f9fa;
 }
 
 /* Ajuste para telas pequenas (Mobile) */
@@ -39,11 +39,12 @@
 .menu-link {
     display: block;
     padding: 12px 15px;
-    margin: 5px 10px; /* espaçamento lateral */
+    margin: 5px 10px;
     color: #adb5bd;
     font-weight: 500;
     border-left: 3px solid transparent;
-    border-radius: 8px; /* 🔥 borda arredondada */
+    border-radius: 8px;
+    transition: all 0.2s ease;
 }
 
 /* HOVER */
@@ -62,19 +63,54 @@
     border-radius: 8px;
 }
 
-/* 🔽 SUBMENU */
+/* 🌳 ESTRUTURA DE ÁRVORE (TREE VIEW) */
+
+/* Container do submenu */
+.submenu {
+    position: relative;
+    margin-left: 25px; /* Recuo para alinhar a árvore */
+    margin-bottom: 5px;
+}
+
+/* Linha Vertical da Árvore */
+.submenu::before {
+    content: "";
+    position: absolute;
+    left: 10px;
+    top: -5px; /* Sobe um pouco para encostar no menu pai */
+    bottom: 15px; /* Não encosta no final para o visual ficar limpo */
+    width: 1px;
+    border-left: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+/* Itens do Submenu */
 .submenu a {
-    padding: 10px 30px;
+    position: relative;
+    padding: 8px 15px 8px 30px;
     display: block;
     color: #adb5bd;
     font-size: 14px;
-    text-decoration: none !important; /* 🔥 remove sublinhado */
+    text-decoration: none !important;
+    transition: all 0.2s ease;
+}
+
+/* Linha Horizontal da Árvore (O "galho") */
+.submenu a::before {
+    content: "";
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    width: 15px;
+    height: 1px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.2);
 }
 
 /* HOVER SUBMENU */
 .submenu a:hover {
     background: #343a40;
     color: #fff;
+    border-radius: 4px;
+    padding-left: 35px; /* Efeito de deslocamento ao passar o mouse */
     box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 
@@ -83,9 +119,22 @@
     transition: all 0.2s ease;
 }
 
-/* Aplica altura padrão de ~15 linhas para todos os CKEditors */
-.ck-editor__editable_inline {
-    min-height: 350px !important; /* Aproximadamente 15-18 linhas de texto */
-    max-height: 600px; /* Evita que fique gigante */
+/* Destaque para o link da página atual */
+.sidebar .active-link {
+    color: #fff !important;
+    background-color: rgba(13, 110, 253, 0.1); /* Azul sutil no fundo */
+    font-weight: bold;
 }
 
+/* Opcional: Adiciona um pequeno ponto indicador na frente do link ativo */
+.sidebar .active-link::after {
+    content: " •";
+    color: #0d6efd;
+}
+
+
+/* CKEDITOR */
+.ck-editor__editable_inline {
+    min-height: 350px !important;
+    max-height: 600px;
+}
