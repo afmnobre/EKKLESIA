@@ -184,5 +184,63 @@ class Sociedade
 		}
 	}
 
+    public function updateLogo($idSociedade, $idIgreja, $caminhoLogo)
+    {
+        $sql = "UPDATE sociedades SET sociedade_logo = ?
+            WHERE sociedade_id = ? AND sociedade_igreja_id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$caminhoLogo, $idSociedade, $idIgreja]);
+    }
+
+	public function getDadosBanner($idSociedade)
+	{
+		// 1. Busca Sociedade + Igreja + Nome do Pastor
+		$sqlSociedade = "SELECT s.*, i.igreja_id, i.igreja_nome, i.igreja_endereco, m.membro_nome as pastor_nome
+						 FROM sociedades s
+						 LEFT JOIN igrejas i ON i.igreja_id = s.sociedade_igreja_id
+						 LEFT JOIN membros m ON m.membro_id = i.igreja_pastor_id
+						 WHERE s.sociedade_id = ?";
+
+		$stmtS = $this->db->prepare($sqlSociedade);
+		$stmtS->execute([$idSociedade]);
+		$sociedade = $stmtS->fetch(\PDO::FETCH_ASSOC);
+
+		if (!$sociedade) return null;
+
+		$idIgreja = $sociedade['igreja_id'];
+
+		// 2. Busca Redes Sociais da Igreja
+		$sqlRedes = "SELECT * FROM igrejas_redes_sociais WHERE rede_igreja_id = ? AND rede_status = 'ativo'";
+		$stmtR = $this->db->prepare($sqlRedes);
+		$stmtR->execute([$idIgreja]);
+		$redes = $stmtR->fetchAll(\PDO::FETCH_ASSOC);
+
+		// 3. Busca Membros da Sociedade + Foto + Endereço + Dados de Pasta
+		$sqlMembros = "SELECT m.membro_id, m.membro_nome, m.membro_registro_interno, m.membro_igreja_id,
+					   f.membro_foto_arquivo, e.membro_endereco_rua
+					   FROM sociedades_membros sm
+					   INNER JOIN membros m ON m.membro_id = sm.sociedade_membro_membro_id
+					   LEFT JOIN membros_fotos f ON f.membro_foto_membro_id = m.membro_id
+					   LEFT JOIN membros_enderecos e ON e.membro_endereco_membro_id = m.membro_id
+					   WHERE sm.sociedade_membro_sociedade_id = ?";
+
+		$stmtM = $this->db->prepare($sqlMembros);
+		$stmtM->execute([$idSociedade]);
+		$membros = $stmtM->fetchAll(\PDO::FETCH_ASSOC);
+
+		return [
+			'sociedade' => $sociedade,
+			'redes'     => $redes,
+			'membros'   => $membros
+		];
+	}
+
+    public function updateLayout($idSociedade, $layoutJson)
+    {
+        // Usamos ? para simplificar o bind e evitar erro de parâmetro não definido
+        $sql = "UPDATE sociedades SET sociedade_layout_config = ? WHERE sociedade_id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$layoutJson, $idSociedade]);
+    }
 
 }

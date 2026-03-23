@@ -54,13 +54,21 @@
                                     <?= $soc['sociedade_status'] ?>
                                 </span>
                             </td>
-							<td class="text-end pe-4">
+                            <td class="text-end pe-4">
+                                <a href="<?= url('sociedades/banner/' . $soc['sociedade_id']) ?>"
+                                    class="btn btn-sm btn-dark shadow-sm"
+                                    title="Gerar Banner/Flyer">
+                                    <i class="bi bi-image"></i>
+                                 </a>
                                 <a href="<?= url('sociedades/gerenciar/' . $soc['sociedade_id']) ?>"
                                     class="btn btn-sm btn-info text-white shadow-sm"
                                     title="Gerenciar Sócios">
                                     <i class="bi bi-person-plus-fill"></i>
                                 </a>
-
+                                <button class="btn btn-sm btn-outline-secondary shadow-sm"
+                                    onclick="window.abrirModalLogo(<?= $soc['sociedade_id'] ?>, '<?= $soc['sociedade_nome'] ?>', '<?= $soc['sociedade_logo'] ?>')">
+                                    <i class="bi bi-camera-fill"></i>
+                                </button>
 								<button class="btn btn-sm btn-warning text-dark shadow-sm"
 										onclick="window.abrirModalLider(<?= $soc['sociedade_id'] ?>, '<?= $soc['sociedade_nome'] ?>')">
 									<i class="bi bi-star-fill"></i>
@@ -138,51 +146,6 @@
     </div>
 </div>
 
-<!--<div class="modal fade" id="modalGerenciarSocios" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title"><i class="bi bi-search me-2"></i>Membros Aptos: <span id="nomeSociedadeTitulo"></span></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-
-            <form action="<?= url('sociedades/vincularLote') ?>" method="POST">
-                <input type="hidden" name="sociedade_id" id="gerenciar_soc_id">
-
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <div class="input-group">
-                            <span class="input-group-text bg-light"><i class="bi bi-filter"></i></span>
-                            <input type="text" id="buscaMembroApto" class="form-control" placeholder="Filtrar por nome na lista..." onkeyup="window.filtrarMembrosAptos()">
-                        </div>
-                    </div>
-
-                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                        <table class="table table-hover align-middle">
-                            <thead class="sticky-top bg-white border-bottom">
-                                <tr>
-                                    <th width="40px">Incluir</th>
-                                    <th>Nome do Membro</th>
-                                    <th>Idade</th>
-                                    <th>Gênero</th>
-                                </tr>
-                            </thead>
-                            <tbody id="listaAptosCorpo">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="modal-footer bg-light">
-                    <span class="me-auto text-muted small" id="contadorAptos">0 membros encontrados</span>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                    <button type="submit" class="btn btn-info text-white fw-bold">Salvar na Sociedade</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
--->
 <div class="modal fade" id="modalDefinirLider" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content shadow-lg border-0">
@@ -223,6 +186,28 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalLogoSociedade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <form action="<?= url('sociedades/salvarLogo') ?>" method="POST" enctype="multipart/form-data" class="modal-content border-0 shadow">
+            <input type="hidden" name="sociedade_id" id="logo_soc_id">
+            <div class="modal-header bg-secondary text-white">
+                <h6 class="modal-title"><i class="bi bi-image me-2"></i>Logo: <span id="nomeSociedadeLogo"></span></h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div id="previewLogo" class="mb-3">
+                    </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Selecione o arquivo (PNG/JPG)</label>
+                    <input type="file" name="sociedade_logo" class="form-control form-control-sm" accept="image/*" required>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="submit" class="btn btn-primary btn-sm w-100">Fazer Upload</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
 // --- FUNÇÕES DE SOCIEDADE (CADASTRO/EDIÇÃO) ---
@@ -376,6 +361,21 @@ window.abrirModalLider = function(idSociedade, nomeSociedade) {
 
     // Chama a função original que já existia
     originalAbrirModalLider(idSociedade, nomeSociedade);
+};
+
+window.abrirModalLogo = function(id, nome, logoAtual) {
+    document.getElementById('logo_soc_id').value = id;
+    document.getElementById('nomeSociedadeLogo').innerText = nome;
+
+    const preview = document.getElementById('previewLogo');
+    if (logoAtual && logoAtual !== 'null' && logoAtual !== '') {
+        // Assume que o caminho salvo no banco já considera a estrutura de uploads
+        preview.innerHTML = `<img src="<?= url('assets/uploads/') ?>${logoAtual}" class="img-thumbnail" style="max-height: 120px;">`;
+    } else {
+        preview.innerHTML = `<div class="py-3 border rounded bg-light text-muted small">Sem logo cadastrada</div>`;
+    }
+
+    new bootstrap.Modal(document.getElementById('modalLogoSociedade')).show();
 };
 
 </script>

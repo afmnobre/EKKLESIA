@@ -394,4 +394,17 @@ class MembrosController extends Controller
 		}
 		exit;
 	}
+
+	public function get_info($id) {
+		// Busca no banco: SELECT endereco, numero, bairro FROM membros WHERE id = $id
+		$membro = $this->membroModel->find($id);
+
+		$dados = [
+			'endereco' => $membro['logradouro'] . ", " . $membro['numero'] . " - " . $membro['bairro']
+		];
+
+		echo json_encode($dados);
+		exit;
+	}
+
 }

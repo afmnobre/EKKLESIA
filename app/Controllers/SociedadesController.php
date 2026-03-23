@@ -203,4 +203,110 @@ class SociedadesController extends Controller
 		exit;
 	}
 
+	public function salvarLogo()
+	{
+		$idSociedade = $_POST['sociedade_id'];
+		$idIgreja = $_SESSION['usuario_igreja_id'];
+
+		if (isset($_FILES['sociedade_logo']) && $_FILES['sociedade_logo']['error'] === 0) {
+			$extensao = strtolower(pathinfo($_FILES['sociedade_logo']['name'], PATHINFO_EXTENSION));
+			$novoNome = "logo_" . time() . "." . $extensao;
+
+			// 1. Define a raiz do projeto subindo 2 níveis (de /app/Controllers para /)
+			$raizProjeto = dirname(__DIR__, 2);
+
+			// 2. Caminho absoluto para o sistema de arquivos (Linux/Windows)
+			// Estrutura: /public/assets/uploads/<id_igreja>/sociedades/<id_sociedade>/logo/
+			$diretorioDestino = $raizProjeto . "/public/assets/uploads/{$idIgreja}/sociedades/{$idSociedade}/logo/";
+
+			// 3. Tenta criar a pasta com permissão total
+			if (!is_dir($diretorioDestino)) {
+				if (!mkdir($diretorioDestino, 0777, true)) {
+					die("Erro: Não foi possível criar o diretório: " . $diretorioDestino);
+				}
+			}
+
+			// 4. Move o arquivo
+			if (move_uploaded_file($_FILES['sociedade_logo']['tmp_name'], $diretorioDestino . $novoNome)) {
+
+				// O caminho que vai para o banco DEVE ser relativo ao que a função assets() ou a URL espera
+				// Exemplo: 1/sociedades/4/logo/logo_xxx.png
+				$caminhoRelativoBanco = "{$idIgreja}/sociedades/{$idSociedade}/logo/{$novoNome}";
+
+				// Busca a logo antiga para deletar e limpa o servidor (Opcional, mas recomendado)
+				$sociedade = $this->model->getById($idSociedade, $idIgreja);
+				if (!empty($sociedade['sociedade_logo'])) {
+					$caminhoAntigo = $raizProjeto . "/public/assets/uploads/" . $sociedade['sociedade_logo'];
+					if (file_exists($caminhoAntigo)) {
+						unlink($caminhoAntigo);
+					}
+				}
+
+				// Salva no banco
+				if ($this->model->updateLogo($idSociedade, $idIgreja, $caminhoRelativoBanco)) {
+					header("Location: " . url("sociedades?sucesso=logo_atualizado"));
+				} else {
+					die("Erro ao salvar o caminho no banco de dados.");
+				}
+				exit;
+			} else {
+				die("Erro ao mover o arquivo para: " . $diretorioDestino);
+			}
+		}
+		header("Location: " . url("sociedades?erro=arquivo_invalido"));
+		exit;
+    }
+
+ 	public function banner($id)
+	{
+		// Chama o método que acabamos de criar no Model
+		$dados = $this->model->getDadosBanner($id);
+
+		if (!$dados) {
+			header("Location: " . url("sociedades?erro=nao_encontrado"));
+			exit;
+		}
+
+		// Renderiza a view passando as variáveis separadas
+		$this->view('sociedades/banner_builder', [
+			'sociedade' => $dados['sociedade'],
+			'igreja'    => $dados['sociedade'], // Os dados da igreja estão no mesmo array devido ao JOIN
+			'redes'     => $dados['redes'],
+			'membros'   => $dados['membros']
+		]);
+	}
+
+	public function salvar_layout()
+	{
+		if (ob_get_length()) ob_clean();
+		header('Content-Type: application/json');
+
+		try {
+			$id = $_POST['id'] ?? null;
+            $layoutJson = $_POST['layout'] ?? null;
+
+            if ($layoutJson) {
+               // Remove escapes automáticos se o servidor estiver adicionando
+                $layoutJson = stripslashes($layoutJson);
+            }
+
+			if (!$id || !$layoutJson) {
+				throw new \Exception("Dados incompletos (ID ou Layout ausentes).");
+			}
+
+			// CHAMADA CORRETA PARA O NOVO MÉTODO
+			$atualizou = $this->model->updateLayout($id, $layoutJson);
+
+			if ($atualizou) {
+				echo json_encode(['sucesso' => true]);
+			} else {
+				throw new \Exception("Erro ao salvar no banco de dados.");
+			}
+
+		} catch (\Exception $e) {
+			echo json_encode(['sucesso' => false, 'mensagem' => $e->getMessage()]);
+		}
+		exit;
+	}
+
 }
