@@ -4,7 +4,6 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\EscolaDominical;
-use App\Core\Database;
 
 class EscolaDominicalController extends Controller
 {
@@ -77,6 +76,38 @@ class EscolaDominicalController extends Controller
 			$this->model->salvarConfiguracao($igrejaId, $nome, $min, $max);
 			header("Location: " . url('escolaDominical'));
 			exit;
+		}
+	}
+
+	public function atualizarConfiguracao()
+	{
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$igrejaId    = $_SESSION['usuario_igreja_id'];
+			$classeId    = $_POST['classe_id'] ?? null;
+			$nome        = $_POST['classe_nome'] ?? '';
+			$professorId = $_POST['classe_professor_id'] ?? null;
+			$idadeMin    = $_POST['classe_idade_min'] ?? 0;
+			$idadeMax    = $_POST['classe_idade_max'] ?? 99;
+			$senha       = $_POST['classe_senha'] ?? null; // NOVO CAMPO
+
+			if ($classeId && !empty($nome)) {
+				$db = \App\Core\Database::getInstance();
+
+				// Adicionamos classe_senha = ? no UPDATE
+				$sql = "UPDATE classes_escola
+						SET classe_nome = ?,
+							classe_professor_id = ?,
+							classe_idade_min = ?,
+							classe_idade_max = ?,
+							classe_senha = ?
+						WHERE classe_id = ? AND classe_igreja_id = ?";
+
+				$stmt = $db->prepare($sql);
+				$stmt->execute([$nome, $professorId, $idadeMin, $idadeMax, $senha, $classeId, $igrejaId]);
+
+				header("Location: " . url('escolaDominical?sucesso=editado'));
+				exit;
+			}
 		}
 	}
 

@@ -12,9 +12,17 @@
             <h2 class="fw-bold text-primary mb-0"><i class="bi bi-book me-2"></i>Escola Dominical</h2>
             <p class="text-muted">Gestão de classes e frequências</p>
         </div>
-        <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNovaClasse">
-            <i class="bi bi-plus-lg me-2"></i>Nova Classe
-        </button>
+        <div class="d-flex gap-2">
+<button type="button" class="btn btn-outline-primary shadow-sm"
+        id="btnAcessoProfessor"
+        data-bs-toggle="modal"
+        data-bs-target="#modalQrAcesso">
+    <i class="bi bi-person-badge me-2"></i>Acesso Professor
+</button>
+            <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNovaClasse">
+                <i class="bi bi-plus-lg me-2"></i>Nova Classe
+            </button>
+        </div>
     </div>
 
     <div class="row g-4">
@@ -27,16 +35,30 @@
                                 <div class="bg-light-primary p-3 rounded-3">
                                     <i class="bi bi-people-fill fs-4 text-primary"></i>
                                 </div>
-                                <div class="dropdown">
-                                    <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-pencil me-2"></i>Editar</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash me-2"></i>Excluir</a></li>
-                                    </ul>
-                                </div>
+								<div class="dropdown">
+									<button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+										<i class="bi bi-three-dots-vertical"></i>
+									</button>
+									<ul class="dropdown-menu dropdown-menu-end shadow border-0">
+										<li>
+											<a class="dropdown-item btn-editar-classe" href="#"
+											   data-id="<?= $classe['classe_id'] ?>"
+											   data-nome="<?= $classe['classe_nome'] ?>"
+											   data-min="<?= $classe['classe_idade_min'] ?>"
+											   data-max="<?= $classe['classe_idade_max'] ?>"
+											   data-professor="<?= $classe['classe_professor_id'] ?>">
+												<i class="bi bi-pencil me-2 text-primary"></i>Editar Classe
+											</a>
+										</li>
+										<li><hr class="dropdown-divider"></li>
+										<li>
+											<a class="dropdown-item text-danger" href="<?= url('escolaDominical/excluir/' . $classe['classe_id']) ?>"
+											   onclick="return confirm('Deseja realmente excluir esta classe?')">
+												<i class="bi bi-trash me-2"></i>Excluir
+											</a>
+										</li>
+									</ul>
+								</div>
                             </div>
 
                             <h5 class="card-title fw-bold mb-1"><?= $classe['classe_nome'] ?></h5>
@@ -44,18 +66,20 @@
                                 <i class="bi bi-person-badge me-1"></i> Prof: <?= $classe['professor_nome'] ?? 'Não definido' ?>
                             </p>
 
-                            <div class="mb-4">
-                                <?php
-                                    $faixa = "Geral";
-                                    $cor = "bg-secondary";
-                                    if(stripos($classe['classe_nome'], 'Cordeirinhos') !== false) { $faixa = "1 a 3 anos"; $cor = "bg-info"; }
-                                    elseif(stripos($classe['classe_nome'], 'Arca') !== false) { $faixa = "4 a 6 anos"; $cor = "bg-success"; }
-                                    elseif(stripos($classe['classe_nome'], 'Josias') !== false) { $faixa = "7 a 12 anos"; $cor = "bg-warning text-dark"; }
-                                    elseif(stripos($classe['classe_nome'], 'Timóteo') !== false) { $faixa = "13 a 17 anos"; $cor = "bg-primary"; }
-                                    elseif(stripos($classe['classe_nome'], 'Adultos') !== false) { $faixa = "18+ anos"; $cor = "bg-dark"; }
-                                ?>
-                                <span class="badge <?= $cor ?> rounded-pill px-3"><?= $faixa ?></span>
-                            </div>
+							<div class="mb-4">
+								<?php
+									// Definimos a cor baseada na idade mínima para manter um padrão visual
+									$cor = "bg-secondary";
+									if($classe['classe_idade_min'] <= 3) $cor = "bg-info";
+									elseif($classe['classe_idade_min'] <= 6) $cor = "bg-success";
+									elseif($classe['classe_idade_min'] <= 12) $cor = "bg-warning text-dark";
+									elseif($classe['classe_idade_min'] <= 17) $cor = "bg-primary";
+									else $cor = "bg-dark";
+								?>
+								<span class="badge <?= $cor ?> rounded-pill px-3">
+									<?= $classe['classe_idade_min'] ?> a <?= $classe['classe_idade_max'] ?> anos
+								</span>
+							</div>
 
                             <div class="d-grid gap-2">
                                 <a href="<?= url('escolaDominical/chamada/' . $classe['classe_id']) ?>" class="btn btn-outline-primary">
@@ -172,8 +196,6 @@
     </div>
 </div>
 
-
-
 <style>
     .bg-light-primary { background-color: rgba(13, 110, 253, 0.1); }
     .transition { transition: all 0.3s ease; }
@@ -269,6 +291,94 @@ document.getElementById('select-config-classe').addEventListener('change', funct
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalEditarClasse" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Editar Classe</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="<?= url('escolaDominical/atualizarConfiguracao') ?>" method="POST">
+                <input type="hidden" name="classe_id" id="edit_classe_id">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase">Nome da Classe</label>
+                        <input type="text" name="classe_nome" id="edit_classe_nome" class="form-control" required>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-uppercase">Idade Mínima</label>
+                            <input type="number" name="classe_idade_min" id="edit_classe_min" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-uppercase">Idade Máxima</label>
+                            <input type="number" name="classe_idade_max" id="edit_classe_max" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase">Professor Responsável</label>
+                        <select name="classe_professor_id" id="edit_classe_professor" class="form-select">
+                            <?php foreach($membros as $m): ?>
+                                <option value="<?= $m['membro_id'] ?>"><?= $m['membro_nome'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-primary">Senha de Acesso (Chamada)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-key"></i></span>
+                            <input type="text" name="classe_senha" id="edit_classe_senha" class="form-control border-start-0" placeholder="Defina a senha para o professor">
+                        </div>
+                        <div class="form-text small text-muted">Esta senha será usada junto com o celular do professor para o login.</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="modal fade" id="modalQrAcesso" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header bg-primary text-white border-0 py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-qr-code me-2"></i>Acesso à Chamada
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-5">
+                <p class="text-muted fw-bold mb-1">Para Professores</p>
+                <p class="text-muted small mb-4">Aproxime a câmera do seu celular para abrir o Portal da Chamada.</p>
+
+                <div id="qrcode" class="d-flex justify-content-center p-3 border rounded-3 bg-white shadow-inner mb-4" style="min-height: 200px;">
+                    </div>
+
+<div class="card bg-light border-0">
+    <div class="card-body py-2">
+        <small class="text-muted d-block fw-bold text-uppercase mb-1">Ou acesse a URL:</small>
+        <code class="fw-bold text-primary" style="word-break: break-all;">
+            <?= full_url('professor/login') ?>
+        </code>
+    </div>
+</div>
+            </div>
+            <div class="modal-footer border-0 bg-light d-flex justify-content-center">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <style>
     /* Estilos para Choices dentro do modal gerenciador */
@@ -448,4 +558,62 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Lógica para abrir e preencher o modal de edição
+document.querySelectorAll('.btn-editar-classe').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        // Preenche os campos do modal com os dados do botão
+        document.getElementById('edit_classe_id').value = this.getAttribute('data-id');
+        document.getElementById('edit_classe_nome').value = this.getAttribute('data-nome');
+        document.getElementById('edit_classe_min').value = this.getAttribute('data-min');
+        document.getElementById('edit_classe_max').value = this.getAttribute('data-max');
+
+        // Seleciona o professor correto no combo
+        const profId = this.getAttribute('data-professor');
+        const selectProf = document.getElementById('edit_classe_professor');
+        selectProf.value = profId;
+
+        // Abre o modal
+        const modalEditar = new bootstrap.Modal(document.getElementById('modalEditarClasse'));
+        modalEditar.show();
+    });
+});
+
+</script>
+
+
+
+<script>
+(function() {
+    window.addEventListener('load', function() {
+        const qrcodeContainer = document.getElementById('qrcode');
+        const modalElement = document.getElementById('modalQrAcesso');
+
+        // Agora usamos a FULL_URL (URL Completa com http)
+        const urlAcessoCompleta = "<?= full_url('professor/login') ?>";
+
+        if (modalElement && qrcodeContainer) {
+            modalElement.addEventListener('show.bs.modal', function () {
+                qrcodeContainer.innerHTML = '';
+
+                if (typeof QRCode !== "undefined") {
+                    try {
+                        new QRCode(qrcodeContainer, {
+                            text: urlAcessoCompleta,
+                            width: 220,
+                            height: 220,
+                            colorDark : "#0d6efd",
+                            colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.H
+                        });
+                    } catch (e) {
+                        console.error("Erro ao gerar QR Code:", e);
+                    }
+                }
+            });
+        }
+    });
+})();
 </script>

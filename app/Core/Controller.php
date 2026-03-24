@@ -28,6 +28,20 @@ class Controller
         require __DIR__ . '/../Views/layouts/footer.php';
     }
 
+	public function rawview($view, $data = [])
+	{
+		extract($data);
+
+		// Carrega apenas o header (CSS/Meta) e o rodapé (JS)
+		// Sem o sidebar e sem a div .content para ocupar a tela toda no celular
+		require __DIR__ . '/../Views/layouts/header.php';
+
+		// Carrega a página específica
+		require __DIR__ . '/../Views/paginas/' . $view . '.php';
+
+		require __DIR__ . '/../Views/layouts/footer.php';
+	}
+
 }
 
 
