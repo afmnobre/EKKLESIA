@@ -145,8 +145,8 @@ class Financeiro {
 		}
 	}
 
-	public function getContasAgendadas($igrejaId) {
-		// Trocamos INNER por LEFT para debugar
+	// Busca os lançamentos filtrados por mês e ano
+	public function getContasAgendadas($igrejaId, $mes, $ano) {
 		$sql = "SELECT
 					fc.*,
 					sub.subcategoria_nome,
@@ -155,10 +155,12 @@ class Financeiro {
 				LEFT JOIN financeiro_subcategorias sub ON fc.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
 				LEFT JOIN financeiro_categorias cat ON sub.subcategoria_categoria_id = cat.financeiro_categoria_id
 				WHERE fc.financeiro_conta_igreja_id = ?
+				AND MONTH(fc.financeiro_conta_data_vencimento) = ?
+				AND YEAR(fc.financeiro_conta_data_vencimento) = ?
 				ORDER BY fc.financeiro_conta_data_vencimento ASC";
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$igrejaId]);
+		$stmt->execute([$igrejaId, $mes, $ano]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
@@ -583,6 +585,35 @@ class Financeiro {
 		}
 
 		return $relatorio;
+	}
+
+	public function getSaldosPorConta($igrejaId) {
+		// Busca o nome da conta e o saldo atual da tabela de contas financeiras
+		$sql = "SELECT
+					financeiro_conta_financeira_nome as nome,
+					financeiro_conta_financeira_saldo as saldo
+				FROM financeiro_contas_financeiras
+				WHERE financeiro_conta_financeira_igreja_id = ?
+				AND financeiro_conta_financeira_status = 'Ativo'
+				ORDER BY financeiro_conta_financeira_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+	// Busca os anos únicos baseados na data de vencimento
+	public function getAnosComMovimentacao($igrejaId) {
+		$sql = "SELECT DISTINCT YEAR(financeiro_conta_data_vencimento) as ano
+				FROM financeiro_contas
+				WHERE financeiro_conta_igreja_id = ?
+				ORDER BY ano DESC";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		$resultado = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+		// Se não houver nada, retorna o ano atual para não quebrar o combo
+		return !empty($resultado) ? $resultado : [['ano' => date('Y')]];
 	}
 
 }

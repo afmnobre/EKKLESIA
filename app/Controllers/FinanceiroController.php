@@ -93,23 +93,31 @@ class FinanceiroController extends Controller {
 	public function lancamentos() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 
-		// 1. Pega as contas para a tabela (usando a query com JOIN que você postou)
-		$contas = $this->model->getContasAgendadas($igrejaId);
+		// --- NOVA LÓGICA DE FILTRO ---
+		$anoAtual = isset($_GET['ano']) ? (int)$_GET['ano'] : date('Y');
+		$mesAtual = isset($_GET['mes']) ? (int)$_GET['mes'] : date('n');
 
-		// 2. Pega as categorias agrupadas para o COMBO do Modal
+		// Busca os anos que possuem movimentação para o Combo (Crie no Model)
+		$anosDisponiveis = $this->model->getAnosComMovimentacao($igrejaId);
+		if (empty($anosDisponiveis)) { $anosDisponiveis = [['ano' => date('Y')]]; }
+
+		// 1. Pega as contas filtradas por Mês/Ano (Ajuste o método no Model)
+		$contas = $this->model->getContasAgendadas($igrejaId, $mesAtual, $anoAtual);
+
+		// Mantemos os dados dos modais
 		$categoriasAgrupadas = $this->model->getCategoriasAgrupadas($igrejaId);
-
-		// 3. Pega as contas bancárias para o Modal de Baixa
-        $contasBancarias = $this->model->getContasBancarias($igrejaId);
-
-        // 4. Carrega os membros para rateiro das receitas.
-		$membros = $this->model->getMembrosAtivos($igrejaId); // Crie este método se não existir
+		$contasBancarias = $this->model->getContasBancarias($igrejaId);
+		$membros = $this->model->getMembrosAtivos($igrejaId);
 
 		$this->view('financeiro/lancamentos', [
 			'contas_agendadas'     => $contas,
-			'categorias_agrupadas' => $categoriasAgrupadas, // <-- O combo usa esta aqui
-            'contas_bancarias'     => $contasBancarias,
-			'membros'              => $membros // <--- Envie para a view aqui
+			'categorias_agrupadas' => $categoriasAgrupadas,
+			'contas_bancarias'     => $contasBancarias,
+			'membros'              => $membros,
+			// Passamos os dados do filtro para a View
+			'anoSelecionado'       => $anoAtual,
+			'mesSelecionado'       => $mesAtual,
+			'anosDisponiveis'      => $anosDisponiveis
 		]);
 	}
 

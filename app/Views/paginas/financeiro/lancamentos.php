@@ -1,3 +1,46 @@
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <div class="row align-items-center">
+
+            <div class="col-md-3 border-end">
+                <label class="small fw-bold text-muted text-uppercase mb-1 d-block">Filtrar por Ano</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-0"><i class="bi bi-calendar-event text-primary"></i></span>
+                    <select class="form-select border-0 bg-light fw-bold"
+                            onchange="location.href='?mes=<?= $mesSelecionado ?>&ano='+this.value">
+                        <?php foreach($anosDisponiveis as $a): ?>
+                            <option value="<?= $a['ano'] ?>" <?= $a['ano'] == $anoSelecionado ? 'selected' : '' ?>>
+                                <?= $a['ano'] ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-md-9">
+                <label class="small fw-bold text-muted text-uppercase mb-1 d-block text-center text-md-start ps-3">Mês de Referência</label>
+                <div class="nav nav-pills nav-fill bg-light p-1 rounded-pill mx-md-2">
+                    <?php
+                    $meses = [
+                        1=>'Jan', 2=>'Fev', 3=>'Mar', 4=>'Abr', 5=>'Mai', 6=>'Jun',
+                        7=>'Jul', 8=>'Ago', 9=>'Set', 10=>'Out', 11=>'Nov', 12=>'Dez'
+                    ];
+                    foreach($meses as $num => $nome): ?>
+                        <div class="nav-item">
+                            <a class="nav-link py-1 rounded-pill <?= $num == $mesSelecionado ? 'active shadow-sm' : 'text-dark fw-bold' ?>"
+                               style="font-size: 0.85rem;"
+                               href="?ano=<?= $anoSelecionado ?>&mes=<?= $num ?>">
+                                <?= $nome ?>
+                            </a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold"><i class="bi bi-calendar-check me-2 text-primary"></i>Contas a Pagar/Receber</h3>
