@@ -148,7 +148,7 @@
                             <span class="stat-value text-danger"><?= $item['faltas'] ?></span>
                             <span class="stat-label">Faltas</span>
                         </div>
-                        <div class="stat-item">
+
                             <span class="stat-value text-secondary"><?= $item['total_aulas'] ?></span>
                             <span class="stat-label">Aulas</span>
                         </div>

@@ -134,6 +134,109 @@
     overflow: hidden;
 }
 
+
+    /* Container do Certificado com proporção A4 Paisagem */
+    .certificado-container {
+        position: relative;
+        width: 100%;
+        /* Proporção A4 Paisagem: 1.414 (Largura / Altura) */
+        aspect-ratio: 297 / 210;
+        margin: 0 auto;
+        background-color: #fff;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        overflow: hidden;
+        font-family: 'Times New Roman', serif;
+    }
+
+    /* Imagem de fundo ocupa todo o container */
+    .img-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: fill; /* Garante que cubra a proporção A4 */
+        z-index: 1;
+    }
+
+    .certificado-container {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 297 / 210;
+        margin: 0 auto;
+        background-color: #fff;
+        overflow: hidden;
+        font-family: 'Times New Roman', serif;
+        color: #1a1a1a;
+    }
+
+    .img-background {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        object-fit: fill;
+        z-index: 1;
+    }
+
+    .certificado-content {
+        position: relative;
+        z-index: 2;
+        width: 100%; height: 100%;
+        padding: 5% 8%; /* Padding equilibrado */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        text-align: center;
+    }
+
+    /* Cabeçalho com Logo e Info da Igreja */
+    .cert-header { margin-bottom: 10px; }
+    .cert-igreja-nome { font-size: 1.6rem; font-weight: bold; color: #003366; text-transform: uppercase; }
+    .cert-igreja-endereco { font-size: 0.85rem; color: #555; font-style: italic; }
+
+    /* Corpo do Certificado */
+    .cert-titulo { font-size: 3rem; font-weight: bold; color: #b8860b; margin: 15px 0; letter-spacing: 2px; }
+
+    /* Registro Interno (Rol) */
+    .cert-rol {
+        font-size: 1rem;
+        font-weight: bold;
+        color: #444;
+        margin-bottom: 10px;
+        text-align: right;
+        padding-right: 20px;
+    }
+
+    .cert-texto { font-size: 1.4rem; line-height: 1.5; margin: 15px 0; }
+
+    /* Data subida (antes das assinaturas) */
+    .cert-data {
+        font-size: 1.2rem;
+        margin-bottom: 30px; /* Espaço para as assinaturas abaixo */
+        font-weight: 500;
+    }
+
+    .cert-assinaturas {
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-end;
+        margin-top: 10px;
+    }
+    .assinatura-box {
+        border-top: 1.5px solid #333;
+        width: 32%;
+        padding-top: 8px;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    @media print {
+        @page { size: A4 landscape; margin: 0; }
+        body * { visibility: hidden; }
+        #areaImpressao, #areaImpressao * { visibility: visible; }
+        #areaImpressao { position: absolute; left: 0; top: 0; width: 100%; }
+        .certificado-container { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
 </style>
 
 
@@ -546,6 +649,55 @@
 	</div>
 
 
+
+<div class="modal fade" id="modalCertificadoDinamico" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content border-0 bg-transparent">
+            <div class="modal-body p-0" id="areaImpressao">
+                <div class="certificado-container">
+                    <img src="<?= url('assets/img/CertificadoBatismo.png') ?>" class="img-background">
+
+                    <div class="certificado-content">
+                        <div class="cert-header">
+                             <img src="<?= url('assets/img/logo_ipb.png') ?>" style="height: 70px; margin-bottom: 10px;">
+                             <div class="cert-igreja-nome" id="view-igreja">...</div>
+                             <div class="cert-igreja-endereco" id="view-endereco">...</div>
+                        </div>
+
+                        <div class="cert-rol">Rol nº: <span id="view-rol">...</span></div>
+
+                        <div class="cert-titulo">CERTIFICADO DE BATISMO</div>
+
+                        <div class="cert-texto">
+                            Certificamos que <strong id="view-nome" style="font-size: 2rem; color: #000;">...</strong><br>
+                            foi batizado(a) em nome do Pai, do Filho e do Espírito Santo no dia <br>
+                            <strong id="view-data-batismo">...</strong>, tornando-se membro desta igreja.
+                        </div>
+
+                        <div class="cert-data" id="view-data-hoje">...</div>
+
+                        <div class="cert-assinaturas">
+                            <div class="assinatura-box">
+                                <span id="view-pastor">Pastor Responsável</span>
+                            </div>
+                            <div class="assinatura-box">
+                                <span>Secretário(a) do Conselho</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-white">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary px-5 shadow" onclick="window.print()">
+                    <i class="bi bi-printer me-2"></i>Imprimir Certificado A4
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 /**
@@ -764,4 +916,68 @@ window.gerarImagemRG = function() {
         btn.disabled = false;
     });
 };
+
+
+//MODAL CERTIFICADO MEMBRO
+// 1. Criamos a variável global para o modal fora do evento para não duplicar
+// Usamos um objeto global para evitar conflitos de escopo
+if (typeof certificadoGlobal === 'undefined') {
+    var certificadoGlobal = {
+        modalInstance: null
+    };
+}
+
+document.querySelectorAll('.btn-abrir-certificado').forEach(button => {
+    button.onclick = function() {
+        const idMembro = this.getAttribute('data-id');
+        const urlFinal = "<?= url('membros/dadosCertificado') ?>/" + idMembro;
+        const modalElement = document.getElementById('modalCertificadoDinamico');
+
+        // Inicializa o modal se não existir
+        if (!certificadoGlobal.modalInstance) {
+            certificadoGlobal.modalInstance = new bootstrap.Modal(modalElement);
+        }
+
+        // Limpa campos e mostra loader
+        document.getElementById('view-nome').innerText = "Carregando...";
+        if(document.getElementById('cert-loader')) document.getElementById('cert-loader').style.display = 'flex';
+
+        certificadoGlobal.modalInstance.show();
+
+        fetch(urlFinal)
+            .then(response => response.json())
+            .then(res => {
+                if(res.success) {
+                    const d = res.dados;
+                    document.getElementById('view-nome').innerText = d.membro_nome;
+                    document.getElementById('view-igreja').innerText = d.igreja_nome;
+                    document.getElementById('view-endereco').innerText = d.igreja_endereco || '';
+                    document.getElementById('view-rol').innerText = d.membro_registro_interno || '---';
+                    document.getElementById('view-data-batismo').innerText = d.data_batismo_formatada;
+                    document.getElementById('view-data-hoje').innerText = d.data_hoje;
+                    document.getElementById('view-pastor').innerText = d.pastor_nome || "Pastor Responsável";
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                certificadoGlobal.modalInstance.hide();
+                alert("Erro ao carregar os dados.");
+            })
+            .finally(() => {
+                if(document.getElementById('cert-loader')) document.getElementById('cert-loader').style.display = 'none';
+            });
+    };
+});
+
+// Limpador de Backdrop (Previnir tela escura travada)
+document.addEventListener('hidden.bs.modal', function (event) {
+    if (event.target.id === 'modalCertificadoDinamico') {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(b => b.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style = '';
+    }
+});
+</script>
+
 </script>

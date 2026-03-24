@@ -407,4 +407,30 @@ class MembrosController extends Controller
 		exit;
 	}
 
+	// No MembrosController.php
+	public function dadosCertificado($id)
+	{
+		// Adicione isso no início para testar se a rota chega aqui
+		header('Content-Type: application/json');
+
+		$idIgreja = $_SESSION['usuario_igreja_id'];
+		$dados = $this->model->getDadosCertificado($id, $idIgreja);
+
+		if (!$dados) {
+			echo json_encode(['success' => false, 'message' => 'Membro não encontrado']);
+			exit;
+		}
+
+		$dados['data_batismo_formatada'] = date('d/m/Y', strtotime($dados['membro_data_batismo']));
+		$dados['data_hoje'] = date('d/m/Y'); // Simplificado para teste
+
+		echo json_encode(['success' => true, 'dados' => $dados]);
+		exit; // Garante que nenhum HTML extra do sistema seja enviado
+	}
+
+	private function getMesPt($n) {
+		$meses = [1=>'Janeiro', 2=>'Fevereiro', 3=>'Março', 4=>'Abril', 5=>'Maio', 6=>'Junho', 7=>'Julho', 8=>'Agosto', 9=>'Setembro', 10=>'Outubro', 11=>'Novembro', 12=>'Dezembro'];
+		return $meses[$n];
+	}
+
 }

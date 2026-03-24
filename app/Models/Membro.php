@@ -378,5 +378,16 @@ class Membro
 		return $res;
 	}
 
+	public function getDadosCertificado($membroId, $igrejaId)
+	{
+		$sql = "SELECT m.*, i.igreja_nome, i.igreja_cnpj, i.igreja_endereco, p.membro_nome as pastor_nome
+				FROM membros m
+				JOIN igrejas i ON m.membro_igreja_id = i.igreja_id
+				LEFT JOIN membros p ON i.igreja_pastor_id = p.membro_id
+				WHERE m.membro_id = ? AND m.membro_igreja_id = ?";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$membroId, $igrejaId]);
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
 
 }

@@ -65,6 +65,13 @@
                             <td class="text-center">
                                 <div class="btn-group shadow-sm border">
                                     <button class="btn btn-white btn-sm btn-gerar-carteirinha" data-id="<?= $membro['membro_id'] ?>" title="Imprimir Carteirinha">🆔</button>
+                                    <?php if (!empty($membro['membro_data_batismo'])): ?>
+                                    <button type="button" class="btn btn-sm btn-abrir-certificado"
+                                        data-id="<?= $membro['membro_id'] ?>">
+                                        🎓
+                                    </button>
+                                    <?php endif; ?>
+
                                     <button class="btn btn-white btn-sm" data-bs-toggle="modal" data-bs-target="#modalEndereco<?= $membro['membro_id'] ?>" title="Endereço">📍</button>
                                     <button class="btn btn-white btn-sm" data-bs-toggle="modal" data-bs-target="#modalFoto<?= $membro['membro_id'] ?>" title="Foto">📸</button>
 
@@ -74,7 +81,7 @@
                                     <button class="btn btn-white btn-sm" data-bs-toggle="modal" data-bs-target="#modalHistorico<?= $membro['membro_id'] ?>" title="Histórico">📜</button>
                                     <button class="btn btn-white btn-sm" data-bs-toggle="modal" data-bs-target="#modalFicha<?= $membro['membro_id'] ?>" title="Ficha Completa">📄</button>
                                 </div>
-                                <a href="<?= url('membros/edit/' . $membro['membro_id']) ?>" class="btn btn-link btn-sm text-primary ms-2 text-decoration-none fw-bold">Editar</a>
+                                <a href="<?= url('membros/edit/' . $membro['membro_id']) ?>" class="btn btn-link btn-sm text-primary ms-2 text-decoration-none fw-bold">✏️</a>
                             </td>
                         </tr>
 
