@@ -5,6 +5,9 @@
     <title>EKKLESIA</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <!--FAVICON-->
+    <link rel="icon" type="image/png" href="<?= url('assets/img/favicon.png') ?>?v=1.1">
+
     <!--<link href="<?= asset('css/bootstrap-icons.min.css') ?>" rel="stylesheet">-->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="<?= asset('css/bootstrap.min.css') ?>" rel="stylesheet">

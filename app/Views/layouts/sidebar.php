@@ -40,11 +40,14 @@
 
         <a class="menu-link" data-bs-toggle="collapse" href="#financeiro">💵 Financeiro</a>
         <div class="collapse submenu" id="financeiro">
+            <a href="<?= url('financeiro') ?>">Movimentações</a>
             <a href="<?= url('financeiro/categorias') ?>">Categorias</a>
-            <a href="<?= url('financeiro/contas') ?>">Contas</a>
             <hr class="m-1 opacity-25">
-            <a href="<?= url('financeiro/movimentacoes') ?>">Movimentações</a>
-            <a href="<?= url('financeiro/pagamentos') ?>">Pagamentos</a>
+            <a href="<?= url('financeiro/contas') ?>">Contas Bancárias</a>
+            <a href="<?= url('financeiro/lancamentos') ?>">Lançamentos</a>
+            <hr class="m-1 opacity-25">
+            <a href="<?= url('financeiro/dashboard') ?>">Dashboard</a>
+            <a href="<?= url('financeiro/relatorio_membros') ?>">Ofertas e Dizimos</a>
         </div>
 
         <a class="menu-link" data-bs-toggle="collapse" href="#patrimonios">🏠 Patrimônios</a>
@@ -57,9 +60,9 @@
 
         <a class="menu-link" data-bs-toggle="collapse" href="#documentos">📄 Documentos</a>
         <div class="collapse submenu" id="documentos">
-            <a href="<?= url('documentos/categorias/create') ?>">Categorias</a>
-            <a href="<?= url('documentos') ?>">Listagem</a>
-            <a href="<?= url('documentos/create') ?>">Novo Documento</a>
+            <a href="<?= url('documentos') ?>">Documentos Cadastrados</a>
+            <a href="<?= url('documentos/categorias') ?>">Categorias</a>
+            <a href="<?= url('documentos/dashboard') ?>">Dashboard</a>
         </div>
 
         <hr class="text-white-50">

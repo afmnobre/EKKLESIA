@@ -288,7 +288,7 @@ class SociedadesController extends Controller
             if ($layoutJson) {
                // Remove escapes automáticos se o servidor estiver adicionando
                 $layoutJson = stripslashes($layoutJson);
-            }
+                }
 
 			if (!$id || !$layoutJson) {
 				throw new \Exception("Dados incompletos (ID ou Layout ausentes).");
