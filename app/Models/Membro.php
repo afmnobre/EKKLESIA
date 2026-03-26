@@ -118,34 +118,6 @@ class Membro
 		}
 	}
 
-	public function saveEndereco($data)
-	{
-		// Verifica se já existe um endereço para este membro
-		$stmt = $this->db->prepare("SELECT membro_endereco_id FROM membros_enderecos WHERE membro_endereco_membro_id = ?");
-		$stmt->execute([$data['membro_id']]);
-		$existe = $stmt->fetch();
-
-		if ($existe) {
-			$sql = "UPDATE membros_enderecos SET
-						membro_endereco_rua = :rua,
-						membro_endereco_cidade = :cidade,
-						membro_endereco_estado = :estado,
-						membro_endereco_cep = :cep
-					WHERE membro_endereco_membro_id = :membro_id
-					AND membro_endereco_igreja_id = :igreja_id";
-		} else {
-			$sql = "INSERT INTO membros_enderecos (
-						membro_endereco_membro_id, membro_endereco_igreja_id,
-						membro_endereco_rua, membro_endereco_cidade,
-						membro_endereco_estado, membro_endereco_cep
-					) VALUES (
-						:membro_id, :igreja_id, :rua, :cidade, :estado, :cep
-					)";
-		}
-
-		return $this->db->prepare($sql)->execute($data);
-	}
-
 	public function saveFoto($membroId, $nomeArquivo)
 	{
 		// 1. Verificar se já existe uma foto para este membro para retornar o nome antigo (para deletar o arquivo físico)
@@ -358,6 +330,13 @@ class Membro
 		return $res;
 	}
 
+    public function getIgrejaDados($idIgreja) {
+        $sql = "SELECT * FROM igrejas WHERE igreja_id = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$idIgreja]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
 	public function getHistoricosParaVariosMembros($ids) {
 		if (empty($ids)) return [];
 
@@ -388,6 +367,139 @@ class Membro
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([$membroId, $igrejaId]);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
+
+	/**
+	 * Busca os dados de um membro específico pelo ID
+	 */
+	public function getMembroById($id)
+	{
+		$sql = "SELECT * FROM membros WHERE membro_id = ?";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$id]);
+		return $stmt->fetch(\PDO::FETCH_ASSOC);
+	}
+
+	public function buscarFiltrado($igrejaId, $letra = null, $busca = null)
+	{
+		$sql = "SELECT m.*,
+					   e.membro_endereco_rua, e.membro_endereco_cidade,
+					   e.membro_endereco_estado, e.membro_endereco_cep,
+					   f.membro_foto_arquivo,
+					   GROUP_CONCAT(c.cargo_nome SEPARATOR ', ') as cargos_nomes
+				FROM membros m
+				LEFT JOIN membros_enderecos e ON m.membro_id = e.membro_endereco_membro_id
+				LEFT JOIN membros_fotos f ON m.membro_id = f.membro_foto_membro_id
+				LEFT JOIN membros_cargos_vinculo v ON m.membro_id = v.vinculo_membro_id
+				LEFT JOIN cargos c ON v.vinculo_cargo_id = c.cargo_id
+				WHERE m.membro_igreja_id = :igrejaId";
+
+		$params = [':igrejaId' => $igrejaId];
+
+		// Se houver busca por texto (prioridade)
+		if (!empty($busca)) {
+			$sql .= " AND m.membro_nome LIKE :busca";
+			$params[':busca'] = '%' . $busca . '%';
+		}
+		// Se não houver busca, mas houver letra (Abas)
+		elseif (!empty($letra)) {
+			$sql .= " AND m.membro_nome LIKE :letra";
+			$params[':letra'] = $letra . '%';
+		}
+
+		$sql .= " GROUP BY m.membro_id ORDER BY m.membro_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	public function getByIdCompleto($id, $igrejaId)
+	{
+		$sql = "SELECT
+					m.*,
+					f.membro_foto_arquivo,
+					i.igreja_nome,
+					i.igreja_endereco,
+					i.igreja_cnpj,
+					p.membro_nome as pastor_nome,
+					-- ADICIONADO: CAMPOS DO ENDEREÇO
+					e.membro_endereco_id,
+					e.membro_endereco_cep,
+					e.membro_endereco_rua,
+					e.membro_endereco_numero,
+					e.membro_endereco_complemento,
+					e.membro_endereco_bairro,
+					e.membro_endereco_cidade,
+					e.membro_endereco_estado
+				FROM membros m
+				LEFT JOIN membros_fotos f ON m.membro_id = f.membro_foto_membro_id
+				LEFT JOIN igrejas i ON m.membro_igreja_id = i.igreja_id
+				LEFT JOIN membros p ON i.igreja_pastor_id = p.membro_id
+				-- ADICIONADO: JOIN COM A TABELA DE ENDEREÇOS
+				LEFT JOIN membros_enderecos e ON m.membro_id = e.membro_endereco_membro_id
+				WHERE m.membro_id = :id AND m.membro_igreja_id = :igreja_id";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->bindValue(':id', $id);
+		$stmt->bindValue(':igreja_id', $igrejaId);
+		$stmt->execute();
+
+		return $stmt->fetch(\PDO::FETCH_ASSOC);
+	}
+
+	public function saveEndereco($data)
+	{
+		// 1. Verifica se este membro já tem um endereço cadastrado
+		$check = "SELECT membro_endereco_id FROM membros_enderecos WHERE membro_endereco_membro_id = :membro_id";
+		$stmtCheck = $this->db->prepare($check);
+		$stmtCheck->bindValue(':membro_id', $data['membro_id']);
+		$stmtCheck->execute();
+		$idExistente = $stmtCheck->fetchColumn();
+
+		if ($idExistente) {
+			// 2. Se existe, faz UPDATE
+			$sql = "UPDATE membros_enderecos SET
+						membro_endereco_rua = :rua,
+						membro_endereco_numero = :numero,
+						membro_endereco_complemento = :complemento,
+						membro_endereco_bairro = :bairro,
+						membro_endereco_cidade = :cidade,
+						membro_endereco_estado = :estado,
+						membro_endereco_cep = :cep
+					WHERE membro_endereco_id = :id";
+			$stmt = $this->db->prepare($sql);
+			$stmt->bindValue(':id', $idExistente);
+		} else {
+			// 3. Se não existe, faz INSERT
+			$sql = "INSERT INTO membros_enderecos (
+						membro_endereco_membro_id,
+						membro_endereco_igreja_id,
+						membro_endereco_rua,
+						membro_endereco_numero,
+						membro_endereco_complemento,
+						membro_endereco_bairro,
+						membro_endereco_cidade,
+						membro_endereco_estado,
+						membro_endereco_cep
+					) VALUES (
+						:membro_id, :igreja_id, :rua, :numero, :complemento, :bairro, :cidade, :estado, :cep
+					)";
+			$stmt = $this->db->prepare($sql);
+			$stmt->bindValue(':membro_id', $data['membro_id']);
+			$stmt->bindValue(':igreja_id', $data['igreja_id']);
+		}
+
+		// Bind dos valores comuns a ambos
+		$stmt->bindValue(':rua', $data['rua']);
+		$stmt->bindValue(':numero', $data['numero']);
+		$stmt->bindValue(':complemento', $data['complemento']);
+		$stmt->bindValue(':bairro', $data['bairro']);
+		$stmt->bindValue(':cidade', $data['cidade']);
+		$stmt->bindValue(':estado', $data['estado']);
+		$stmt->bindValue(':cep', $data['cep']);
+
+		return $stmt->execute();
 	}
 
 }

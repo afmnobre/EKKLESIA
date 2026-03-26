@@ -52,7 +52,7 @@
 										</li>
 										<li><hr class="dropdown-divider"></li>
 										<li>
-											<a class="dropdown-item text-danger" href="<?= url('escolaDominical/excluir/' . $classe['classe_id']) ?>"
+											<a class="dropdown-item text-danger" href="<?= url('escolaDominical/excluirClasse/' . $classe['classe_id']) ?>"
 											   onclick="return confirm('Deseja realmente excluir esta classe?')">
 												<i class="bi bi-trash me-2"></i>Excluir
 											</a>
@@ -104,7 +104,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalNovaClasse" tabindex="-1" aria-hidden="true">
+<!-- <div class="modal fade" id="modalNovaClasse" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
@@ -150,7 +150,7 @@
         </div>
     </div>
 </div>
-
+-->
 
 <div class="modal fade" id="modalNovaClasse" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

@@ -22,11 +22,13 @@ class DashboardController extends Controller
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 
 		$igreja = $this->modelIgreja->getByIgreja($igrejaId);
+		$totalMembros = $this->model->getTotalMembros($igrejaId); // Nova linha
 		$ebdDinamica = $this->model->getMetricasEBD($igrejaId);
 		$sociedades = $this->model->getMetricasSociedades($igrejaId);
 
 		$this->view('dashboard/index', [
 			'igreja' => $igreja,
+			'totalMembros' => $totalMembros, // Enviando para a view
 			'ebd' => $ebdDinamica,
 			'sociedades' => $sociedades
 		]);

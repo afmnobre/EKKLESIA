@@ -93,4 +93,11 @@ class Dashboard
 
 		return $sociedades;
 	}
+
+	public function getTotalMembros($igrejaId) {
+		$sql = "SELECT COUNT(*) FROM membros WHERE membro_igreja_id = ? AND membro_status = 'Ativo'";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchColumn();
+	}
 }

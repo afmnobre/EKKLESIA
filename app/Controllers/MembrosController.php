@@ -15,35 +15,41 @@ class MembrosController extends Controller
         $this->model = new Membro();
     }
 
-    // Corresponde a: url('membros')
+    /**
+     * Lista principal de membros
+     */
 	public function index()
 	{
 		$idIgreja = $_SESSION['usuario_igreja_id'];
+		$portalModel = new \App\Models\PortalMembro();
 
-		// CONSULTA 1: Todos os membros da igreja
+		// BUSCA O NOME DA IGREJA PARA EVITAR O WARNING
+		$dadosIgreja = $portalModel->getIgreja($idIgreja);
+		$nomeIgreja = $dadosIgreja['igreja_nome'] ?? 'EKKLESIA';
+
+		$pendentes = $portalModel->getPendentes($idIgreja);
+		$totalPendentes = count($pendentes);
+
 		$membros = $this->model->getAll($idIgreja);
+		$todosCargos = $this->model->getTodosCargos();
 
+		// Se não houver membros ativos, enviamos os dados básicos
 		if (empty($membros)) {
-			return $this->view('membros/index', ['membros' => [], 'todosCargos' => $this->model->getTodosCargos()]);
+			return $this->view('membros/index', [
+				'membros' => [],
+				'todosCargos' => $todosCargos,
+				'totalPendentes' => $totalPendentes,
+				'nomeIgreja' => $nomeIgreja
+			]);
 		}
 
-		// Coletamos todos os IDs de membros em um array simples [1, 2, 3...]
 		$idsMembros = array_column($membros, 'membro_id');
-
-		// CONSULTA 2: Todos os cargos (você já faz isso)
-		$todosCargos = $this->model->getTodosCargos();
 		$mapaCargos = array_column($todosCargos, 'cargo_nome', 'cargo_id');
-
-		// CONSULTA 3: Todos os vínculos de cargos e históricos DE UMA VEZ
-		// Para isso, precisamos de dois novos métodos no Model que usem "WHERE IN (...)"
 		$todosVinculos = $this->model->getCargosParaVariosMembros($idsMembros);
 		$todosHistoricos = $this->model->getHistoricosParaVariosMembros($idsMembros);
 
-		// Agora organizamos os dados no loop (Sem tocar no Banco de Dados!)
 		foreach ($membros as &$m) {
 			$id = $m['membro_id'];
-
-			// Filtra cargos desse membro no array geral
 			$meusCargosIds = $todosVinculos[$id] ?? [];
 			$m['cargos_selecionados'] = $meusCargosIds;
 
@@ -52,385 +58,441 @@ class MembrosController extends Controller
 				if (isset($mapaCargos[$cid])) $nomes[] = $mapaCargos[$cid];
 			}
 			$m['membro_cargo'] = !empty($nomes) ? implode(', ', $nomes) : 'Membro Comum';
-
-			// Filtra históricos desse membro no array geral
 			$m['historicos'] = $todosHistoricos[$id] ?? [];
 		}
 
 		$this->view('membros/index', [
 			'membros' => $membros,
-			'todosCargos' => $todosCargos
+			'todosCargos' => $todosCargos,
+			'totalPendentes' => $totalPendentes,
+			'nomeIgreja' => $nomeIgreja // Passando o nome corrigido
 		]);
 	}
 
-	public function updateCargos()
-	{
-		$membroId = $_POST['membro_id'] ?? null;
-		$cargosIds = $_POST['cargos'] ?? [];
-
-		if ($membroId) {
-			// Removi o bloco de diagnóstico e deixei o fluxo normal
-			if ($this->model->saveCargosVinculo($membroId, $cargosIds)) {
-				header("Location: " . url('membros') . "?sucesso=cargos_atualizados");
-			} else {
-				die("Erro persistente no Model. Verifique permissões de escrita.");
-			}
-		}
-		exit;
-	}
-
-    // Corresponde a: url('membros/create')
-    public function create()
+    /**
+     * Filtro AJAX para busca e paginação alfabética
+     */
+    public function filtrar()
     {
-        $this->view('membros/cadastrar');
+        $letra = $_GET['letra'] ?? 'A';
+        $busca = $_GET['busca'] ?? '';
+        $idIgreja = $_SESSION['usuario_igreja_id'];
+
+        $membros = $this->model->buscarFiltrado($idIgreja, $letra, $busca);
+
+        if (empty($membros)) {
+            echo '<tr><td colspan="6" class="text-center py-5 text-muted">Nenhum membro encontrado.</td></tr>';
+            return;
+        }
+
+        foreach ($membros as $m): ?>
+            <tr>
+                <td><span class="badge bg-light text-dark border"><?= $m['membro_registro_interno'] ?></span></td>
+                <td class="ps-4">
+                    <span class="fw-bold d-block text-dark"><?= htmlspecialchars($m['membro_nome']) ?></span>
+                    <small class="text-muted">Nasc: <?= !empty($m['membro_data_nascimento']) ? date('d/m/Y', strtotime($m['membro_data_nascimento'])) : '--' ?></small>
+                </td>
+				<td>
+					<?php if (!empty($m['cargos_nomes'])): ?>
+						<span class="badge bg-light text-primary border shadow-sm"
+							  title="<?= htmlspecialchars($m['cargos_nomes']) ?>"
+							  style="cursor: help;">
+							<i class="bi bi-tag-fill me-1"></i>
+							<?= (strlen($m['cargos_nomes']) > 25) ? substr(htmlspecialchars($m['cargos_nomes']), 0, 25) . '...' : htmlspecialchars($m['cargos_nomes']) ?>
+						</span>
+					<?php else: ?>
+						<span class="text-muted small italic">Membro Comum</span>
+					<?php endif; ?>
+				</td>
+                <td><small class="text-muted"><?= $m['membro_telefone'] ?></small></td>
+                <td>
+                    <span class="badge rounded-pill <?= $m['membro_status'] == 'Ativo' ? 'bg-success' : 'bg-danger' ?>">
+                        <?= strtoupper($m['membro_status']) ?>
+                    </span>
+                </td>
+                <td class="text-center">
+                    <div class="btn-group shadow-sm border">
+                        <button class="btn btn-white btn-sm btn-acao-dinamica"
+                                data-id="<?= $m['membro_id'] ?>"
+                                data-acao="certificado" title="Certificado">🎓</button>
+
+
+<button class="btn btn-white btn-sm btn-acao-dinamica"
+        data-id="<?= $m['membro_id'] ?>"
+        data-acao="carteirinha"
+        title="Visualizar Carteirinha">🆔</button>
+
+                        <button class="btn btn-white btn-sm btn-acao-dinamica"
+                                data-id="<?= $m['membro_id'] ?>"
+                                data-acao="foto" title="Foto do Membro">
+                                <?= !empty($m['membro_foto_arquivo']) ? '📸' : '📷' ?></button>
+
+                        <button class="btn btn-white btn-sm btn-acao-dinamica"
+                                data-id="<?= $m['membro_id'] ?>"
+                                data-acao="cargos" title="Cargos e Funções">🏷️</button>
+
+                        <button class="btn btn-white btn-sm btn-acao-dinamica"
+                                data-id="<?= $m['membro_id'] ?>"
+                                data-acao="endereco" title="Endereço">📍</button>
+
+                        <button class="btn btn-white btn-sm btn-acao-dinamica"
+                                data-id="<?= $m['membro_id'] ?>"
+                                data-acao="status" title="Alterar Status">🔄</button>
+
+                        <button class="btn btn-white btn-sm btn-acao-dinamica"
+                                data-id="<?= $m['membro_id'] ?>"
+                                data-acao="historico" title="Registrar Histórico">📜</button>
+
+                        <button class="btn btn-white btn-sm btn-acao-dinamica"
+                                data-id="<?= $m['membro_id'] ?>"
+                                data-acao="ficha" title="Ficha Completa">📄</button>
+                    </div>
+                    <a href="<?= url('membros/edit/' . $m['membro_id']) ?>" class="btn btn-link btn-sm text-primary ms-2 fw-bold text-decoration-none">✏️</a>
+                </td>
+            </tr>
+        <?php endforeach;
     }
 
-    // Processamento do formulário
-	public function store()
+    /**
+     * O CARREGADOR MODULAR (O que você pediu)
+     * Busca os arquivos em app/Views/paginas/membros/modais/modal-{acao}/
+     */
+	public function getModalContent($acao, $id)
 	{
-		$membroModel = new \App\Models\Membro();
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+		$membro = $this->model->getByIdCompleto($id, $igrejaId);
 
-		$idIgreja = $_SESSION['usuario_igreja_id'] ?? null;
-		if (!$idIgreja) {
-			header("Location: " . url('login'));
-			exit;
+		if (!$membro) {
+			echo "<div class='p-3 text-danger'>Membro não localizado.</div>";
+			return;
 		}
 
-		$proximoId = $membroModel->getNextId();
-		$ano       = date('Y');
-		$mes       = date('m');
-		$idSufixo  = str_pad($proximoId, 4, '0', STR_PAD_LEFT);
-		$registroInterno = "{$idIgreja}{$ano}{$mes}{$idSufixo}";
+		// Inicializamos as variáveis para evitar o erro "Undefined variable" em outros modais
+		$todosCargos = [];
+		$cargosSelecionados = [];
 
-		$data = [
-			'igreja_id'        => $idIgreja,
-			'registro_interno' => $registroInterno,
-			'nome'             => $_POST['nome'],
-			'nascimento'       => $_POST['data_nascimento'] ?: null,
-			'genero'           => $_POST['genero'] ?? null,
-			'email'            => $_POST['email'] ?? null,
-			'telefone'         => $_POST['telefone'] ?? null,
-			'batismo'          => $_POST['data_batismo'] ?: null, // Novo campo capturado do HTML
-			'status'           => 'Ativo'
-		];
+		// Lógica específica baseada na ação
+		switch ($acao) {
+			case 'cargos':
+				// Busca a lista de 31 cargos que você tem no banco
+				$todosCargos = $this->model->getTodosCargos();
+				// Busca o que o membro já tem (IDs)
+				$cargosSelecionados = $this->model->getCargosIdsByMembro($id);
+				break;
 
-		if ($membroModel->insert($data)) {
-			header("Location: " . url('membros') . "?sucesso=1");
-			exit;
+			case 'historico':
+				// Se precisar de algo específico para o histórico no futuro, adicione aqui
+                break;
+			case 'ficha':
+				// 1. Busca os dados da Igreja do usuário logado
+				$idIgreja = $_SESSION['usuario_igreja_id'];
+
+				// Supondo que você tenha um método no model para pegar os dados da igreja
+				// Se não tiver, pode fazer uma query simples: SELECT igreja_nome FROM igrejas WHERE igreja_id = ?
+				$dadosIgreja = $this->model->getIgrejaDados($idIgreja);
+				$membro['nome_igreja'] = $dadosIgreja['igreja_nome'] ?? 'Igreja Não Identificada';
+
+				// 2. Busca cargos e histórico
+				$membro['membro_cargo'] = $this->model->getCargosNomesByMembro($id);
+				$membro['historicos'] = $this->model->getHistorico($id);
+
+				// 3. Lógica da Foto (URL Pública)
+				$membro['foto_url'] = null;
+				if (!empty($membro['membro_foto_arquivo'])) {
+					$registro = $membro['membro_registro_interno'];
+					$caminhoWeb = "assets/uploads/{$idIgreja}/membros/{$registro}/{$membro['membro_foto_arquivo']}";
+					$membro['foto_url'] = url($caminhoWeb);
+				}
+				break;
+			case 'carteirinha':
+				$idIgreja = $_SESSION['usuario_igreja_id'];
+
+				// Captura a instância do banco de dados corretamente
+				$db = \App\Core\Database::getInstance();
+
+				// 1. Busca os dados básicos da igreja
+				$dadosIgreja = $this->model->getIgrejaDados($idIgreja);
+				$pastorId = $dadosIgreja['igreja_pastor_id'] ?? null;
+				$nomePastor = 'NÃO INFORMADO';
+
+				// 2. Busca o NOME do Pastor na tabela membros
+				if ($pastorId) {
+					$stmtPastor = $db->prepare("SELECT membro_nome FROM membros WHERE membro_id = ?");
+					$stmtPastor->execute([$pastorId]);
+					$resPastor = $stmtPastor->fetch(\PDO::FETCH_ASSOC);
+					if ($resPastor) {
+						$nomePastor = mb_strtoupper($resPastor['membro_nome']);
+					}
+				}
+
+				// 3. Busca as Redes Sociais para os contatos
+				$stmtRedes = $db->prepare("
+					SELECT rede_nome, rede_usuario
+					FROM igrejas_redes_sociais
+					WHERE rede_igreja_id = ? AND rede_status = 'ativo'
+				");
+				$stmtRedes->execute([$idIgreja]);
+				$redes = $stmtRedes->fetchAll(\PDO::FETCH_ASSOC);
+
+				$contatosArray = [];
+				foreach ($redes as $r) {
+					$contatosArray[] = "{$r['rede_nome']}: {$r['rede_usuario']}";
+				}
+				$contatosStr = !empty($contatosArray) ? implode(' | ', $contatosArray) : ($dadosIgreja['igreja_telefone'] ?? '');
+
+				// 4. Prepara os arrays para a View (layout.php)
+				$m = [
+					'membro_id'               => $membro['membro_id'],
+					'membro_registro_interno' => $membro['membro_registro_interno'] ?? '000',
+					'membro_nome'             => mb_strtoupper($membro['membro_nome'] ?? ''),
+					'membro_data_nascimento'  => $membro['membro_data_nascimento'] ?? '',
+					'membro_data_batismo'     => $membro['membro_data_batismo'] ?? '',
+					'membro_foto_arquivo'     => $membro['membro_foto_arquivo'] ?? null,
+					'membro_cargo'            => mb_strtoupper($this->model->getCargosNomesByMembro($id) ?: 'MEMBRO')
+				];
+
+				$igreja = [
+					'nome'     => mb_strtoupper($dadosIgreja['igreja_nome'] ?? 'IGREJA PRESBITERIANA'),
+					'pastor'   => $nomePastor, // Agora com o nome real vindo de membros
+					'endereco' => $dadosIgreja['igreja_endereco'] ?? '',
+					'contatos' => $contatosStr
+				];
+
+				$caminhoView = dirname(__DIR__) . '/Views/paginas/membros/modais/modal-carteirinha/layout.php';
+				if (file_exists($caminhoView)) {
+					include $caminhoView;
+				}
+				exit;
+        }
+
+		// Define os caminhos dos arquivos modulares
+		$diretorioModal = dirname(__DIR__, 1) . "/Views/paginas/membros/modais/modal-{$acao}";
+		$layout = "{$diretorioModal}/layout.php";
+		$css    = "{$diretorioModal}/estilo.css";
+		$js     = "{$diretorioModal}/script.js";
+
+		if (file_exists($layout)) {
+			// Injeta CSS se houver
+			if (file_exists($css)) {
+				echo "<style>" . file_get_contents($css) . "</style>";
+			}
+
+			// Torna as variáveis disponíveis para o layout.php
+			// O include extrai o conteúdo aqui, mantendo o acesso a $membro, $todosCargos, etc.
+			include $layout;
+
+			// Injeta JS se houver
+			if (file_exists($js)) {
+				echo "<script>" . file_get_contents($js) . "</script>";
+			}
 		} else {
-			die("Erro ao inserir no banco de dados. Verifique o Model.");
+			echo "<div class='p-4 text-center text-muted'>Componente modular '{$acao}' não encontrado em: <br><small>{$diretorioModal}</small></div>";
 		}
 	}
 
-	public function updateEndereco()
-	{
-		$idIgreja = $_SESSION['usuario_igreja_id'] ?? null;
+    // --- MÉTODOS DE PERSISTÊNCIA E EDIÇÃO ---
 
-		if (!$idIgreja || $_SERVER['REQUEST_METHOD'] !== 'POST') {
-			header("Location: " . url('membros'));
-			exit;
-		}
+    public function create() { $this->view('membros/cadastrar'); }
 
-		$membroModel = new \App\Models\Membro();
+    public function store()
+    {
+        $idIgreja = $_SESSION['usuario_igreja_id'] ?? die("Sessão expirada");
 
-		$data = [
-			'membro_id' => $_POST['membro_id'],
-			'igreja_id' => $idIgreja,
-			'rua'       => $_POST['rua'],
-			'cidade'    => $_POST['cidade'],
-			'estado'    => $_POST['estado'],
-			'cep'       => $_POST['cep']
+        $proximoId = $this->model->getNextId();
+        $registroInterno = $idIgreja . date('Ym') . str_pad($proximoId, 4, '0', STR_PAD_LEFT);
+
+        $data = [
+            'igreja_id'        => $idIgreja,
+            'registro_interno' => $registroInterno,
+            'nome'             => $_POST['nome'],
+            'nascimento'       => $_POST['data_nascimento'] ?: null,
+            'genero'           => $_POST['genero'] ?? null,
+            'email'            => $_POST['email'] ?? null,
+            'telefone'         => $_POST['telefone'] ?? null,
+            'batismo'          => $_POST['data_batismo'] ?: null,
+            'status'           => 'Ativo'
         ];
 
-		if ($membroModel->saveEndereco($data)) {
+        if ($this->model->insert($data)) {
+            header("Location: " . url('membros') . "?sucesso=1");
+        } else {
+            die("Erro ao inserir membro.");
+        }
+        exit;
+    }
+
+    public function edit($id)
+    {
+        $idIgreja = $_SESSION['usuario_igreja_id'];
+        $membro = $this->model->getById($id, $idIgreja);
+        if (!$membro) { header('Location: ' . url('membros')); exit; }
+        $this->view('membros/cadastrar', ['membro' => $membro]);
+    }
+
+    public function update($id)
+    {
+        $idIgreja = $_SESSION['usuario_igreja_id'];
+        $dados = [
+            'nome'            => $_POST['nome'],
+            'genero'          => $_POST['genero'] ?? null,
+            'email'           => $_POST['email'],
+            'telefone'        => $_POST['telefone'],
+            'data_nascimento' => $_POST['data_nascimento'],
+            'data_batismo'    => $_POST['data_batismo']
+        ];
+
+        if ($this->model->update($id, $idIgreja, $dados)) {
+            header('Location: ' . url('membros?sucesso=editado'));
+        } else {
+            header('Location: ' . url('membros/edit/' . $id . '?erro=1'));
+        }
+        exit;
+    }
+
+    public function updateCargos()
+    {
+        $membroId = $_POST['membro_id'] ?? null;
+        $cargosIds = $_POST['cargos'] ?? [];
+        if ($membroId && $this->model->saveCargosVinculo($membroId, $cargosIds)) {
+            header("Location: " . url('membros') . "?sucesso=cargos_atualizados");
+        }
+        exit;
+    }
+
+	public function updateEndereco() //NOVO AJAX
+	{
+		// Captura os dados via POST
+		$data = [
+			'membro_id'   => $_POST['membro_id'],
+			'igreja_id'   => $_SESSION['usuario_igreja_id'],
+			'cep'         => $_POST['membro_cep'],
+			'rua'         => $_POST['membro_rua'],
+			'numero'      => $_POST['membro_numero'],
+			'complemento' => $_POST['membro_complemento'],
+			'bairro'      => $_POST['membro_bairro'],
+			'cidade'      => $_POST['membro_cidade'],
+			'estado'      => $_POST['membro_uf'] // Nome que está no ID do input do modal
+		];
+
+		if ($this->model->saveEndereco($data)) {
+			// Retorna para a lista com mensagem de sucesso
 			header("Location: " . url('membros') . "?sucesso=endereco_atualizado");
 		} else {
-			header("Location: " . url('membros') . "?erro=1");
+			die("Erro ao processar o endereço.");
 		}
 		exit;
 	}
 
 	public function uploadFoto()
 	{
-		$idIgreja = $_SESSION['usuario_igreja_id'] ?? null;
+		$idIgreja = $_SESSION['usuario_igreja_id'];
 		$membroId = $_POST['membro_id'];
 		$registro = $_POST['membro_registro_interno'];
 
 		if (isset($_FILES['foto']) && $_FILES['foto']['error'] === 0) {
-
 			$extensao = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
 			$novoNome = "perfil_" . time() . "." . $extensao;
 
-			// 1. Define o caminho absoluto subindo níveis a partir deste arquivo (Controller)
-			// Se o controller está em /app/Controllers/, subimos 2 níveis para a raiz do projeto
-			$raizProjeto = dirname(__DIR__, 2);
+			// NOVO CAMINHO: Adicionada a subpasta /membros/
+			$diretorioDestino = dirname(__DIR__, 2) . "/public/assets/uploads/{$idIgreja}/membros/{$registro}/";
 
-			// Caminho final: /var/www/html/EKKLESIA/public/assets/uploads/ID/REGISTRO/
-			$diretorioDestino = $raizProjeto . "/public/assets/uploads/{$idIgreja}/{$registro}/";
-
-			// 2. Tenta criar a pasta com permissão total (0777)
+			// Cria o diretório recursivamente (o 0777 com 'true' garante a criação de toda a árvore)
 			if (!is_dir($diretorioDestino)) {
-				if (!mkdir($diretorioDestino, 0777, true)) {
-					// Se falhar aqui, é permissão do Linux na pasta 'uploads'
-					die("Erro: Não foi possível criar o diretório: " . $diretorioDestino);
-				}
+				mkdir($diretorioDestino, 0777, true);
 			}
 
-			// 3. Move o arquivo
 			if (move_uploaded_file($_FILES['foto']['tmp_name'], $diretorioDestino . $novoNome)) {
-				$membroModel = new \App\Models\Membro();
+				// Salva o nome do arquivo no banco e retorna o nome da foto antiga
+				$fotoAntiga = $this->model->saveFoto($membroId, $novoNome);
 
-				// Salva no banco e captura o nome da antiga para limpar o servidor
-				$fotoAntiga = $membroModel->saveFoto($membroId, $novoNome);
-
-				if (is_string($fotoAntiga) && !empty($fotoAntiga)) {
-					$caminhoAntigo = $diretorioDestino . $fotoAntiga;
-					if (file_exists($caminhoAntigo)) {
-						unlink($caminhoAntigo);
-					}
+				// Opcional: Deleta a foto antiga do servidor para não acumular lixo
+				if ($fotoAntiga && file_exists($diretorioDestino . $fotoAntiga)) {
+					unlink($diretorioDestino . $fotoAntiga);
 				}
 
 				header("Location: " . url('membros') . "?sucesso=foto_atualizada");
-				exit;
-			} else {
-				// Se cair aqui, o PHP não tem permissão de escrita no destino final
-				die("Erro ao mover o arquivo para: " . $diretorioDestino);
 			}
 		}
 		exit;
 	}
 
-    public function updateStatus()
-	{
-		$membroId = $_POST['membro_id'] ?? null;
-		$novoStatus = $_POST['status'] ?? null;
-		$igrejaId = $_SESSION['usuario_igreja_id'] ?? null;
-
-		if ($membroId && $novoStatus && $igrejaId) {
-			$membroModel = new \App\Models\Membro();
-
-			if ($membroModel->updateStatus($membroId, $igrejaId, $novoStatus)) {
-				header("Location: " . url('membros') . "?sucesso=status_atualizado");
-			} else {
-				header("Location: " . url('membros') . "?erro=falha_status");
-			}
-		} else {
-			header("Location: " . url('membros') . "?erro=dados_invalidos");
-		}
-		exit;
-	}
-
-	public function addHistorico()
-	{
-		$membroId = $_POST['membro_id'] ?? null;
-		$texto = $_POST['historico'] ?? null;
-
-		if ($membroId && !empty($texto)) {
-			$membroModel = new \App\Models\Membro();
-
-			$data = [
-				'membro_id' => $membroId,
-				'texto'     => $texto, // O CKEditor envia HTML (ex: <p><strong>...</strong></p>)
-				'data'      => date('Y-m-d H:i:s')
-			];
-
-			if ($membroModel->insertHistorico($data)) {
-				header("Location: " . url('membros') . "?sucesso=historico_salvo");
-			} else {
-				header("Location: " . url('membros') . "?erro=falha_historico");
-			}
-		} else {
-			header("Location: " . url('membros') . "?erro=texto_vazio");
-		}
-		exit;
+    public function addHistorico()
+    {
+        $membroId = $_POST['membro_id'];
+        $data = [
+            'membro_id' => $membroId,
+            'texto'     => $_POST['historico'],
+            'data'      => date('Y-m-d H:i:s')
+        ];
+        if ($this->model->insertHistorico($data)) {
+            header("Location: " . url('membros') . "?sucesso=historico_salvo");
+        }
+        exit;
     }
 
-	public function edit($id)
-	{
-		// Pegamos o ID da igreja da sessão, igual você fez no index()
+    public function updateStatus()
+    {
+        $membroId = $_POST['membro_id'];
+        $novoStatus = $_POST['status'];
+        $igrejaId = $_SESSION['usuario_igreja_id'];
+
+        if ($this->model->updateStatus($membroId, $igrejaId, $novoStatus)) {
+            header("Location: " . url('membros') . "?sucesso=status_atualizado");
+        }
+        exit;
+    }
+
+	public function pendentes() {
 		$idIgreja = $_SESSION['usuario_igreja_id'];
+		$model = new \App\Models\PortalMembro();
 
-		// Chamamos o Model passando os dois parâmetros: o ID do membro e o ID da igreja
-		$membro = $this->model->getById($id, $idIgreja);
+		$pendentes = $model->getPendentes($idIgreja);
+		// Geramos a sugestão baseada na regra igreja_id + data + prox_id
+		$sugestaoRegistro = $model->gerarSugestaoRegistro($idIgreja);
 
-		if (!$membro) {
-			// Se não encontrar o membro (ou ele não pertencer a essa igreja), volta
-			header('Location: ' . url('membros'));
-			exit;
-		}
-
-		// Carrega a view de cadastro passando os dados do membro
-		// A view usará a variável $membro para preencher os campos automaticamente
-		$this->view('membros/cadastrar', [
-			'membro' => $membro
+		$this->view('membros/pendentes', [
+			'pendentes' => $pendentes,
+			'sugestao'  => $sugestaoRegistro,
+			'titulo'    => 'Aprovação de Novos Membros'
 		]);
 	}
 
-	public function update($id)
-	{
-		// 1. Verifica se os dados vieram via POST
-		if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-			header('Location: ' . url('membros'));
-			exit;
+	public function aprovar() {
+		$idIgreja = $_SESSION['usuario_igreja_id'];
+		$membroId = $_POST['membro_id'];
+		$statusPost = $_POST['status'];
+		$novoRegistro = $_POST['membro_registro_interno'];
+
+		$model = new \App\Models\PortalMembro();
+
+		if ($statusPost === 'Ativo') {
+			// DINÂMICO: Sobe 2 níveis a partir de app/Controllers para chegar na raiz do projeto
+			// Independente se está no Windows/Local ou Linux/Produção
+			$rootPath = dirname(__DIR__, 2);
+
+			// Caminho absoluto para a pasta de uploads
+			$basePath = $rootPath . "/public/assets/uploads/{$idIgreja}/membros/";
+
+			$diretorioAntigo = $basePath . "PENDENTE_" . $membroId;
+			$diretorioNovo = $basePath . $novoRegistro;
+
+			if (is_dir($diretorioAntigo)) {
+				if (!is_dir($diretorioNovo)) {
+					if (!rename($diretorioAntigo, $diretorioNovo)) {
+						error_log("ERRO EKKLESIA: Falha ao renomear de $diretorioAntigo para $diretorioNovo");
+						// Opcional: Você pode avisar o usuário que a pasta não foi movida
+					}
+				}
+			}
 		}
 
-		$idIgreja = $_SESSION['usuario_igreja_id'];
-
-		// 2. Coleta os dados do formulário
-		$dados = [
-			'nome'            => $_POST['nome'],
-			'genero'          => $_POST['genero'] ?? null,
-			'email'           => $_POST['email'],
-			'telefone'        => $_POST['telefone'],
-			'data_nascimento' => $_POST['data_nascimento'],
-			'data_batismo'    => $_POST['data_batismo']
-		];
-
-		// 3. Tenta atualizar no banco
-		if ($this->model->update($id, $idIgreja, $dados)) {
-			// Redireciona com flag de sucesso (você pode tratar isso na view depois)
-			header('Location: ' . url('membros?sucesso=editado'));
+		if($model->alterarStatus($membroId, $statusPost, $novoRegistro)) {
+			$msg = ($statusPost === 'Ativo') ? 'aprovado' : 'rejeitado';
+			header("Location: " . url('membros/pendentes?sucesso=' . $msg));
 		} else {
-			// Se der erro, volta para a edição com mensagem de erro
-			header('Location: ' . url('membros/edit/' . $id . '?erro=update_failed'));
+			header("Location: " . url('membros/pendentes?erro=falha_banco'));
 		}
 		exit;
-	}
-
-	public function get_dados_carteirinha($id) {
-		if (session_status() === PHP_SESSION_NONE) {
-			session_start();
-		}
-
-		if (ob_get_length()) ob_clean();
-		header('Content-Type: application/json');
-
-		try {
-			$db = \App\Core\Database::getInstance();
-			$membroModel = new \App\Models\Membro();
-
-			$igrejaId = $_SESSION['igreja_id'] ?? null;
-
-			if (!$igrejaId) {
-				$stmt = $db->prepare("SELECT membro_igreja_id FROM membros WHERE membro_id = ?");
-				$stmt->execute([$id]);
-				$res = $stmt->fetch(\PDO::FETCH_ASSOC);
-				$igrejaId = $res['membro_igreja_id'] ?? 0;
-			}
-
-			// 1. Buscar Dados do Membro
-			$membro = $membroModel->getById($id, $igrejaId);
-
-			if (!$membro) {
-				echo json_encode(['error' => 'Membro não encontrado.']);
-				exit;
-			}
-
-			// 2. Lógica das Datas
-			$dataNasc = (!empty($membro['membro_data_nascimento']) && $membro['membro_data_nascimento'] != '0000-00-00')
-						? date('d/m/Y', strtotime($membro['membro_data_nascimento']))
-						: '--/--/----';
-
-			$dataBat = (!empty($membro['membro_data_batismo']) && $membro['membro_data_batismo'] != '0000-00-00')
-						? date('d/m/Y', strtotime($membro['membro_data_batismo']))
-						: '--/--/----';
-
-			// 3. Buscar Dados da Igreja + Nome do Pastor (JOIN com a tabela membros)
-			$stmtIgreja = $db->prepare("
-				SELECT i.*, p.membro_nome as pastor_nome
-				FROM igrejas i
-				LEFT JOIN membros p ON i.igreja_pastor_id = p.membro_id
-				WHERE i.igreja_id = ?
-			");
-			$stmtIgreja->execute([$igrejaId]);
-			$igrejaData = $stmtIgreja->fetch(\PDO::FETCH_ASSOC);
-
-			// 4. Buscar Redes Sociais Ativas (Tabela Auxiliar)
-			$stmtRedes = $db->prepare("
-				SELECT rede_nome, rede_usuario
-				FROM igrejas_redes_sociais
-				WHERE rede_igreja_id = ? AND rede_status = 'ativo'
-			");
-			$stmtRedes->execute([$igrejaId]);
-			$redes = $stmtRedes->fetchAll(\PDO::FETCH_ASSOC);
-
-			// Montar string de contatos (Ex: @igreja | (11) 9999-9999)
-			$contatosArray = [];
-			foreach ($redes as $r) {
-				$contatosArray[] = $r['rede_usuario'];
-			}
-			$contatosStr = implode(' | ', $contatosArray);
-
-			// 5. Buscar Foto e Cargos do Membro
-			$stmtFoto = $db->prepare("SELECT membro_foto_arquivo FROM membros_fotos WHERE membro_foto_membro_id = ?");
-			$stmtFoto->execute([$id]);
-			$foto = $stmtFoto->fetch(\PDO::FETCH_ASSOC);
-			$cargosStr = $membroModel->getCargosNomesByMembro($id);
-
-			// 6. Montar JSON Final
-			$json = [
-				'membro' => [
-					'id'              => $membro['membro_id'],
-					'igreja_id'       => $igrejaId,
-					'registro'        => $membro['membro_registro_interno'] ?? '000',
-					'nome'            => mb_strtoupper($membro['membro_nome'] ?? ''),
-					'data_nascimento' => $dataNasc,
-					'data_batismo'    => $dataBat,
-					'foto'            => $foto ? $foto['membro_foto_arquivo'] : null,
-					'cargo'           => mb_strtoupper($cargosStr ?: 'MEMBRO')
-				],
-				'igreja' => [
-					'nome'     => mb_strtoupper($igrejaData['igreja_nome'] ?? ''),
-					'endereco' => $igrejaData['igreja_endereco'] ?? '',
-					'pastor'   => mb_strtoupper($igrejaData['pastor_nome'] ?? 'NÃO INFORMADO'),
-					'contatos' => $contatosStr
-				]
-			];
-
-			echo json_encode($json);
-
-		} catch (\Exception $e) {
-			echo json_encode(['error' => 'Erro interno: ' . $e->getMessage()]);
-		}
-		exit;
-	}
-
-	public function get_info($id) {
-		// Busca no banco: SELECT endereco, numero, bairro FROM membros WHERE id = $id
-		$membro = $this->membroModel->find($id);
-
-		$dados = [
-			'endereco' => $membro['logradouro'] . ", " . $membro['numero'] . " - " . $membro['bairro']
-		];
-
-		echo json_encode($dados);
-		exit;
-	}
-
-	// No MembrosController.php
-	public function dadosCertificado($id)
-	{
-		// Adicione isso no início para testar se a rota chega aqui
-		header('Content-Type: application/json');
-
-		$idIgreja = $_SESSION['usuario_igreja_id'];
-		$dados = $this->model->getDadosCertificado($id, $idIgreja);
-
-		if (!$dados) {
-			echo json_encode(['success' => false, 'message' => 'Membro não encontrado']);
-			exit;
-		}
-
-		$dados['data_batismo_formatada'] = date('d/m/Y', strtotime($dados['membro_data_batismo']));
-		$dados['data_hoje'] = date('d/m/Y'); // Simplificado para teste
-
-		echo json_encode(['success' => true, 'dados' => $dados]);
-		exit; // Garante que nenhum HTML extra do sistema seja enviado
-	}
-
-	private function getMesPt($n) {
-		$meses = [1=>'Janeiro', 2=>'Fevereiro', 3=>'Março', 4=>'Abril', 5=>'Maio', 6=>'Junho', 7=>'Julho', 8=>'Agosto', 9=>'Setembro', 10=>'Outubro', 11=>'Novembro', 12=>'Dezembro'];
-		return $meses[$n];
 	}
 
 }

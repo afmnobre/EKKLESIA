@@ -151,6 +151,17 @@ class EscolaDominicalController extends Controller
 
 		header("Location: " . url('escolaDominical/configuracoes'));
 		exit;
+    }
+
+	// Excluir configuração
+	public function excluirClasse($id)
+	{
+		$db = \App\Core\Database::getInstance();
+		$stmt = $db->prepare("DELETE FROM classes_escola WHERE classe_id = ? AND classe_igreja_id = ?");
+		$stmt->execute([$id, $_SESSION['usuario_igreja_id']]);
+
+		header("Location: " . url('escolaDominical/index'));
+		exit;
 	}
 
 	// Rota AJAX: Busca os dados para preencher o modal de gerenciamento

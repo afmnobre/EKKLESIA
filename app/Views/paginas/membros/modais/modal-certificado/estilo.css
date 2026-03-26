@@ -1,0 +1,98 @@
+/* --- 1. VISUALIZAÇÃO NO MODAL (TELA) --- */
+/* Isso garante que, no navegador, o certificado apareça bonito e centralizado */
+.certificado-container {
+    width: 100%;
+    max-width: 900px;
+    aspect-ratio: 297 / 210; /* Mantém a proporção A4 */
+    position: relative;
+    background: #fff;
+    margin: 20px auto;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+    overflow: hidden; /* Garante que nada saia do limite */
+    display: block;
+}
+
+.img-background {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    object-fit: fill;
+    z-index: 1; /* Fica no fundo */
+}
+
+.certificado-content {
+    position: relative; /* Mudado de absolute para relative para não "sumir" */
+    width: 100%;
+    height: 100%;
+    z-index: 2; /* Fica acima da imagem */
+    padding: 1.5cm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    box-sizing: border-box;
+    min-height: 500px; /* Garante altura mínima no modal */
+}
+
+/* --- 2. REGRAS EXCLUSIVAS PARA IMPRESSÃO --- */
+@media print {
+    @page {
+        size: landscape;
+        margin: 0;
+    }
+
+    /* Limpa a sujeira do site (index, navbar, etc) */
+    body * { visibility: hidden !important; }
+    .no-print, .modal-header, .modal-footer, .btn, .modal-backdrop { display: none !important; }
+
+    /* Força o container de impressão a ocupar a folha toda */
+    #areaImpressaoCertificado,
+    #areaImpressaoCertificado * {
+        visibility: visible !important;
+    }
+
+    #areaImpressaoCertificado {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 297mm !important;
+        height: 210mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        z-index: 99999;
+        background: #fff;
+    }
+
+    .certificado-container {
+        width: 297mm !important;
+        height: 210mm !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .certificado-content {
+        position: absolute !important; /* Na impressão volta a ser absolute para sobrepor */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Garante que a imagem preencha de ponta a ponta sem bordas brancas */
+    .img-background {
+        width: 297mm !important;
+        height: 210mm !important;
+        object-fit: fill !important;
+    }
+
+    /* Mata a segunda página */
+    html, body {
+        overflow: hidden !important;
+        height: 210mm !important;
+    }
+
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}

@@ -26,6 +26,24 @@
         </div>
     </div>
 
+
+<div class="card-body">
+    <div class="row align-items-center">
+        <div class="col">
+            <span class="badge bg-primary mb-2 shadow-sm">Dashboard Administrativo EKKLESIA</span>
+            <h2 class="card-title fw-bold text-dark mb-1"><?= $igreja['igreja_nome'] ?></h2>
+            <p class="text-muted mb-0">
+                <i class="fas fa-map-marker-alt me-2 text-danger"></i><?= $igreja['igreja_endereco'] ?>
+            </p>
+        </div>
+        <div class="col-auto text-center border-start ps-4">
+            <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.7rem;">Total de Membros</small>
+            <h2 class="fw-bold text-primary mb-0"><?= $totalMembros ?></h2>
+            <span class="badge bg-success-subtle text-success rounded-pill" style="font-size: 0.6rem;">ATIVOS</span>
+        </div>
+    </div>
+</div>
+
     <div class="row mb-4">
         <div class="col-12">
             <h5 class="text-dark fw-bold mb-3 border-bottom pb-2">

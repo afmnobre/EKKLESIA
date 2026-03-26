@@ -1,0 +1,263 @@
+<style>
+    /* Cores e Estilos Base */
+    .bg-ipb { background-color: #005a32 !important; }
+    .text-ipb { color: #005a32 !important; }
+    .btn-ipb { background-color: #005a32; color: white; border: none; }
+    .btn-ipb:hover { background-color: #004426; color: white; }
+    .btn-outline-ipb { border-color: #005a32; color: #005a32; }
+    .btn-outline-ipb:hover { background-color: #005a32; color: white; }
+
+    .uppercase-input { text-transform: uppercase; }
+
+    /* Estilo do Cabeçalho Unificado */
+    .header-perfil { padding: 40px 0 80px 0; margin-bottom: -60px; }
+
+    /* Badge Customizado */
+    .badge-status { font-size: 0.65rem; padding: 5px 10px; }
+    .bg-success-subtle { background-color: #d1e7dd; color: #0f5132; }
+    .bg-warning-subtle { background-color: #fff3cd; color: #664d03; }
+
+    /* Ajustes da Tabela */
+    .table-ebd th { font-size: 0.65rem; letter-spacing: 0.5px; }
+    .status-icon { font-size: 1.1rem; }
+</style>
+
+<div class="container-fluid p-0" style="background-color: #f8f9fa; min-height: 100vh;">
+
+	<div class="bg-ipb text-white header-perfil shadow-sm">
+		<div class="container">
+			<div class="row align-items-center">
+				<div class="col-auto">
+					<?php
+						$diretorio = ($perfil['membro_status'] === 'Ativo') ? $perfil['membro_registro_interno'] : "PENDENTE_{$perfil['membro_id']}";
+						$fotoUrl = !empty($perfil['membro_foto_arquivo'])
+							? asset("uploads/{$perfil['membro_igreja_id']}/membros/{$diretorio}/{$perfil['membro_foto_arquivo']}")
+							: asset("img/avatar-default.png");
+					?>
+					<img src="<?= $fotoUrl ?>" class="rounded-circle shadow-sm border border-3 border-white" style="width: 70px; height: 70px; object-fit: cover;">
+				</div>
+
+				<div class="col">
+					<h5 class="fw-bold mb-0 text-white">Olá, <?= explode(' ', $perfil['membro_nome'])[0] ?>!</h5>
+					<p class="small mb-0 opacity-75">
+						<i class="bi bi-card-text me-1"></i> ROL: <?= $perfil['membro_registro_interno'] ?? 'Aguardando...' ?> -
+
+                    </p>
+				</div>
+
+                <div class="col-auto d-flex align-items-center">
+                    <a href="<?= url('PortalMembro/logout') ?>" class="btn btn-outline-light btn-sm px-3 fw-bold border-2 me-3 rounded-0">
+                        <i class="bi bi-box-arrow-right me-1"></i> SAIR
+                    </a>
+					<div class="d-none d-md-block">
+						<img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 40px; filter: brightness(0) invert(1);">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+    <div class="container pb-5">
+        <div class="card border-0 shadow rounded-4">
+            <div class="card-header bg-white p-3 border-0 rounded-top-4 d-flex align-items-center justify-content-between">
+                <h6 class="mb-0 fw-bold text-ipb"><i class="bi bi-person-badge me-2"></i>MEU PERFIL</h6>
+                <small class="text-muted fw-bold"><?= $nomeIgreja ?></small>
+            </div>
+
+            <div class="card-body p-4">
+
+                <div class="d-flex align-items-center mb-3">
+                    <h6 class="fw-bold text-ipb mb-0 small text-uppercase">Informações Pessoais</h6>
+                    <hr class="flex-grow-1 ms-3 opacity-25">
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-12 border-bottom pb-2">
+                        <label class="form-label small fw-bold text-muted mb-0">Nome Completo</label>
+                        <p class="mb-0 fw-bold text-dark text-uppercase"><?= $perfil['membro_nome'] ?></p>
+                    </div>
+                    <div class="col-md-6 border-bottom pb-2">
+                        <label class="form-label small fw-bold text-muted mb-0">E-mail</label>
+                        <p class="mb-0 text-dark"><?= $perfil['membro_email'] ?: 'Não informado' ?></p>
+                    </div>
+                    <div class="col-md-6 border-bottom pb-2">
+                        <label class="form-label small fw-bold text-muted mb-0">WhatsApp</label>
+                        <p class="mb-0 text-dark"><?= $perfil['membro_telefone'] ?: 'Não informado' ?></p>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold text-muted mb-0">Endereço</label>
+                        <p class="mb-0 text-dark">
+                            <?= $perfil['membro_endereco_rua'] ?>, <?= $perfil['membro_endereco_numero'] ?><br>
+                            <?= $perfil['membro_endereco_bairro'] ?> — <?= $perfil['membro_endereco_cidade'] ?>/<?= $perfil['membro_endereco_estado'] ?>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center mb-3">
+                    <h6 class="fw-bold text-ipb mb-0 small text-uppercase">Dados Eclesiásticos</h6>
+                    <hr class="flex-grow-1 ms-3 opacity-25">
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 rounded-4 border bg-light">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.6rem;">Cargo Atual</small>
+                            <span class="fw-bold text-ipb fs-5"><?= $perfil['cargo_nome'] ?: 'Membro Comungante' ?></span>
+                        </div>
+                    </div>
+                    <?php if (!empty($perfil['sociedade_nome'])): ?>
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 rounded-4 border bg-light h-100">
+                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.6rem;">Sociedade Interna</small>
+                            <span class="fw-bold text-dark"><?= $perfil['sociedade_nome'] ?></span>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+				<div class="d-flex align-items-center mb-3 mt-4">
+					<h6 class="fw-bold text-ipb mb-0 small text-uppercase">Presença EBD - <?= $anoAtual ?></h6>
+					<hr class="flex-grow-1 ms-3 opacity-25">
+				</div>
+
+				<div class="row g-2 mb-4">
+					<div class="col-12">
+						<div class="d-flex overflow-auto pb-2 mb-3" style="white-space: nowrap; -webkit-overflow-scrolling: touch;">
+							<?php
+							$mesesNome = [
+								'01' => 'Jan', '02' => 'Fev', '03' => 'Mar', '04' => 'Abr',
+								'05' => 'Mai', '06' => 'Jun', '07' => 'Jul', '08' => 'Ago',
+								'09' => 'Set', '10' => 'Out', '11' => 'Nov', '12' => 'Dez'
+							];
+							$mesAtual = date('m');
+							foreach ($mesesNome as $num => $nome):
+								$active = ($num == $mesAtual) ? 'active bg-ipb text-white' : 'bg-white text-muted border';
+							?>
+								<button class="btn btn-sm rounded-pill me-2 fw-bold btn-mes <?= $active ?>"
+										onclick="filtrarMes('<?= $num ?>', this)"
+										style="min-width: 60px;">
+									<?= $nome ?>
+								</button>
+							<?php endforeach; ?>
+						</div>
+
+						<div class="table-responsive rounded-4 border bg-white">
+							<table class="table table-sm table-borderless mb-0">
+								<thead class="bg-light">
+									<tr class="text-center" style="font-size: 0.7rem;">
+										<th class="p-2 text-muted text-uppercase">Data</th>
+										<th class="p-2 text-muted text-uppercase">Classe / Aula</th>
+										<th class="p-2 text-muted text-uppercase">Status</th>
+									</tr>
+								</thead>
+								<tbody id="corpo-tabela-ebd" style="font-size: 0.85rem;">
+									</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+
+                <div class="d-flex align-items-center justify-content-between mb-3 mt-4">
+                    <h6 class="fw-bold text-ipb mb-0 small text-uppercase">Dependentes</h6>
+                    <a href="<?= url('PortalMembro/novoDependente') ?>" class="btn btn-outline-ipb btn-sm rounded-pill px-3 fw-bold">
+                        <i class="bi bi-plus-lg me-1"></i> ADICIONAR
+                    </a>
+                </div>
+
+                <?php if (empty($dependentes)): ?>
+                    <div class="text-center py-4 border rounded-4 bg-light">
+                        <p class="text-muted small mb-0">Nenhum dependente cadastrado.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="row g-2">
+                        <?php foreach ($dependentes as $dep): ?>
+                            <div class="col-12">
+                                <div class="card border shadow-none rounded-4">
+                                    <div class="card-body p-2 px-3">
+                                        <div class="row align-items-center">
+                                            <div class="col-auto">
+                                                <?php
+                                                    $dirDep = ($dep['membro_status'] === 'Ativo') ? $dep['membro_registro_interno'] : "PENDENTE_{$dep['membro_id']}";
+                                                    $fotoDep = !empty($dep['membro_foto_arquivo'])
+                                                        ? asset("uploads/{$dep['membro_igreja_id']}/membros/{$dirDep}/{$dep['membro_foto_arquivo']}")
+                                                        : asset("img/avatar-default.png");
+                                                ?>
+                                                <img src="<?= $fotoDep ?>" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                            </div>
+                                            <div class="col">
+                                                <h6 class="mb-0 fw-bold small text-uppercase"><?= $dep['membro_nome'] ?></h6>
+                                                <span class="badge badge-status rounded-pill <?= $dep['membro_status'] === 'Ativo' ? 'bg-success-subtle' : 'bg-warning-subtle' ?>">
+                                                    <?= $dep['membro_status'] ?>
+                                                </span>
+                                            </div>
+                                            <div class="col-auto">
+                                                <i class="bi bi-chevron-right text-muted opacity-50"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+            </div>
+        </div>
+
+        <div class="mt-5 pb-3 text-center">
+            <h6 class="fw-bold text-muted small mb-1"><?= $nomeIgreja ?></h6>
+            <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 35px; opacity: 0.5;">
+        </div>
+    </div>
+</div>
+
+
+<script>
+// Passamos os dados do PHP para o JavaScript com segurança
+const todasPresencas = <?= json_encode($presencas_mensais) ?>;
+const mesesNomesCompletos = <?= json_encode($mesesNome) ?>;
+
+function filtrarMes(mes, btn) {
+    // 1. Atualizar visual dos botões
+    document.querySelectorAll('.btn-mes').forEach(b => {
+        b.classList.remove('active', 'bg-ipb', 'text-white');
+        b.classList.add('bg-white', 'text-muted', 'border');
+    });
+    btn.classList.add('active', 'bg-ipb', 'text-white');
+    btn.classList.remove('bg-white', 'text-muted', 'border');
+
+    // 2. Filtrar dados
+    const corpo = document.getElementById('corpo-tabela-ebd');
+    corpo.innerHTML = '';
+
+    if (!todasPresencas[mes] || todasPresencas[mes].length === 0) {
+        corpo.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted small">Sem registros em ${mesesNomesCompletos[mes]}.</td></tr>`;
+        return;
+    }
+
+    todasPresencas[mes].forEach(p => {
+        const dataFormatada = new Date(p.presenca_data + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+        const icon = p.presenca_status == 1
+            ? '<i class="bi bi-check-circle-fill text-success fs-5"></i>'
+            : '<i class="bi bi-x-circle-fill text-danger fs-5"></i>';
+
+        corpo.innerHTML += `
+            <tr class="border-bottom align-middle text-center">
+                <td class="fw-bold text-dark">${dataFormatada}</td>
+                <td>
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">${p.classe_nome}</small>
+                </td>
+                <td>${icon}</td>
+            </tr>
+        `;
+    });
+}
+
+// Inicia com o mês atual
+document.addEventListener('DOMContentLoaded', function() {
+    const mesAtual = '<?= $mesAtual ?>';
+    const btnAtivo = document.querySelector('.btn-mes.active');
+    if(btnAtivo) filtrarMes(mesAtual, btnAtivo);
+});
+</script>
