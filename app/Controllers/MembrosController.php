@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\Membro;
+use App\Core\Utils;
 
 class MembrosController extends Controller
 {
@@ -46,7 +47,11 @@ class MembrosController extends Controller
 		$idsMembros = array_column($membros, 'membro_id');
 		$mapaCargos = array_column($todosCargos, 'cargo_nome', 'cargo_id');
 		$todosVinculos = $this->model->getCargosParaVariosMembros($idsMembros);
-		$todosHistoricos = $this->model->getHistoricosParaVariosMembros($idsMembros);
+        $todosHistoricos = $this->model->getHistoricosParaVariosMembros($idsMembros);
+        $bairrosData = $this->model->getEstatisticasBairro($idIgreja);
+        // Se o model retornar falso por algum motivo, forçamos um array vazio
+        $bairros = $bairrosData ? $bairrosData : [];
+
 
 		foreach ($membros as &$m) {
 			$id = $m['membro_id'];
@@ -65,7 +70,8 @@ class MembrosController extends Controller
 			'membros' => $membros,
 			'todosCargos' => $todosCargos,
 			'totalPendentes' => $totalPendentes,
-			'nomeIgreja' => $nomeIgreja // Passando o nome corrigido
+            'nomeIgreja' => $nomeIgreja,
+            'bairros' => $bairros
 		]);
 	}
 
@@ -116,11 +122,10 @@ class MembrosController extends Controller
                                 data-id="<?= $m['membro_id'] ?>"
                                 data-acao="certificado" title="Certificado">🎓</button>
 
-
-<button class="btn btn-white btn-sm btn-acao-dinamica"
-        data-id="<?= $m['membro_id'] ?>"
-        data-acao="carteirinha"
-        title="Visualizar Carteirinha">🆔</button>
+                        <button class="btn btn-white btn-sm btn-acao-dinamica"
+                                data-id="<?= $m['membro_id'] ?>"
+                                data-acao="carteirinha"
+                                title="Visualizar Carteirinha">🆔</button>
 
                         <button class="btn btn-white btn-sm btn-acao-dinamica"
                                 data-id="<?= $m['membro_id'] ?>"
@@ -294,32 +299,33 @@ class MembrosController extends Controller
 
     public function create() { $this->view('membros/cadastrar'); }
 
-    public function store()
-    {
-        $idIgreja = $_SESSION['usuario_igreja_id'] ?? die("Sessão expirada");
+	public function store()
+	{
+		$idIgreja = $_SESSION['usuario_igreja_id'] ?? die("Sessão expirada");
 
-        $proximoId = $this->model->getNextId();
-        $registroInterno = $idIgreja . date('Ym') . str_pad($proximoId, 4, '0', STR_PAD_LEFT);
+		$proximoId = $this->model->getNextId();
+		$registroInterno = $idIgreja . date('Ym') . str_pad($proximoId, 4, '0', STR_PAD_LEFT);
 
-        $data = [
-            'igreja_id'        => $idIgreja,
-            'registro_interno' => $registroInterno,
-            'nome'             => $_POST['nome'],
-            'nascimento'       => $_POST['data_nascimento'] ?: null,
-            'genero'           => $_POST['genero'] ?? null,
-            'email'            => $_POST['email'] ?? null,
-            'telefone'         => $_POST['telefone'] ?? null,
-            'batismo'          => $_POST['data_batismo'] ?: null,
-            'status'           => 'Ativo'
-        ];
+		$data = [
+			'igreja_id'        => $idIgreja,
+			'registro_interno' => $registroInterno,
+			'nome'             => $_POST['nome'],
+			'nascimento'       => $_POST['data_nascimento'] ?: null,
+			'genero'           => $_POST['genero'] ?? null,
+			'estado_civil'     => $_POST['estado_civil'] ?? null, // Novo campo do POST
+			'email'            => $_POST['email'] ?? null,
+			'telefone'         => $_POST['telefone'] ?? null,
+			'batismo'          => $_POST['data_batismo'] ?: null,
+			'status'           => 'Ativo'
+		];
 
-        if ($this->model->insert($data)) {
-            header("Location: " . url('membros') . "?sucesso=1");
-        } else {
-            die("Erro ao inserir membro.");
-        }
-        exit;
-    }
+		if ($this->model->insert($data)) {
+			header("Location: " . url('membros') . "?sucesso=1");
+		} else {
+			die("Erro ao inserir membro.");
+		}
+		exit;
+	}
 
     public function edit($id)
     {
@@ -329,25 +335,26 @@ class MembrosController extends Controller
         $this->view('membros/cadastrar', ['membro' => $membro]);
     }
 
-    public function update($id)
-    {
-        $idIgreja = $_SESSION['usuario_igreja_id'];
-        $dados = [
-            'nome'            => $_POST['nome'],
-            'genero'          => $_POST['genero'] ?? null,
-            'email'           => $_POST['email'],
-            'telefone'        => $_POST['telefone'],
-            'data_nascimento' => $_POST['data_nascimento'],
-            'data_batismo'    => $_POST['data_batismo']
-        ];
+	public function update($id)
+	{
+		$idIgreja = $_SESSION['usuario_igreja_id'];
+		$dados = [
+			'nome'            => $_POST['nome'],
+			'genero'          => $_POST['genero'] ?? null,
+			'estado_civil'    => $_POST['estado_civil'] ?? null, // Novo campo do POST
+			'email'           => $_POST['email'],
+			'telefone'        => $_POST['telefone'],
+			'data_nascimento' => $_POST['data_nascimento'],
+			'data_batismo'    => $_POST['data_batismo']
+		];
 
-        if ($this->model->update($id, $idIgreja, $dados)) {
-            header('Location: ' . url('membros?sucesso=editado'));
-        } else {
-            header('Location: ' . url('membros/edit/' . $id . '?erro=1'));
-        }
-        exit;
-    }
+		if ($this->model->update($id, $idIgreja, $dados)) {
+			header('Location: ' . url('membros?sucesso=editado'));
+		} else {
+			header('Location: ' . url('membros/edit/' . $id . '?erro=1'));
+		}
+		exit;
+	}
 
     public function updateCargos()
     {
@@ -383,6 +390,7 @@ class MembrosController extends Controller
 		exit;
 	}
 
+	// No topo do arquivo, não esqueça de importar a Utils
 	public function uploadFoto()
 	{
 		$idIgreja = $_SESSION['usuario_igreja_id'];
@@ -390,31 +398,40 @@ class MembrosController extends Controller
 		$registro = $_POST['membro_registro_interno'];
 
 		if (isset($_FILES['foto']) && $_FILES['foto']['error'] === 0) {
-			$extensao = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
-			$novoNome = "perfil_" . time() . "." . $extensao;
+			// Forçamos a extensão para .jpg pois a Utils::otimizarImagem salva como JPEG
+			$novoNome = "perfil_" . time() . ".jpg";
 
-			// NOVO CAMINHO: Adicionada a subpasta /membros/
 			$diretorioDestino = dirname(__DIR__, 2) . "/public/assets/uploads/{$idIgreja}/membros/{$registro}/";
+			$caminhoCompleto = $diretorioDestino . $novoNome;
 
-			// Cria o diretório recursivamente (o 0777 com 'true' garante a criação de toda a árvore)
 			if (!is_dir($diretorioDestino)) {
 				mkdir($diretorioDestino, 0777, true);
 			}
 
-			if (move_uploaded_file($_FILES['foto']['tmp_name'], $diretorioDestino . $novoNome)) {
-				// Salva o nome do arquivo no banco e retorna o nome da foto antiga
+			// 1. Movemos o arquivo original temporariamente
+			if (move_uploaded_file($_FILES['foto']['tmp_name'], $caminhoCompleto)) {
+
+				// 2. Aplicamos a Otimização (Redimensiona, ajusta qualidade e sobrescreve o arquivo)
+				// Usamos o próprio $caminhoCompleto como origem e destino para otimizar "no lugar"
+				Utils::otimizarImagem($caminhoCompleto, $caminhoCompleto, 800, 75);
+
+				// 3. Salva no banco e pega o nome da foto antiga
 				$fotoAntiga = $this->model->saveFoto($membroId, $novoNome);
 
-				// Opcional: Deleta a foto antiga do servidor para não acumular lixo
+				// 4. Limpeza: Deleta a foto antiga se existir
 				if ($fotoAntiga && file_exists($diretorioDestino . $fotoAntiga)) {
 					unlink($diretorioDestino . $fotoAntiga);
 				}
 
 				header("Location: " . url('membros') . "?sucesso=foto_atualizada");
+				exit;
 			}
 		}
+
+		// Caso algo dê errado ou não venha arquivo
+		header("Location: " . url('membros') . "?erro=upload_falhou");
 		exit;
-	}
+    }
 
     public function addHistorico()
     {
@@ -459,40 +476,71 @@ class MembrosController extends Controller
 
 	public function aprovar() {
 		$idIgreja = $_SESSION['usuario_igreja_id'];
-		$membroId = $_POST['membro_id'];
-		$statusPost = $_POST['status'];
-		$novoRegistro = $_POST['membro_registro_interno'];
+		$membroId = $_POST['membro_id'] ?? null;
+		$statusPost = $_POST['status'] ?? '';
+		$novoRegistro = $_POST['membro_registro_interno'] ?? '';
 
 		$model = new \App\Models\PortalMembro();
 
+		// Define o caminho base para evitar repetição e erros
+		$rootPath = dirname(__DIR__, 2);
+		$basePathMembros = $rootPath . "/public/assets/uploads/{$idIgreja}/membros/";
+
+		if ($statusPost === 'Rejeitado') {
+			$diretorioPendente = $basePathMembros . "PENDENTE_" . $membroId;
+
+			if (is_dir($diretorioPendente)) {
+				$this->rrmdir($diretorioPendente);
+			}
+
+			if ($model->excluirMembroCompleto($membroId)) {
+				header("Location: " . url('membros/pendentes?sucesso=excluido'));
+			} else {
+				header("Location: " . url('membros/pendentes?erro=falha_banco'));
+			}
+			exit;
+		}
+
+		// --- LOGICA DE APROVAÇÃO ---
 		if ($statusPost === 'Ativo') {
-			// DINÂMICO: Sobe 2 níveis a partir de app/Controllers para chegar na raiz do projeto
-			// Independente se está no Windows/Local ou Linux/Produção
-			$rootPath = dirname(__DIR__, 2);
+			// 1. Define os caminhos de Origem e Destino
+			$diretorioPendente = $basePathMembros . "PENDENTE_" . $membroId;
+			$diretorioNovo = $basePathMembros . $novoRegistro;
 
-			// Caminho absoluto para a pasta de uploads
-			$basePath = $rootPath . "/public/assets/uploads/{$idIgreja}/membros/";
-
-			$diretorioAntigo = $basePath . "PENDENTE_" . $membroId;
-			$diretorioNovo = $basePath . $novoRegistro;
-
-			if (is_dir($diretorioAntigo)) {
+			// 2. Tenta renomear a pasta física se a pendente existir
+			if (is_dir($diretorioPendente)) {
+				// Verifica se o destino já não existe para não sobrescrever erro
 				if (!is_dir($diretorioNovo)) {
-					if (!rename($diretorioAntigo, $diretorioNovo)) {
-						error_log("ERRO EKKLESIA: Falha ao renomear de $diretorioAntigo para $diretorioNovo");
-						// Opcional: Você pode avisar o usuário que a pasta não foi movida
-					}
+					rename($diretorioPendente, $diretorioNovo);
 				}
 			}
-		}
 
-		if($model->alterarStatus($membroId, $statusPost, $novoRegistro)) {
-			$msg = ($statusPost === 'Ativo') ? 'aprovado' : 'rejeitado';
-			header("Location: " . url('membros/pendentes?sucesso=' . $msg));
-		} else {
-			header("Location: " . url('membros/pendentes?erro=falha_banco'));
+			// 3. Atualiza o banco de dados
+			if($model->alterarStatus($membroId, $statusPost, $novoRegistro)) {
+				header("Location: " . url('membros/pendentes?sucesso=aprovado'));
+			} else {
+				header("Location: " . url('membros/pendentes?erro=falha_banco'));
+			}
 		}
 		exit;
+	}
+
+	/**
+	 * Função auxiliar para deletar pastas com arquivos dentro
+	 */
+	private function rrmdir($dir) {
+		if (is_dir($dir)) {
+			$objects = scandir($dir);
+			foreach ($objects as $object) {
+				if ($object != "." && $object != "..") {
+					if (is_dir($dir . DIRECTORY_SEPARATOR . $object) && !is_link($dir . "/" . $object))
+						$this->rrmdir($dir . DIRECTORY_SEPARATOR . $object);
+					else
+						unlink($dir . DIRECTORY_SEPARATOR . $object);
+				}
+			}
+			rmdir($dir);
+		}
 	}
 
 }

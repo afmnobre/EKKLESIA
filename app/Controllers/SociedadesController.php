@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\Sociedade;
+use App\Core\Utils;
+
 
 class SociedadesController extends Controller
 {
@@ -209,31 +211,30 @@ class SociedadesController extends Controller
 		$idIgreja = $_SESSION['usuario_igreja_id'];
 
 		if (isset($_FILES['sociedade_logo']) && $_FILES['sociedade_logo']['error'] === 0) {
-			$extensao = strtolower(pathinfo($_FILES['sociedade_logo']['name'], PATHINFO_EXTENSION));
-			$novoNome = "logo_" . time() . "." . $extensao;
 
-			// 1. Define a raiz do projeto subindo 2 níveis (de /app/Controllers para /)
+			// Forçamos a extensão .jpg pois a Utils::otimizarImagem converte para JPEG
+			$novoNome = "logo_" . time() . ".jpg";
+
 			$raizProjeto = dirname(__DIR__, 2);
-
-			// 2. Caminho absoluto para o sistema de arquivos (Linux/Windows)
-			// Estrutura: /public/assets/uploads/<id_igreja>/sociedades/<id_sociedade>/logo/
 			$diretorioDestino = $raizProjeto . "/public/assets/uploads/{$idIgreja}/sociedades/{$idSociedade}/logo/";
+			$caminhoCompleto = $diretorioDestino . $novoNome;
 
-			// 3. Tenta criar a pasta com permissão total
 			if (!is_dir($diretorioDestino)) {
 				if (!mkdir($diretorioDestino, 0777, true)) {
-					die("Erro: Não foi possível criar o diretório: " . $diretorioDestino);
+					die("Erro: Não foi possível criar o diretório.");
 				}
 			}
 
-			// 4. Move o arquivo
-			if (move_uploaded_file($_FILES['sociedade_logo']['tmp_name'], $diretorioDestino . $novoNome)) {
+			// 1. Movemos o arquivo original para o destino
+			if (move_uploaded_file($_FILES['sociedade_logo']['tmp_name'], $caminhoCompleto)) {
 
-				// O caminho que vai para o banco DEVE ser relativo ao que a função assets() ou a URL espera
-				// Exemplo: 1/sociedades/4/logo/logo_xxx.png
+				// 2. Otimizamos a imagem (Redimensiona e reduz peso)
+				Utils::otimizarImagem($caminhoCompleto, $caminhoCompleto, 800, 80);
+
+				// 3. Define o caminho relativo para o banco de dados
 				$caminhoRelativoBanco = "{$idIgreja}/sociedades/{$idSociedade}/logo/{$novoNome}";
 
-				// Busca a logo antiga para deletar e limpa o servidor (Opcional, mas recomendado)
+				// 4. Busca e deleta a logo antiga para manter o servidor limpo
 				$sociedade = $this->model->getById($idSociedade, $idIgreja);
 				if (!empty($sociedade['sociedade_logo'])) {
 					$caminhoAntigo = $raizProjeto . "/public/assets/uploads/" . $sociedade['sociedade_logo'];
@@ -242,7 +243,7 @@ class SociedadesController extends Controller
 					}
 				}
 
-				// Salva no banco
+				// 5. Atualiza o banco de dados
 				if ($this->model->updateLogo($idSociedade, $idIgreja, $caminhoRelativoBanco)) {
 					header("Location: " . url("sociedades?sucesso=logo_atualizado"));
 				} else {
@@ -250,12 +251,13 @@ class SociedadesController extends Controller
 				}
 				exit;
 			} else {
-				die("Erro ao mover o arquivo para: " . $diretorioDestino);
+				die("Erro ao mover o arquivo.");
 			}
 		}
+
 		header("Location: " . url("sociedades?erro=arquivo_invalido"));
 		exit;
-    }
+	}
 
  	public function banner($id)
 	{

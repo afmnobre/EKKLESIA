@@ -91,4 +91,69 @@ class Professor {
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
+ 	public function registrarPresencaQRCode($igrejaId, $classeId, $codigoLido) {
+		$hoje = date('Y-m-d');
+
+		// 1. Busca o membro pelo registro interno e valida se está matriculado nesta classe
+		$sqlCheckMatricula = "SELECT m.membro_id, m.membro_nome
+							  FROM membros m
+							  JOIN classes_membros cm ON m.membro_id = cm.classe_membro_membro_id
+							  WHERE cm.classe_membro_classe_id = ?
+								AND m.membro_registro_interno = ?
+								AND m.membro_igreja_id = ?
+								AND m.membro_status = 'Ativo'";
+
+		$stmtCheck = $this->db->prepare($sqlCheckMatricula);
+		$stmtCheck->execute([$classeId, $codigoLido, $igrejaId]);
+		$aluno = $stmtCheck->fetch();
+
+		if (!$aluno) {
+			return [
+				'status' => 'erro',
+				'mensagem' => 'Registro ' . $codigoLido . ' não encontrado ou aluno não matriculado nesta classe.'
+			];
+		}
+
+		$membroId = $aluno['membro_id'];
+		$primeiroNome = explode(' ', trim($aluno['membro_nome']))[0];
+
+		// 2. Verificação de Duplicidade (presenca_data)
+		$sqlCheckPresenca = "SELECT COUNT(*) as ja_marcou
+							 FROM classes_presencas
+							 WHERE presenca_classe_id = ?
+							   AND presenca_membro_id = ?
+							   AND presenca_data = ?";
+
+		$stmtPresenca = $this->db->prepare($sqlCheckPresenca);
+		$stmtPresenca->execute([$classeId, $membroId, $hoje]);
+		$resPresenca = $stmtPresenca->fetch();
+
+		if ($resPresenca && $resPresenca['ja_marcou'] > 0) {
+			return [
+				'status' => 'aviso',
+				'mensagem' => "{$primeiroNome} já registrou presença hoje."
+			];
+		}
+
+		// 3. Inserção final respeitando as colunas da sua tabela classes_presencas
+		$sqlInsert = "INSERT INTO classes_presencas
+					  (presenca_classe_id, presenca_membro_id, presenca_data, presenca_status)
+					  VALUES (?, ?, ?, 1)";
+
+		$stmtInsert = $this->db->prepare($sqlInsert);
+
+		if ($stmtInsert->execute([$classeId, $membroId, $hoje])) {
+			return [
+				'status' => 'sucesso',
+				'mensagem' => "Presença de {$primeiroNome} confirmada!"
+			];
+		}
+
+		return [
+			'status' => 'erro',
+			'mensagem' => 'Erro interno ao salvar presença no banco.'
+		];
+	}
+
+
 }

@@ -24,38 +24,37 @@
 
 <div class="container-fluid p-0" style="background-color: #f8f9fa; min-height: 100vh;">
 
-	<div class="bg-ipb text-white header-perfil shadow-sm">
-		<div class="container">
-			<div class="row align-items-center">
-				<div class="col-auto">
-					<?php
-						$diretorio = ($perfil['membro_status'] === 'Ativo') ? $perfil['membro_registro_interno'] : "PENDENTE_{$perfil['membro_id']}";
-						$fotoUrl = !empty($perfil['membro_foto_arquivo'])
-							? asset("uploads/{$perfil['membro_igreja_id']}/membros/{$diretorio}/{$perfil['membro_foto_arquivo']}")
-							: asset("img/avatar-default.png");
-					?>
-					<img src="<?= $fotoUrl ?>" class="rounded-circle shadow-sm border border-3 border-white" style="width: 70px; height: 70px; object-fit: cover;">
-				</div>
+    <div class="bg-ipb text-white header-perfil shadow-sm">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <?php
+                        $diretorio = ($perfil['membro_status'] === 'Ativo') ? $perfil['membro_registro_interno'] : "PENDENTE_{$perfil['membro_id']}";
+                        $fotoUrl = !empty($perfil['membro_foto_arquivo'])
+                            ? asset("uploads/{$perfil['membro_igreja_id']}/membros/{$diretorio}/{$perfil['membro_foto_arquivo']}")
+                            : asset("img/avatar-default.png");
+                    ?>
+                    <img src="<?= $fotoUrl ?>" class="rounded-circle shadow-sm border border-3 border-white" style="width: 70px; height: 70px; object-fit: cover;">
+                </div>
 
-				<div class="col">
-					<h5 class="fw-bold mb-0 text-white">Olá, <?= explode(' ', $perfil['membro_nome'])[0] ?>!</h5>
-					<p class="small mb-0 opacity-75">
-						<i class="bi bi-card-text me-1"></i> ROL: <?= $perfil['membro_registro_interno'] ?? 'Aguardando...' ?> -
-
+                <div class="col">
+                    <h5 class="fw-bold mb-0 text-white">Olá, <?= explode(' ', $perfil['membro_nome'])[0] ?>!</h5>
+                    <p class="small mb-0 opacity-75">
+                        <i class="bi bi-card-text me-1"></i> ROL: <?= $perfil['membro_registro_interno'] ?? 'Aguardando...' ?>
                     </p>
-				</div>
+                </div>
 
                 <div class="col-auto d-flex align-items-center">
                     <a href="<?= url('PortalMembro/logout') ?>" class="btn btn-outline-light btn-sm px-3 fw-bold border-2 me-3 rounded-0">
                         <i class="bi bi-box-arrow-right me-1"></i> SAIR
                     </a>
-					<div class="d-none d-md-block">
-						<img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 40px; filter: brightness(0) invert(1);">
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+                    <div class="d-none d-md-block">
+                        <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 40px; filter: brightness(0) invert(1);">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="container pb-5">
         <div class="card border-0 shadow rounded-4">
@@ -76,14 +75,32 @@
                         <label class="form-label small fw-bold text-muted mb-0">Nome Completo</label>
                         <p class="mb-0 fw-bold text-dark text-uppercase"><?= $perfil['membro_nome'] ?></p>
                     </div>
+
+                    <div class="col-md-4 border-bottom pb-2">
+                        <label class="form-label small fw-bold text-muted mb-0">Gênero</label>
+                        <p class="mb-0 text-dark"><?= $perfil['membro_genero'] ?: 'Não informado' ?></p>
+                    </div>
+
+                    <div class="col-md-4 border-bottom pb-2">
+                        <label class="form-label small fw-bold text-muted mb-0">Estado Civil</label>
+                        <p class="mb-0 text-dark"><?= $perfil['membro_estado_civil'] ?: 'Não informado' ?></p>
+                    </div>
+
+                    <div class="col-md-4 border-bottom pb-2">
+                        <label class="form-label small fw-bold text-muted mb-0">Nascimento</label>
+                        <p class="mb-0 text-dark"><?= date('d/m/Y', strtotime($perfil['membro_data_nascimento'])) ?></p>
+                    </div>
+
                     <div class="col-md-6 border-bottom pb-2">
                         <label class="form-label small fw-bold text-muted mb-0">E-mail</label>
                         <p class="mb-0 text-dark"><?= $perfil['membro_email'] ?: 'Não informado' ?></p>
                     </div>
+
                     <div class="col-md-6 border-bottom pb-2">
                         <label class="form-label small fw-bold text-muted mb-0">WhatsApp</label>
                         <p class="mb-0 text-dark"><?= $perfil['membro_telefone'] ?: 'Não informado' ?></p>
                     </div>
+
                     <div class="col-12">
                         <label class="form-label small fw-bold text-muted mb-0">Endereço</label>
                         <p class="mb-0 text-dark">
@@ -115,48 +132,47 @@
                     <?php endif; ?>
                 </div>
 
-				<div class="d-flex align-items-center mb-3 mt-4">
-					<h6 class="fw-bold text-ipb mb-0 small text-uppercase">Presença EBD - <?= $anoAtual ?></h6>
-					<hr class="flex-grow-1 ms-3 opacity-25">
-				</div>
+                <div class="d-flex align-items-center mb-3 mt-4">
+                    <h6 class="fw-bold text-ipb mb-0 small text-uppercase">Presença EBD - <?= $anoAtual ?></h6>
+                    <hr class="flex-grow-1 ms-3 opacity-25">
+                </div>
 
-				<div class="row g-2 mb-4">
-					<div class="col-12">
-						<div class="d-flex overflow-auto pb-2 mb-3" style="white-space: nowrap; -webkit-overflow-scrolling: touch;">
-							<?php
-							$mesesNome = [
-								'01' => 'Jan', '02' => 'Fev', '03' => 'Mar', '04' => 'Abr',
-								'05' => 'Mai', '06' => 'Jun', '07' => 'Jul', '08' => 'Ago',
-								'09' => 'Set', '10' => 'Out', '11' => 'Nov', '12' => 'Dez'
-							];
-							$mesAtual = date('m');
-							foreach ($mesesNome as $num => $nome):
-								$active = ($num == $mesAtual) ? 'active bg-ipb text-white' : 'bg-white text-muted border';
-							?>
-								<button class="btn btn-sm rounded-pill me-2 fw-bold btn-mes <?= $active ?>"
-										onclick="filtrarMes('<?= $num ?>', this)"
-										style="min-width: 60px;">
-									<?= $nome ?>
-								</button>
-							<?php endforeach; ?>
-						</div>
+                <div class="row g-2 mb-4">
+                    <div class="col-12">
+                        <div class="d-flex overflow-auto pb-2 mb-3" style="white-space: nowrap; -webkit-overflow-scrolling: touch;">
+                            <?php
+                            $mesesNome = [
+                                '01' => 'Jan', '02' => 'Fev', '03' => 'Mar', '04' => 'Abr',
+                                '05' => 'Mai', '06' => 'Jun', '07' => 'Jul', '08' => 'Ago',
+                                '09' => 'Set', '10' => 'Out', '11' => 'Nov', '12' => 'Dez'
+                            ];
+                            $mesAtual = date('m');
+                            foreach ($mesesNome as $num => $nome):
+                                $active = ($num == $mesAtual) ? 'active bg-ipb text-white' : 'bg-white text-muted border';
+                            ?>
+                                <button class="btn btn-sm rounded-pill me-2 fw-bold btn-mes <?= $active ?>"
+                                        onclick="filtrarMes('<?= $num ?>', this)"
+                                        style="min-width: 60px;">
+                                    <?= $nome ?>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
 
-						<div class="table-responsive rounded-4 border bg-white">
-							<table class="table table-sm table-borderless mb-0">
-								<thead class="bg-light">
-									<tr class="text-center" style="font-size: 0.7rem;">
-										<th class="p-2 text-muted text-uppercase">Data</th>
-										<th class="p-2 text-muted text-uppercase">Classe / Aula</th>
-										<th class="p-2 text-muted text-uppercase">Status</th>
-									</tr>
-								</thead>
-								<tbody id="corpo-tabela-ebd" style="font-size: 0.85rem;">
-									</tbody>
-							</table>
-						</div>
-					</div>
-				</div>
-
+                        <div class="table-responsive rounded-4 border bg-white">
+                            <table class="table table-sm table-borderless mb-0">
+                                <thead class="bg-light">
+                                    <tr class="text-center" style="font-size: 0.7rem;">
+                                        <th class="p-2 text-muted text-uppercase">Data</th>
+                                        <th class="p-2 text-muted text-uppercase">Classe / Aula</th>
+                                        <th class="p-2 text-muted text-uppercase">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="corpo-tabela-ebd" style="font-size: 0.85rem;">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="d-flex align-items-center justify-content-between mb-3 mt-4">
                     <h6 class="fw-bold text-ipb mb-0 small text-uppercase">Dependentes</h6>
@@ -211,7 +227,6 @@
         </div>
     </div>
 </div>
-
 
 <script>
 // Passamos os dados do PHP para o JavaScript com segurança

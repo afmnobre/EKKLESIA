@@ -1,48 +1,87 @@
 <div class="container-fluid pt-3">
 
-    <div class="row mb-3">
-        <div class="col-12 text-center p-3 rounded bg-white shadow-sm border-bottom">
-            <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" alt="Logo IPB Completo" class="img-fluid" style="max-height: 85px;">
-        </div>
-    </div>
+	<div class="row mb-3">
+		<div class="col-12 text-center p-3 rounded bg-white shadow-sm border-bottom">
+			<img src="<?= url('assets/img/logo_ipb_completo.png') ?>" alt="Logo IPB Completo" class="img-fluid" style="max-height: 85px;">
+		</div>
+	</div>
 
-    <div class="card border-0 shadow-sm mb-4 overflow-hidden">
-        <div class="row g-0 align-items-center">
-            <div class="col-md-4 text-center bg-light p-2">
-                <img src="<?= url('assets/img/Igreja.jpg') ?>"
-                     class="img-fluid rounded"
-                     alt="Projeto da Igreja"
-                     style="object-fit: contain; max-height: 220px; width: auto;">
-            </div>
-            <div class="col-md-8">
-                <div class="card-body">
-                    <span class="badge bg-primary mb-2 shadow-sm">Dashboard Administrativo EKKLESIA</span>
-                    <h2 class="card-title fw-bold text-dark mb-1"><?= $igreja['igreja_nome'] ?></h2>
-                    <p class="text-muted mb-0">
-                        <i class="fas fa-map-marker-alt me-2 text-danger"></i><?= $igreja['igreja_endereco'] ?>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
+	<div class="card border-0 shadow-sm mb-4 overflow-hidden">
+		<div class="card-body p-0">
+			<div class="row g-0 align-items-center">
 
+				<div class="col-md-4 col-12 text-center bg-light p-3 border-end d-flex align-items-center justify-content-center" style="min-height: 200px;">
+					<img src="<?= url('assets/img/Igreja.jpg') ?>"
+						 class="img-fluid rounded shadow-sm"
+						 alt="Projeto da Igreja"
+						 style="object-fit: contain; max-height: 180px; width: auto; display: block;">
+				</div>
 
-<div class="card-body">
-    <div class="row align-items-center">
-        <div class="col">
-            <span class="badge bg-primary mb-2 shadow-sm">Dashboard Administrativo EKKLESIA</span>
-            <h2 class="card-title fw-bold text-dark mb-1"><?= $igreja['igreja_nome'] ?></h2>
-            <p class="text-muted mb-0">
-                <i class="fas fa-map-marker-alt me-2 text-danger"></i><?= $igreja['igreja_endereco'] ?>
-            </p>
-        </div>
-        <div class="col-auto text-center border-start ps-4">
-            <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.7rem;">Total de Membros</small>
-            <h2 class="fw-bold text-primary mb-0"><?= $totalMembros ?></h2>
-            <span class="badge bg-success-subtle text-success rounded-pill" style="font-size: 0.6rem;">ATIVOS</span>
-        </div>
-    </div>
-</div>
+				<div class="col-md col-12 p-4">
+					<span class="badge bg-primary mb-2 shadow-sm">Dashboard Administrativo EKKLESIA</span>
+					<h2 class="card-title fw-bold text-dark mb-1"><?= $igreja['igreja_nome'] ?></h2>
+					<p class="text-muted mb-0 small">
+						<i class="fas fa-map-marker-alt me-2 text-danger"></i><?= $igreja['igreja_endereco'] ?>
+					</p>
+				</div>
+
+				<div class="col-md-auto col-12 text-center p-4 border-start bg-light-subtle">
+					<div class="px-3">
+						<small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px;">Total de Membros</small>
+						<h1 class="fw-bold text-primary mb-0" style="font-size: 2.5rem; line-height: 1;"><?= $totalMembros ?></h1>
+						<span class="badge bg-success-subtle text-success rounded-pill mt-1" style="font-size: 0.7rem;">ATIVOS</span>
+					</div>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+	<div class="row mb-5">
+		<div class="col-12">
+			<h5 class="text-dark fw-bold mb-3 border-bottom pb-2">
+				<i class="fas fa-users me-2 text-secondary"></i>Sociedades Internas (Membros / Potencial)
+			</h5>
+		</div>
+		<?php
+		$coresSoc = [
+			'UCP' => 'bg-info text-white',
+			'UPA' => 'bg-primary text-white',
+			'UMP' => 'bg-warning text-dark',
+			'SAF' => 'bg-danger text-white',
+			'UPH' => 'bg-success text-white'
+		];
+		?>
+		<?php foreach($sociedades as $nome => $dados): ?>
+		<div class="col-md-3 col-12 mb-3"> <div class="card shadow-sm border-0 <?= $coresSoc[$nome] ?> h-100 shadow-hover overflow-hidden">
+				<div class="card-body p-0">
+					<div class="row g-0 align-items-center">
+						<div class="col-4 bg-white d-flex align-items-center justify-content-center p-2" style="min-height: 80px;">
+							<?php if(!empty($dados['logo'])): ?>
+								<img src="<?= url('assets/uploads/' . $dados['logo']) ?>"
+									 alt="Logo <?= $nome ?>"
+									 class="img-fluid"
+									 style="max-height: 60px; object-fit: contain;">
+							<?php else: ?>
+								<i class="fas fa-shield-alt fa-2x text-muted opacity-25"></i>
+							<?php endif; ?>
+						</div>
+
+						<div class="col-8 text-center p-2">
+							<small class="fw-bold d-block text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+								<?= $nome ?>
+							</small>
+							<h4 class="mb-0 fw-bold">
+								<?= $dados['real'] ?>
+								<small class="opacity-75" style="font-size: 0.6em;">/ <?= $dados['potencial'] ?></small>
+							</h4>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php endforeach; ?>
+	</div>
 
     <div class="row mb-4">
         <div class="col-12">
@@ -69,35 +108,6 @@
                     <div class="progress mt-2" style="height: 6px;" title="<?= round($porcentagem) ?>% da capacidade">
                         <div class="progress-bar <?= $corBarra ?>" style="width: <?= $porcentagem ?>%"></div>
                     </div>
-                </div>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
-
-    <div class="row mb-5">
-        <div class="col-12">
-            <h5 class="text-dark fw-bold mb-3 border-bottom pb-2">
-                <i class="fas fa-users me-2 text-secondary"></i>Sociedades Internas (Membros / Potencial)
-            </h5>
-        </div>
-        <?php
-        $coresSoc = [
-            'UCP' => 'bg-info text-white',
-            'UPA' => 'bg-primary text-white',
-            'UMP' => 'bg-warning text-dark',
-            'SAF' => 'bg-danger text-white',
-            'UPH' => 'bg-success text-white'
-        ];
-        ?>
-        <?php foreach($sociedades as $nome => $dados): ?>
-        <div class="col-md-2 col-6 mb-3">
-            <div class="card shadow-sm border-0 <?= $coresSoc[$nome] ?> h-100 shadow-hover">
-                <div class="card-body text-center d-flex flex-column justify-content-center p-2">
-                    <small class="fw-bold d-block text-uppercase"><?= $nome ?></small>
-                    <h4 class="mb-0 fw-bold">
-                        <?= $dados['real'] ?> <small class="opacity-75" style="font-size: 0.6em;">/ <?= $dados['potencial'] ?></small>
-                    </h4>
                 </div>
             </div>
         </div>

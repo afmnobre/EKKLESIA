@@ -127,22 +127,73 @@ class Financeiro {
 					financeiro_conta_descricao = ?,
 					financeiro_conta_valor = ?,
 					financeiro_conta_data_vencimento = ?,
-					financeiro_conta_pago = ?
+					financeiro_conta_pago = ?,
+					financeiro_conta_reembolso = ?
 					WHERE financeiro_conta_id = ? AND financeiro_conta_igreja_id = ?";
 			return $this->db->prepare($sql)->execute([
-				$data['categoria_id'], $data['descricao'], $data['valor'],
-				$data['vencimento'], $data['pago'], $data['id'], $data['igreja_id']
+				$data['categoria_id'],
+				$data['descricao'],
+				$data['valor'],
+				$data['vencimento'],
+				$data['pago'],
+				$data['reembolso'], // Novo campo
+				$data['id'],
+				$data['igreja_id']
 			]);
 		} else {
 			$sql = "INSERT INTO financeiro_contas
 					(financeiro_conta_igreja_id, financeiro_conta_financeiro_categoria_id, financeiro_conta_descricao,
-					 financeiro_conta_valor, financeiro_conta_tipo, financeiro_conta_data_vencimento, financeiro_conta_pago)
-					VALUES (?, ?, ?, ?, ?, ?, ?)";
+					 financeiro_conta_valor, financeiro_conta_tipo, financeiro_conta_data_vencimento,
+					 financeiro_conta_pago, financeiro_conta_reembolso)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 			return $this->db->prepare($sql)->execute([
-				$data['igreja_id'], $data['categoria_id'], $data['descricao'],
-				$data['valor'], $data['tipo'], $data['vencimento'], $data['pago']
+				$data['igreja_id'],
+				$data['categoria_id'],
+				$data['descricao'],
+				$data['valor'],
+				$data['tipo'],
+				$data['vencimento'],
+				$data['pago'],
+				$data['reembolso'] // Novo campo
 			]);
 		}
+	}
+
+	public function getTesoureiro($igrejaId) {
+		$sql = "SELECT m.membro_nome
+				FROM membros m
+				JOIN membros_cargos_vinculo v ON m.membro_id = v.vinculo_membro_id
+				WHERE m.membro_igreja_id = ?
+				AND v.vinculo_cargo_id = 11
+				LIMIT 1";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		$resultado = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+		return $resultado ? $resultado['membro_nome'] : "Tesouraria";
+	}
+
+	public function getDadosIgreja($igrejaId) {
+		$sql = "SELECT * FROM igrejas WHERE igreja_id = ?"; // Ajuste o nome da tabela/coluna se for diferente
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetch(\PDO::FETCH_ASSOC);
+	}
+
+	public function getContaById($id, $igrejaId) {
+		$sql = "SELECT
+					c.*,
+					cat.financeiro_categoria_nome as financeiro_categoria_nome,
+					sub.subcategoria_nome as subcategoria_nome
+				FROM financeiro_contas c
+				LEFT JOIN financeiro_categorias cat ON c.financeiro_conta_financeiro_categoria_id = cat.financeiro_categoria_id
+				LEFT JOIN financeiro_subcategorias sub ON c.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
+				WHERE c.financeiro_conta_id = ? AND c.financeiro_conta_igreja_id = ?";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$id, $igrejaId]);
+		return $stmt->fetch(\PDO::FETCH_ASSOC);
 	}
 
 	// Busca os lançamentos filtrados por mês e ano
@@ -157,7 +208,7 @@ class Financeiro {
 				WHERE fc.financeiro_conta_igreja_id = ?
 				AND MONTH(fc.financeiro_conta_data_vencimento) = ?
 				AND YEAR(fc.financeiro_conta_data_vencimento) = ?
-				ORDER BY fc.financeiro_conta_data_vencimento ASC";
+				ORDER BY fc.financeiro_conta_data_vencimento DESC";
 
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([$igrejaId, $mes, $ano]);
@@ -241,9 +292,14 @@ class Financeiro {
 		}
 	}
 
+	public function atualizarAnexoFinanceiro($contaId, $igrejaId, $tipo, $caminho) {
+		$coluna = ($tipo === 'comprovante') ? 'financeiro_conta_comprovante' : 'financeiro_conta_nota_fiscal';
+		$sql = "UPDATE financeiro_contas SET {$coluna} = ? WHERE financeiro_conta_id = ? AND financeiro_conta_igreja_id = ?";
+		return $this->db->prepare($sql)->execute([$caminho, $contaId, $igrejaId]);
+	}
+
 	// Busca categorias e subcategorias agrupadas
 	public function getCategoriasAgrupadas($igrejaId) {
-		// Buscamos todas as categorias e suas respectivas subcategorias
 		$sql = "SELECT
 					c.financeiro_categoria_id,
 					c.financeiro_categoria_nome,
@@ -253,7 +309,8 @@ class Financeiro {
 				FROM financeiro_categorias c
 				LEFT JOIN financeiro_subcategorias s ON c.financeiro_categoria_id = s.subcategoria_categoria_id
 				WHERE c.financeiro_categoria_igreja_id = ?
-				ORDER BY c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
+				/* Ordena primeiro por TIPO (entrada antes de saida) e depois pelo NOME */
+				ORDER BY c.financeiro_categoria_tipo ASC, c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
 
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([$igrejaId]);
@@ -263,17 +320,15 @@ class Financeiro {
 		foreach ($dados as $linha) {
 			$catId = $linha['financeiro_categoria_id'];
 
-			// Se a categoria pai ainda não está no array, cria ela
 			if (!isset($agrupado[$catId])) {
 				$agrupado[$catId] = [
 					'id'   => $catId,
 					'nome' => $linha['financeiro_categoria_nome'],
 					'tipo' => $linha['financeiro_categoria_tipo'],
-					'subs' => [] // Array para guardar as subcategorias
+					'subs' => []
 				];
 			}
 
-			// Se houver uma subcategoria vinculada, adiciona na lista 'subs'
 			if ($linha['subcategoria_id']) {
 				$agrupado[$catId]['subs'][] = [
 					'id'   => $linha['subcategoria_id'],

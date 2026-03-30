@@ -16,12 +16,20 @@ class DashboardMembrosController extends Controller
         $this->model = new Membro();
     }
 
-    public function index()
-    {
-        $idIgreja = $_SESSION['usuario_igreja_id'];
-        $dadosDashboard = $this->model->getDashboardStats($idIgreja);
+	public function index()
+	{
+		$idIgreja = $_SESSION['usuario_igreja_id'];
 
-        // Removi o "paginas/" do início, pois o erro mostra que o sistema já o adiciona
-        $this->view('membros/dashboard', $dadosDashboard);
-    }
+		// 1. Pega as estatísticas gerais (ativos, novos, aniversariantes, etc.)
+		$dadosDashboard = $this->model->getDashboardStats($idIgreja);
+
+		// 2. Busca especificamente os dados para o gráfico de bairros
+		$bairrosData = $this->model->getEstatisticasBairro($idIgreja);
+
+		// 3. Mescla os bairros no array principal (garantindo que não seja null)
+		$dadosDashboard['bairros'] = $bairrosData ?: [];
+
+		// Envia tudo para a view
+		$this->view('membros/dashboard', $dadosDashboard);
+	}
 }

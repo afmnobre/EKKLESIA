@@ -55,8 +55,8 @@
                         <span class="input-group-text bg-light border-end-0 text-muted" style="border-radius: 12px 0 0 12px;">
                             <i class="bi bi-phone"></i>
                         </span>
-                        <input type="tel" name="celular" class="form-control form-control-lg bg-light border-start-0"
-                               placeholder="(00) 00000-0000" required autofocus
+                        <input type="tel" name="celular" id="inputCelular" class="form-control form-control-lg bg-light border-start-0"
+                               placeholder="(00) 00000-0000" required autofocus maxlength="15"
                                style="border-radius: 0 12px 12px 0;">
                     </div>
                 </div>
@@ -84,3 +84,21 @@
         </div>
     </div>
 </div>
+
+<script>
+    /* Script para Máscara de Celular Dinâmica */
+    const handlePhone = (event) => {
+        let input = event.target;
+        input.value = phoneMask(input.value);
+    }
+
+    const phoneMask = (value) => {
+        if (!value) return "";
+        value = value.replace(/\D/g, ''); // Remove tudo que não é dígito
+        value = value.replace(/(\d{2})(\d)/, "($1) $2"); // Coloca parênteses no DDD
+        value = value.replace(/(\d{5})(\d)/, "$1-$2"); // Coloca o hífen (formato celular 9 dígitos)
+        return value;
+    }
+
+    document.getElementById('inputCelular').addEventListener('keyup', handlePhone);
+</script>

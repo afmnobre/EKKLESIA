@@ -1,6 +1,9 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold text-dark"><i class="bi bi-people-fill me-2"></i>Sociedades Internas</h3>
+        <button type="button" class="btn btn-warning fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalQrLoginLider">
+            <i class="bi bi-qr-code-scan me-2"></i> ACESSO DO LÍDER
+        </button>
         <button class="btn btn-primary shadow-sm" onclick="window.novaSociedade()">
             <i class="bi bi-plus-lg me-2"></i>Nova Sociedade
         </button>
@@ -209,6 +212,54 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalQrLoginLider" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header bg-dark text-white border-0 py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-shield-lock me-2"></i>Acesso à Liderança
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-5">
+                <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" alt="Logo IPB" class="img-fluid mb-4" style="max-height: 60px;">
+
+                <p class="text-muted fw-bold mb-1 text-uppercase small" style="letter-spacing: 1px;">Portal das Sociedades</p>
+                <p class="text-muted small mb-4">O líder deve escanear para gerenciar membros e eventos.</p>
+
+                <div id="qrcode_lider" class="d-flex justify-content-center p-3 border rounded-4 bg-white shadow-sm mb-4" style="min-height: 220px;">
+                </div>
+
+                <div class="card bg-light border-0 rounded-4 mb-4">
+                    <div class="card-body py-3">
+                        <small class="text-muted d-block fw-bold text-uppercase mb-2" style="font-size: 0.65rem;">Link Direto:</small>
+                        <input type="text" id="inputLinkLider" value="<?= full_url('sociedadeLider/login') ?>" style="position: absolute; left: -9999px;">
+
+                        <div class="d-flex align-items-center justify-content-center">
+                            <code class="fw-bold text-dark me-2" style="word-break: break-all;">
+                                <?= full_url('sociedadeLider/login') ?>
+                            </code>
+                            <button class="btn btn-sm btn-outline-dark border-0" onclick="copyToClipboard('inputLinkLider', 'msgCopyLider')">
+                                <i class="bi bi-copy"></i>
+                            </button>
+                        </div>
+                        <div id="msgCopyLider" class="text-success small mt-1 fw-bold" style="display:none;">Copiado!</div>
+                    </div>
+                </div>
+
+                <img src="<?= url('assets/img/logo_ipb.png') ?>" alt="Sarça IPB" style="height: 40px; opacity: 0.5;">
+            </div>
+            <div class="modal-footer border-0 bg-light d-flex justify-content-center rounded-bottom-4">
+                <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-outline-dark px-4 rounded-pill" onclick="downloadModalAsImage('modalQrLoginLider', 'Acesso_Portal_Liderança')">
+                    <i class="bi bi-download me-2"></i>Salvar Imagem
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
 // --- FUNÇÕES DE SOCIEDADE (CADASTRO/EDIÇÃO) ---
 
@@ -377,5 +428,37 @@ window.abrirModalLogo = function(id, nome, logoAtual) {
 
     new bootstrap.Modal(document.getElementById('modalLogoSociedade')).show();
 };
+
+document.addEventListener("DOMContentLoaded", function() {
+    // AJUSTE AQUI: Mudamos de 'sociedade/login' para 'sociedadeLider/login'
+    const urlLider = "<?= full_url('sociedadeLider/login') ?>";
+
+    const modalLider = document.getElementById('modalQrLoginLider');
+    const containerLider = document.getElementById('qrcode_lider');
+
+    if (modalLider && containerLider) {
+        // Usamos 'shown.bs.modal' para garantir que o modal terminou de abrir
+        modalLider.addEventListener('shown.bs.modal', function() {
+
+            containerLider.innerHTML = ''; // Limpa antes de gerar
+
+            if (typeof QRCode !== "undefined") {
+                // Pequeno delay para garantir que o container está visível
+                setTimeout(function() {
+                    new QRCode(containerLider, {
+                        text: urlLider,
+                        width: 220,
+                        height: 220,
+                        colorDark : "#003366",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                }, 100);
+            } else {
+                containerLider.innerHTML = '<p class="text-danger small mt-5">Biblioteca QRCode não encontrada!</p>';
+            }
+        });
+    }
+});
 
 </script>

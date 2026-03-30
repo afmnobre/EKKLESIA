@@ -2,6 +2,7 @@
 namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\Financeiro;
+use App\Core\Utils;
 
 class FinanceiroController extends Controller {
     private $model;
@@ -124,24 +125,43 @@ class FinanceiroController extends Controller {
 	// Aproveite e crie a rota para salvar o agendamento que o modal envia
 	public function salvar_conta_agendada() {
 		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-			// DEBUG: Se quiser ter certeza, descomente a linha abaixo e tente salvar.
-			// die("Recebi o ID: " . $_POST['subcategoria_id']);
-
 			$data = [
 				'id'           => $_POST['id'] ?? null,
 				'igreja_id'    => $_SESSION['usuario_igreja_id'],
-				'categoria_id' => $_POST['subcategoria_id'], // O nome deve ser IDÊNTICO ao 'name' do select no HTML
+				'categoria_id' => $_POST['subcategoria_id'], // Pega do select 'subcategoria_id'
 				'descricao'    => $_POST['descricao'],
 				'valor'        => $_POST['valor'],
 				'tipo'         => $_POST['tipo'],
 				'vencimento'   => $_POST['vencimento'],
+				'reembolso'    => isset($_POST['reembolso']) ? 1 : 0, // Captura o checkbox
 				'pago'         => 0
 			];
 
-			$this->model->salvarConta($data);
-			header("Location: " . url('financeiro/lancamentos') . "?sucesso=agendado");
+			if ($this->model->salvarConta($data)) {
+				header("Location: " . url('financeiro/lancamentos') . "?sucesso=agendado");
+			} else {
+				// Se falhar, você pode dar um die para ver o erro de PDO
+				die("Erro ao salvar no banco de dados.");
+			}
 			exit;
 		}
+	}
+
+	public function gerar_recibo_reembolso($id) {
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+		$conta = $this->model->getContaById($id, $igrejaId);
+
+		if (!$conta || $conta['financeiro_conta_reembolso'] != 1) {
+			die("Lançamento não encontrado ou não é um reembolso.");
+		}
+
+		$data = [
+			'conta'      => $conta,
+			'igreja'     => $this->model->getDadosIgreja($igrejaId),
+			'tesoureiro' => $this->model->getTesoureiro($igrejaId) // Busca o tesoureiro
+		];
+
+		$this->rawview('financeiro/recibo_reembolso', $data);
 	}
 
 	public function baixar_conta() {
@@ -299,8 +319,8 @@ class FinanceiroController extends Controller {
 		// Certifique-se de que o método 'getFluxoAnualPorCategorias' está no seu Model
 		$relatorioCategorias = $this->model->getFluxoAnualPorCategorias($igrejaId, $anoAtual);
 
-// ADICIONE ISSO PARA TESTAR:
-//var_dump($relatorioCategorias); die();
+        // ADICIONE ISSO PARA TESTAR:
+        //var_dump($relatorioCategorias); die();
 
 
 
@@ -347,6 +367,66 @@ class FinanceiroController extends Controller {
 		]);
 	}
 
+	public function uploadAnexo() {
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$idIgreja = $_SESSION['usuario_igreja_id'];
+			$contaId = $_POST['conta_id'];
+			$tipo = $_POST['tipo_arquivo']; // 'comprovante' ou 'notafiscal'
+			$ano = $_POST['ano_referencia'];
+			$mes = str_pad($_POST['mes_referencia'], 2, "0", STR_PAD_LEFT);
+
+			if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] === 0) {
+
+				// --- 1. BUSCAR ARQUIVO ANTIGO PARA DELETAR ---
+				// Precisamos saber se já existe um arquivo registrado para esta conta
+				$contaAtual = $this->model->getContaById($contaId, $idIgreja);
+				$colunaBanco = ($tipo === 'comprovante') ? 'financeiro_conta_comprovante' : 'financeiro_conta_nota_fiscal';
+				$arquivoAntigo = $contaAtual[$colunaBanco] ?? null;
+
+				$extensaoOriginal = strtolower(pathinfo($_FILES['arquivo']['name'], PATHINFO_EXTENSION));
+				$isImagem = in_array($extensaoOriginal, ['jpg', 'jpeg', 'png', 'webp', 'jfif']);
+
+				$extensaoFinal = $isImagem ? 'jpg' : $extensaoOriginal;
+				$novoNome = "{$tipo}_" . time() . "_" . rand(1000, 9999) . "." . $extensaoFinal;
+
+				$raizProjeto = dirname(__DIR__, 2);
+				$subPastaPath = ($tipo === 'comprovante') ? 'comprovantes' : 'notasfiscais';
+				$diretorioDestino = $raizProjeto . "/public/assets/uploads/{$idIgreja}/financeiro/{$subPastaPath}/{$ano}/{$mes}/";
+				$caminhoCompleto = $diretorioDestino . $novoNome;
+
+				if (!is_dir($diretorioDestino)) {
+					mkdir($diretorioDestino, 0777, true);
+				}
+
+				if (move_uploaded_file($_FILES['arquivo']['tmp_name'], $caminhoCompleto)) {
+					if ($isImagem) {
+						\App\Core\Utils::otimizarImagem($caminhoCompleto, $caminhoCompleto, 1000, 80);
+					}
+
+					$caminhoRelativo = "{$idIgreja}/financeiro/{$subPastaPath}/{$ano}/{$mes}/{$novoNome}";
+
+					if ($this->model->atualizarAnexoFinanceiro($contaId, $idIgreja, $tipo, $caminhoRelativo)) {
+
+						// --- 2. DELETAR O ARQUIVO ANTIGO DO SERVIDOR ---
+						if ($arquivoAntigo) {
+							$caminhoFisicoAntigo = $raizProjeto . "/public/assets/uploads/" . $arquivoAntigo;
+							if (file_exists($caminhoFisicoAntigo)) {
+								unlink($caminhoFisicoAntigo);
+							}
+						}
+
+						header("Location: " . url("financeiro/lancamentos?mes={$mes}&ano={$ano}&sucesso=arquivo_atualizado"));
+					} else {
+						die("Erro ao atualizar banco.");
+					}
+					exit;
+				}
+			}
+		}
+		header("Location: " . url("financeiro/lancamentos?erro=upload_falhou"));
+		exit;
+	}
+
 	public function relatorio_membros() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 		$ano = $_GET['ano'] ?? date('Y');
@@ -372,5 +452,137 @@ class FinanceiroController extends Controller {
 		]);
 	}
 
+	public function exportar_excel() {
+		$mes = $_GET['mes'] ?? date('m');
+		$ano = $_GET['ano'] ?? date('Y');
+		$igrejaId = $_SESSION['usuario_igreja_id'];
 
+		$dados = $this->model->getContasAgendadas($igrejaId, $mes, $ano);
+		$igreja = $this->model->getDadosIgreja($igrejaId);
+
+		$nomeIgreja = $igreja['nome'] ?? 'EKKLESIA';
+		$arquivo = "Financeiro_" . $mes . "_" . $ano . ".csv";
+
+		// Configura os Headers para CSV
+		header('Content-Type: text/csv; charset=utf-8');
+		header('Content-Disposition: attachment; filename="' . $arquivo . '"');
+
+		// Abre a saída de dados (output stream)
+		$output = fopen('php://output', 'w');
+
+		// Adiciona o BOM para o Excel/Google Sheets reconhecer acentos em UTF-8
+		fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+		// Cabeçalho de Identificação (Opcional no CSV, mas ajuda)
+		fputcsv($output, ["RELATÓRIO FINANCEIRO - " . $nomeIgreja]);
+		fputcsv($output, ["Período: " . $mes . "/" . $ano]);
+		fputcsv($output, []); // Linha em branco
+
+		// Cabeçalho da Tabela
+		fputcsv($output, ['Vencimento', 'Descrição', 'Categoria', 'Subcategoria', 'Tipo', 'Valor (R$)', 'Status']);
+
+		$totalEntradas = 0;
+		$totalSaidas = 0;
+
+		foreach ($dados as $d) {
+			$status = $d['financeiro_conta_pago'] ? 'Pago' : 'Pendente';
+			$tipo = ucfirst((string)($d['financeiro_conta_tipo'] ?? ''));
+			$data = date('d/m/Y', strtotime($d['financeiro_conta_data_vencimento']));
+			$valorNumerico = (float)$d['financeiro_conta_valor'];
+
+			if ($d['financeiro_conta_tipo'] == 'entrada') {
+				$totalEntradas += $valorNumerico;
+			} else {
+				$totalSaidas += $valorNumerico;
+			}
+
+			// Adiciona a linha no CSV
+			fputcsv($output, [
+				$data,
+				(string)($d['financeiro_conta_descricao'] ?? ''),
+				(string)($d['financeiro_categoria_nome'] ?? ''),
+				(string)($d['subcategoria_nome'] ?? ''),
+				$tipo,
+				number_format($valorNumerico, 2, ',', ''), // Vírgula como separador decimal para PT-BR
+				$status
+			]);
+		}
+
+		// Totais
+		fputcsv($output, []);
+		fputcsv($output, ['', '', '', '', 'SALDO DO PERÍODO:', number_format($totalEntradas - $totalSaidas, 2, ',', ''), '']);
+
+		fclose($output);
+		exit;
+	}
+
+	public function baixar_anexos_zip() {
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+		$mes = isset($_GET['mes']) ? (int)$_GET['mes'] : date('n');
+		$ano = isset($_GET['ano']) ? (int)$_GET['ano'] : date('Y');
+
+		$contas = $this->model->getContasAgendadas($igrejaId, $mes, $ano);
+
+		// Define a raiz de uploads onde sabemos que temos permissão (chmod 775/777)
+		$raizUploads = dirname(__DIR__, 2) . "/public/assets/uploads/";
+
+		$zip = new \ZipArchive();
+		$nomeZip = "Anexos_" . $mes . "_" . $ano . "_" . time() . ".zip"; // Adicionado time() para evitar conflito
+		$caminhoZip = $raizUploads . $nomeZip; // SALVANDO NA PASTA DE UPLOADS
+
+		if ($zip->open($caminhoZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === TRUE) {
+			$temArquivos = false;
+			$mesNome = str_pad($mes, 2, "0", STR_PAD_LEFT);
+
+			foreach ($contas as $c) {
+				$tipoPasta = ($c['financeiro_conta_tipo'] == 'entrada') ? 'receitas' : 'despesas';
+
+				// Limpeza radical para o nome do arquivo dentro do ZIP
+				$desc = preg_replace('/[^a-zA-Z0-9]/', '_', $c['financeiro_conta_descricao']);
+				$id = $c['financeiro_conta_id'];
+
+				// 1. Verificar Comprovante
+				if (!empty($c['financeiro_conta_comprovante'])) {
+					$caminhoFisico = $raizUploads . $c['financeiro_conta_comprovante'];
+					if (file_exists($caminhoFisico)) {
+						$ext = pathinfo($caminhoFisico, PATHINFO_EXTENSION);
+						$zip->addFile($caminhoFisico, "{$mesNome}/{$tipoPasta}/comprovantes/{$id}_{$desc}.{$ext}");
+						$temArquivos = true;
+					}
+				}
+
+				// 2. Verificar Nota Fiscal
+				if (!empty($c['financeiro_conta_nota_fiscal'])) {
+					$caminhoFisico = $raizUploads . $c['financeiro_conta_nota_fiscal'];
+					if (file_exists($caminhoFisico)) {
+						$ext = pathinfo($caminhoFisico, PATHINFO_EXTENSION);
+						$zip->addFile($caminhoFisico, "{$mesNome}/{$tipoPasta}/notasfiscais/NF_{$id}_{$desc}.{$ext}");
+						$temArquivos = true;
+					}
+				}
+			}
+
+			$zip->close();
+
+			if ($temArquivos && file_exists($caminhoZip)) {
+				// Limpa qualquer saída acidental do PHP antes de enviar o arquivo
+				if (ob_get_level()) ob_end_clean();
+
+				header('Content-Type: application/zip');
+				header('Content-disposition: attachment; filename=' . $nomeZip);
+				header('Content-Length: ' . filesize($caminhoZip));
+				header('Pragma: no-cache');
+
+				readfile($caminhoZip);
+				unlink($caminhoZip); // Remove o ZIP da pasta de uploads após o download
+				exit;
+			} else {
+				if (file_exists($caminhoZip)) unlink($caminhoZip);
+				header("Location: " . url('financeiro/lancamentos') . "?erro=sem_anexos");
+				exit;
+			}
+		} else {
+			die("Erro: O servidor não permitiu criar o ZIP mesmo na pasta de uploads. Verifique as permissões da pasta: " . $raizUploads);
+		}
+	}
 }

@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use App\Core\Database;
+
 use PDO;
 
 class PortalMembro {
@@ -13,26 +14,27 @@ class PortalMembro {
 
 	public function registrarPendente($dados) {
 		try {
-			// 1. Inserir na tabela membros (Adicionado membro_sexo)
 			$sqlMembro = "INSERT INTO membros (
 				membro_igreja_id,
 				membro_nome,
 				membro_data_nascimento,
 				membro_genero,
+				membro_estado_civil,
 				membro_data_batismo,
 				membro_email,
 				membro_senha,
 				membro_telefone,
 				membro_status,
 				membro_data_criacao
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', NOW())";
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', NOW())";
 
 			$stmt = $this->db->prepare($sqlMembro);
 			$stmt->execute([
 				$dados['igreja_id'],
 				$dados['nome'],
 				$dados['data_nasc'],
-				$dados['sexo'], // O novo campo que adicionamos
+				$dados['sexo'],
+				$dados['estado_civil'],
 				$dados['data_batismo'],
 				$dados['email'],
 				$dados['senha'],
@@ -248,4 +250,21 @@ class PortalMembro {
 		]);
 	}
 
+	public function excluirMembroCompleto($membroId)
+	{
+		// 1. Excluir Endereço (Coluna: membro_endereco_membro_id)
+		$stmt1 = $this->db->prepare("DELETE FROM membros_enderecos WHERE membro_endereco_membro_id = :id");
+		$stmt1->bindValue(':id', $membroId, \PDO::PARAM_INT);
+		$stmt1->execute();
+
+		// 2. Excluir do ROL de Membros (Coluna: membro_id)
+		$stmt2 = $this->db->prepare("DELETE FROM membros WHERE membro_id = :id");
+		$stmt2->bindValue(':id', $membroId, \PDO::PARAM_INT);
+
+		return $stmt2->execute();
+	}
+
+
 }
+
+

@@ -85,6 +85,16 @@
 				</div>
 			</div>
         </div>
+
+		<div class="row g-4 mt-2">
+			<div class="col-md-12">
+				<div class="card border-0 shadow-sm p-3">
+					<h6 class="fw-bold text-muted mb-3"><i class="bi bi-geo-alt-fill me-2"></i>Membros por Bairro (Top 10)</h6>
+					<canvas id="chartBairros" style="max-height: 300px;"></canvas>
+				</div>
+			</div>
+		</div>
+
         <div class="col-md-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3 border-0">
@@ -162,4 +172,37 @@ new Chart(document.getElementById('chartEtaria'), {
     },
     options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
 });
+
+// Gráfico de Bairros (Consertado)
+const dadosBairros = <?= json_encode($bairros ?? []) ?>;
+
+if (dadosBairros.length > 0) {
+    new Chart(document.getElementById('chartBairros'), {
+        type: 'bar',
+        data: {
+            // Extrai os nomes dos bairros para os labels
+            labels: dadosBairros.map(item => item.bairro),
+            datasets: [{
+                label: 'Membros',
+                // Extrai os totais para os dados
+                data: dadosBairros.map(item => item.total),
+                backgroundColor: '#6610f2',
+                borderRadius: 5
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Barras horizontais para nomes longos
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { beginAtZero: true, ticks: { stepSize: 1 } },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+}
+
 </script>

@@ -1,3 +1,13 @@
+<style>
+    /* Efeito de hover para o botão verde */
+    .btn-lg:hover {
+        background-color: #004426 !important;
+        color: white !important;
+        transform: translateY(-2px);
+        transition: all 0.2s;
+    }
+</style>
+
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-5 text-center">
@@ -58,11 +68,26 @@
                 </div>
             </div>
 
-            <div class="d-grid gap-2">
-                <a href="<?= url('auth/login') ?>" class="btn btn-primary btn-lg rounded-pill shadow fw-bold">
-                    VOLTAR PARA O LOGIN
-                </a>
-            </div>
+<?php
+    // Captura o ID da igreja vindo do redirecionamento
+    $idIgrejaRetorno = $_GET['igreja'] ?? null;
+?>
+
+<div class="mt-5 text-center">
+    <p class="text-muted small mb-3">Seu cadastro foi enviado para aprovação.</p>
+
+    <?php if ($idIgrejaRetorno): ?>
+        <a href="<?= full_url('PortalMembro/login/' . $idIgrejaRetorno) ?>"
+           class="btn btn-lg px-5 fw-bold shadow-sm rounded-pill"
+           style="background-color: #005a32; color: white; border: none;">
+            <i class="bi bi-box-arrow-in-right me-2"></i> IR PARA TELA DE LOGIN
+        </a>
+    <?php else: ?>
+        <a href="<?= url('PortalMembro/login') ?>" class="btn btn-outline-secondary rounded-pill px-4">
+            VOLTAR AO INÍCIO
+        </a>
+    <?php endif; ?>
+</div>
 
             <div class="mt-5 pt-3 border-top">
                 <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="max-width: 130px; filter: grayscale(1); opacity: 0.6;">

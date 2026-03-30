@@ -32,6 +32,7 @@ class PortalMembroController extends Controller {
 			'senha'        => password_hash($_POST['senha'], PASSWORD_DEFAULT),
 			'data_nasc'    => $_POST['data_nasc'],
 			'sexo'         => $_POST['sexo'],
+			'estado_civil' => $_POST['estado_civil'], // Novo campo adicionado
 			'data_batismo' => $dataBatismo,
 			'telefone'     => $_POST['telefone'],
 			'rua'          => $_POST['rua'],
@@ -49,9 +50,9 @@ class PortalMembroController extends Controller {
 				$this->processarFoto($membroId, $idIgreja);
 			}
 
-			// Redirecionamento usando a URL amigável do seu sistema
+			// Redirecionamento passando o ID da igreja na URL para gerar o link de volta
 			$idBase64 = base64_encode($membroId);
-			header("Location: " . url("PortalMembro/resumo/{$idBase64}"));
+			header("Location: " . url("PortalMembro/resumo/{$idBase64}?igreja={$idIgreja}"));
 			exit;
 		} else {
 			die("Erro ao registrar membro. Verifique os logs do banco de dados.");
@@ -230,10 +231,11 @@ class PortalMembroController extends Controller {
 			'nome'         => strtoupper(trim($_POST['membro_nome'])),
 			'data_nasc'    => $_POST['membro_data_nascimento'],
 			'sexo'         => $_POST['membro_genero'],
-			'data_batismo' => null, // Dependente geralmente entra sem essa info
+			'estado_civil' => $_POST['membro_estado_civil'], // Adicionado aqui
+			'data_batismo' => $_POST['membro_data_batismo'] ?: null,
 			'email'        => $_POST['membro_email'] ?? null,
 			'senha'        => null, // Dependente não faz login direto (usa o do responsável)
-			'telefone'     => null,
+			'telefone'     => $_POST['membro_telefone'] ?? null,
 			'rua'          => $_POST['membro_endereco_rua'],
 			'numero'       => $_POST['membro_endereco_numero'],
 			'bairro'       => $_POST['membro_endereco_bairro'],
@@ -255,7 +257,7 @@ class PortalMembroController extends Controller {
 			$dadosVinculo = [
 				'parentesco_responsavel_id' => $_SESSION['membro_id'],
 				'parentesco_dependente_id'  => $dependenteId,
-				'parentesco_grau'           => $_POST['parentesco_grau']
+				'parentesco_grau'            => $_POST['parentesco_grau']
 			];
 			$model->vincularResponsavel($dadosVinculo);
 

@@ -33,9 +33,9 @@ class Dashboard
     }
 
 	public function getMetricasSociedades($igrejaId) {
-		// 1. Busca as configurações de cada sociedade no banco
+		// 1. Busca as configurações de cada sociedade no banco (Incluindo o campo logo)
 		$sqlSoc = "SELECT sociedade_id, sociedade_nome, sociedade_genero,
-						  sociedade_idade_min, sociedade_idade_max
+						  sociedade_idade_min, sociedade_idade_max, sociedade_logo
 				   FROM sociedades
 				   WHERE sociedade_igreja_id = ? AND sociedade_status = 'Ativo'";
 		$stmtSoc = $this->db->prepare($sqlSoc);
@@ -49,15 +49,16 @@ class Dashboard
 			$sigla = explode(' ', $s['sociedade_nome'])[0];
 			$sociedades[$sigla] = [
 				'id'        => $s['sociedade_id'],
-				'genero'    => strtolower($s['sociedade_genero']),
+				'genero'    => strtolower($s['sociedade_genero'] ?? 'ambos'),
 				'idade_min' => (int)$s['sociedade_idade_min'],
 				'idade_max' => (int)$s['sociedade_idade_max'],
+				'logo'      => $s['sociedade_logo'], // <-- Campo adicionado aqui
 				'real'      => 0,
 				'potencial' => 0
 			];
 		}
 
-		// 2. Busca TODOS os membros ativos
+		// 2. Busca TODOS os membros ativos para cálculo de potencial
 		$sqlMembros = "SELECT membro_genero,
 							  TIMESTAMPDIFF(YEAR, membro_data_nascimento, CURDATE()) as idade
 					   FROM membros
@@ -66,17 +67,17 @@ class Dashboard
 		$stmtMembros->execute([$igrejaId]);
 		$membros = $stmtMembros->fetchAll(\PDO::FETCH_ASSOC);
 
-		// 3. Calcula o POTENCIAL dinamicamente
+		// 3. Calcula o POTENCIAL dinamicamente cruzando idade/gênero
 		foreach ($membros as $m) {
 			$idadeMembro = (int)$m['idade'];
 			$genMembro   = strtolower($m['membro_genero'] ?? '');
 
-			foreach ($sociedades as $sigla => $dados) {
+			foreach ($sociedades as $sigla => &$dados) {
 				$bateGenero = ($dados['genero'] == 'ambos' || $dados['genero'] == $genMembro);
 				$bateIdade  = ($idadeMembro >= $dados['idade_min'] && $idadeMembro <= $dados['idade_max']);
 
 				if ($bateGenero && $bateIdade) {
-					$sociedades[$sigla]['potencial']++;
+					$dados['potencial']++;
 				}
 			}
 		}

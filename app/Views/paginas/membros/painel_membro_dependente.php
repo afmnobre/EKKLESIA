@@ -39,10 +39,10 @@
                     <a href="<?= url('PortalMembro/logout') ?>" class="btn btn-outline-light btn-sm px-3 fw-bold border-2 me-3 rounded-0">
                         <i class="bi bi-box-arrow-right me-1"></i> SAIR
                     </a>
-					<div class="d-none d-md-block">
-						<img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 40px; filter: brightness(0) invert(1);">
-					</div>
-				</div>
+                    <div class="d-none d-md-block">
+                        <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 40px; filter: brightness(0) invert(1);">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -89,11 +89,21 @@
                         <div class="col-6">
                             <label class="form-label small fw-bold">Gênero</label>
                             <select name="membro_genero" class="form-select p-2" required>
+                                <option value="" selected disabled>Selecione...</option>
                                 <option value="Masculino">Masculino</option>
                                 <option value="Feminino">Feminino</option>
                             </select>
                         </div>
                         <div class="col-6">
+                            <label class="form-label small fw-bold">Estado Civil</label>
+                            <select name="membro_estado_civil" class="form-select p-2" required>
+                                <option value="Solteiro(a)" selected>Solteiro(a)</option>
+                                <option value="Casado(a)">Casado(a)</option>
+                                <option value="Viúvo(a)">Viúvo(a)</option>
+                                <option value="Divorciado(a)">Divorciado(a)</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
                             <label class="form-label small fw-bold">Grau de Parentesco</label>
                             <select name="parentesco_grau" class="form-select p-2" required>
                                 <option value="Pai/Mãe">Filho(a)</option>
@@ -188,7 +198,6 @@ function previewImage(input) {
 
 function toggleEndereco() {
     const isChecked = document.getElementById('checkHerdar').checked;
-    // Adicionado 'telefone' à lista de campos alternáveis
     const campos = ['rua', 'numero', 'email', 'telefone', 'cidade_display'];
 
     campos.forEach(id => {

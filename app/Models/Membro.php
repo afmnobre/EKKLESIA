@@ -49,8 +49,8 @@ class Membro
 					   e.membro_endereco_rua,
 					   e.membro_endereco_cidade,
 					   e.membro_endereco_estado,
-					   e.membro_endereco_cep
-				FROM membros m
+                       e.membro_endereco_cep
+       			FROM membros m
 				LEFT JOIN membros_enderecos e ON m.membro_id = e.membro_endereco_membro_id
 				WHERE m.membro_id = ? AND m.membro_igreja_id = ?";
 
@@ -67,6 +67,7 @@ class Membro
 					membro_nome,
 					membro_data_nascimento,
 					membro_genero,
+					membro_estado_civil, -- Novo campo
 					membro_email,
 					membro_telefone,
 					membro_data_batismo,
@@ -78,6 +79,7 @@ class Membro
 					:nome,
 					:nascimento,
 					:genero,
+					:estado_civil, -- Novo placeholder
 					:email,
 					:telefone,
 					:batismo,
@@ -94,6 +96,7 @@ class Membro
 		$sql = "UPDATE membros SET
 					membro_nome = :nome,
 					membro_genero = :genero,
+					membro_estado_civil = :estado_civil, -- Novo campo
 					membro_email = :email,
 					membro_telefone = :telefone,
 					membro_data_nascimento = :nascimento,
@@ -103,14 +106,15 @@ class Membro
 		try {
 			$stmt = $this->db->prepare($sql);
 			return $stmt->execute([
-				'nome'       => $data['nome'],
-				'genero'     => $data['genero'] ?? null,
-				'email'      => $data['email'],
-				'telefone'   => $data['telefone'],
-				'nascimento' => $data['data_nascimento'],
-				'batismo'    => $data['data_batismo'],
-				'id'         => (int)$id,
-				'igreja_id'  => (int)$igrejaId
+				'nome'         => $data['nome'],
+				'genero'       => $data['genero'] ?? null,
+				'estado_civil' => $data['estado_civil'] ?? null, // Inserido aqui
+				'email'        => $data['email'],
+				'telefone'     => $data['telefone'],
+				'nascimento'   => $data['data_nascimento'],
+				'batismo'      => $data['data_batismo'],
+				'id'           => (int)$id,
+				'igreja_id'    => (int)$igrejaId
 			]);
 		} catch (\PDOException $e) {
 			error_log("Erro ao atualizar membro: " . $e->getMessage());
@@ -294,6 +298,24 @@ class Membro
 		$stats['sem_cargo'] = $stmt->fetch()['total'];
 
 		return $stats;
+	}
+
+	public function getEstatisticasBairro($idIgreja)
+	{
+		$sql = "SELECT TRIM(e.membro_endereco_bairro) as bairro, COUNT(*) as total
+				FROM membros_enderecos e
+				INNER JOIN membros m ON e.membro_endereco_membro_id = m.membro_id
+				WHERE m.membro_igreja_id = :idIgreja
+				AND e.membro_endereco_bairro IS NOT NULL
+				AND e.membro_endereco_bairro != ''
+				GROUP BY TRIM(e.membro_endereco_bairro)
+				ORDER BY total DESC
+				LIMIT 10";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->bindValue(':idIgreja', $idIgreja, PDO::PARAM_INT);
+		$stmt->execute();
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
 	public function getCargosNomesByMembro($membroId)

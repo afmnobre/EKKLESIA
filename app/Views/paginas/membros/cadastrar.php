@@ -5,6 +5,13 @@
     $action = $isEdit ? url('membros/update/' . $membro['membro_id']) : url('membros/store');
     $buttonText = $isEdit ? 'Salvar Alterações' : 'Finalizar Cadastro';
 ?>
+<style>
+    /* Força visualmente o texto em maiúsculo */
+    .text-uppercase-input {
+        text-transform: uppercase;
+    }
+</style>
+
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -30,22 +37,36 @@
                         <?php endif; ?>
 
                         <div class="row g-3">
-                            <div class="col-md-8">
-                                <label class="form-label fw-bold text-muted small text-uppercase">Nome Completo</label>
-                                <input type="text" name="nome" class="form-control form-control-lg"
-                                       placeholder="Ex: João Silva" required
-                                       value="<?= $isEdit ? htmlspecialchars($membro['membro_nome']) : '' ?>">
-                            </div>
+							<div class="col-md-6">
+								<label class="form-label fw-bold text-muted small text-uppercase">Nome Completo</label>
+								<input type="text" name="nome" id="nome_completo"
+									   class="form-control form-control-lg text-uppercase-input"
+									   placeholder="EX: JOÃO SILVA" required
+									   value="<?= $isEdit ? htmlspecialchars(strtoupper($membro['membro_nome'])) : '' ?>">
+							</div>
 
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold text-muted small text-uppercase">Gênero</label>
-                                <select name="genero" class="form-select form-control-lg">
-                                    <option value="" disabled <?= !$isEdit ? 'selected' : '' ?>>Selecione...</option>
-                                    <option value="Masculino" <?= ($isEdit && $membro['membro_genero'] == 'Masculino') ? 'selected' : '' ?>>Masculino</option>
-                                    <option value="Feminino" <?= ($isEdit && $membro['membro_genero'] == 'Feminino') ? 'selected' : '' ?>>Feminino</option>
-                                </select>
-                            </div>
+							<div class="col-md-3">
+								<label class="form-label fw-bold text-muted small text-uppercase">Gênero</label>
+								<select name="genero" class="form-select form-control-lg">
+									<option value="" disabled <?= !$isEdit ? 'selected' : '' ?>>Selecione...</option>
+									<option value="Masculino" <?= ($isEdit && $membro['membro_genero'] == 'Masculino') ? 'selected' : '' ?>>Masculino</option>
+									<option value="Feminino" <?= ($isEdit && $membro['membro_genero'] == 'Feminino') ? 'selected' : '' ?>>Feminino</option>
+								</select>
+							</div>
 
+							<div class="col-md-3">
+								<label class="form-label fw-bold text-muted small text-uppercase">Estado Civil</label>
+								<select name="estado_civil" class="form-select form-control-lg">
+									<option value="" disabled <?= !$isEdit ? 'selected' : '' ?>>Selecione...</option>
+									<?php
+										$estados = ['Solteiro(a)', 'Casado(a)', 'Viúvo(a)', 'Divorciado(a)', 'Separado(a)'];
+										foreach($estados as $est):
+											$selected = ($isEdit && isset($membro['membro_estado_civil']) && $membro['membro_estado_civil'] == $est) ? 'selected' : '';
+											echo "<option value=\"$est\" $selected>$est</option>";
+										endforeach;
+									?>
+								</select>
+							</div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold text-muted small text-uppercase">E-mail</label>
                                 <div class="input-group input-group-lg">
@@ -56,14 +77,14 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-muted small text-uppercase">Telefone</label>
-                                <div class="input-group input-group-lg">
-                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-whatsapp"></i></span>
-                                    <input type="text" name="telefone" class="form-control border-start-0"
-                                           placeholder="(00) 00000-0000"
-                                           value="<?= $isEdit ? htmlspecialchars($membro['membro_telefone']) : '' ?>">
-                                </div>
+							<div class="col-md-6">
+								<label class="form-label fw-bold text-muted small text-uppercase">Telefone</label>
+								<div class="input-group input-group-lg">
+									<span class="input-group-text bg-light border-end-0"><i class="bi bi-whatsapp"></i></span>
+									<input type="text" name="telefone" id="telefone" class="form-control border-start-0"
+										   placeholder="(00) 00000-0000" maxlength="15"
+										   value="<?= $isEdit ? htmlspecialchars($membro['membro_telefone']) : '' ?>">
+								</div>
                             </div>
 
                             <div class="col-md-6">
@@ -107,3 +128,19 @@
         </div>
     </div>
 </div>
+<script>
+    document.getElementById('telefone').addEventListener('input', function (e) {
+        let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+
+        // Formatação dinâmica: (xx) xxxxx-xxxx
+        e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+    });
+
+    // Garante que se o valor vier do banco, ele seja formatado ao carregar (se necessário)
+    window.onload = function() {
+        const input = document.getElementById('telefone');
+        if (input.value) {
+            input.dispatchEvent(new Event('input'));
+        }
+    };
+</script>

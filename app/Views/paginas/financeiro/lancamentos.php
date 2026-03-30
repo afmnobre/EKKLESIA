@@ -42,63 +42,98 @@
 </div>
 
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold"><i class="bi bi-calendar-check me-2 text-primary"></i>Contas a Pagar/Receber</h3>
-        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNovaConta">
-            <i class="bi bi-plus-lg"></i> Novo Lançamento
+	<div class="d-flex justify-content-between align-items-center mb-4">
+		<h3 class="fw-bold"><i class="bi bi-calendar-check me-2 text-primary"></i>Contas a Pagar/Receber</h3>
+		<div>
+            <a href="<?= url('financeiro/baixar_anexos_zip?mes='.$mesSelecionado.'&ano='.$anoSelecionado) ?>"
+                class="btn btn-outline-primary shadow-sm me-2">
+                <i class="bi bi-file-earmark-zip"></i> Baixar Anexos (ZIP)
+            </a>
+
+            <a href="<?= url('financeiro/exportar_excel?mes='.$mesSelecionado.'&ano='.$anoSelecionado) ?>"
+			   class="btn btn-outline-success shadow-sm me-2">
+				<i class="bi bi-file-earmark-excel"></i> Exportar Excel
+			</a>
+
+			<button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNovaConta">
+				<i class="bi bi-plus-lg"></i> Novo Lançamento
+			</button>
+		</div>
+	</div>
+
+	<div class="card border-0 shadow-sm">
+		<div class="card-body p-0">
+			<div class="table-responsive">
+				<table class="table table-hover align-middle mb-0">
+					<thead class="bg-light">
+						<tr>
+							<th class="ps-4">Vencimento</th>
+							<th>Descrição</th>
+							<th>Classificação</th>
+							<th>Valor</th>
+							<th>Status</th>
+							<th class="text-end pe-4">Ações</th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach($contas_agendadas as $c):
+							$hoje = date('Y-m-d');
+							$atrasado = ($c['financeiro_conta_data_vencimento'] < $hoje && !$c['financeiro_conta_pago']);
+						?>
+						<tr>
+							<td class="ps-4 <?= $atrasado ? 'text-danger fw-bold' : '' ?>">
+								<?= date('d/m/Y', strtotime($c['financeiro_conta_data_vencimento'])) ?>
+							</td>
+							<td>
+								<span class="d-block fw-bold text-dark"><?= $c['financeiro_conta_descricao'] ?></span>
+							</td>
+							<td>
+								<small class="text-muted d-block" style="font-size: 0.7rem;"><?= $c['financeiro_categoria_nome'] ?></small>
+								<span class="badge bg-light text-dark border"><?= $c['subcategoria_nome'] ?></span>
+							</td>
+							<td class="fw-bold text-<?= $c['financeiro_conta_tipo'] == 'saida' ? 'danger' : 'success' ?>">
+								R$ <?= number_format($c['financeiro_conta_valor'], 2, ',', '.') ?>
+							</td>
+							<td>
+								<?php if($c['financeiro_conta_pago']): ?>
+									<span class="badge bg-success-subtle text-success px-3">Pago</span>
+								<?php else: ?>
+									<span class="badge bg-warning-subtle text-warning px-3">Pendente</span>
+								<?php endif; ?>
+							</td>
+							<td class="text-end pe-4">
+
+<?php if($c['financeiro_conta_pago']): ?>
+    <div class="btn-group">
+        <button type="button" class="btn btn-sm <?= !empty($c['financeiro_conta_comprovante']) ? 'btn-success' : 'btn-outline-secondary' ?>"
+                onclick="abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, 'comprovante', '<?= $c['financeiro_conta_comprovante'] ?? '' ?>')" title="Comprovante">
+            <i class="bi bi-receipt"></i>
+        </button>
+
+        <button type="button" class="btn btn-sm <?= !empty($c['financeiro_conta_nota_fiscal']) ? 'btn-info' : 'btn-outline-secondary' ?>"
+                onclick="abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, 'notafiscal', '<?= $c['financeiro_conta_nota_fiscal'] ?? '' ?>')" title="Nota Fiscal">
+            <i class="bi bi-file-earmark-text"></i>
         </button>
     </div>
+<?php endif; ?>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="ps-4">Vencimento</th>
-                            <th>Descrição</th>
-                            <th>Classificação</th>
-                            <th>Valor</th>
-                            <th>Status</th>
-                            <th class="text-end pe-4">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($contas_agendadas as $c):
-                            $hoje = date('Y-m-d');
-                            $atrasado = ($c['financeiro_conta_data_vencimento'] < $hoje && !$c['financeiro_conta_pago']);
-                        ?>
-                        <tr>
-                            <td class="ps-4 <?= $atrasado ? 'text-danger fw-bold' : '' ?>">
-                                <?= date('d/m/Y', strtotime($c['financeiro_conta_data_vencimento'])) ?>
-                            </td>
-                            <td>
-                                <span class="d-block fw-bold text-dark"><?= $c['financeiro_conta_descricao'] ?></span>
-                            </td>
-                            <td>
-                                <small class="text-muted d-block" style="font-size: 0.7rem;"><?= $c['financeiro_categoria_nome'] ?></small>
-                                <span class="badge bg-light text-dark border"><?= $c['subcategoria_nome'] ?></span>
-                            </td>
-                            <td class="fw-bold text-<?= $c['financeiro_conta_tipo'] == 'saida' ? 'danger' : 'success' ?>">
-                                R$ <?= number_format($c['financeiro_conta_valor'], 2, ',', '.') ?>
-                            </td>
-                            <td>
-                                <?php if($c['financeiro_conta_pago']): ?>
-                                    <span class="badge bg-success-subtle text-success px-3">Pago</span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning-subtle text-warning px-3">Pendente</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-end pe-4">
+
                                 <div class="btn-group">
-                                    <?php if(!$c['financeiro_conta_pago']): ?>
-                                        <button class="btn btn-sm btn-success px-3" title="Dar Baixa"
-                                                onclick="pagarConta(<?= $c['financeiro_conta_id'] ?>, <?= $c['financeiro_conta_valor'] ?>)">
-                                            <i class="bi bi-check2-circle"></i>
-                                        </button>
+									<?php if($c['financeiro_conta_tipo'] == 'saida' && isset($c['financeiro_conta_reembolso']) && $c['financeiro_conta_reembolso'] == 1): ?>
+										<a href="<?= url('financeiro/gerar_recibo_reembolso/'.$c['financeiro_conta_id']) ?>"
+										   target="_blank"
+										   class="btn btn-sm btn-outline-success"
+										   title="Gerar Recibo de Reembolso">
+											<i class="bi bi-file-earmark-pdf"></i>
+										</a>
+									<?php endif; ?>
+									<?php if(!$c['financeiro_conta_pago']): ?>
+										<button class="btn btn-sm btn-success px-3" title="Dar Baixa"
+												onclick="pagarConta(<?= $c['financeiro_conta_id'] ?>, <?= $c['financeiro_conta_valor'] ?>)">
+											<i class="bi bi-check2-circle"></i>
+										</button>
 
 										<?php if($c['financeiro_conta_tipo'] == 'entrada'):
-											// Tenta encontrar o ID da subcategoria em diferentes nomes possíveis
 											$subId = $c['financeiro_conta_financeiro_subcategoria_id']
 													 ?? $c['financeiro_subcategoria_id']
 													 ?? $c['financeiro_conta_financeiro_categoria_id']
@@ -110,29 +145,73 @@
 											</button>
 										<?php endif; ?>
 
-                                        <button class="btn btn-sm btn-outline-primary" title="Editar Lançamento"
-                                                onclick="editarLancamento(<?= htmlspecialchars(json_encode($c)) ?>)">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
+										<button class="btn btn-sm btn-outline-primary" title="Editar Lançamento"
+												onclick="editarLancamento(<?= htmlspecialchars(json_encode($c)) ?>)">
+											<i class="bi bi-pencil"></i>
+										</button>
 
-                                        <a href="<?= url('financeiro/excluir_lancamento/'.$c['financeiro_conta_id']) ?>"
-                                           class="btn btn-sm btn-outline-danger" title="Excluir"
-                                           onclick="return confirm('Tem certeza que deseja excluir este agendamento?')">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="badge bg-light text-muted border py-2 px-3">
-                                            <i class="bi bi-lock-fill me-1"></i> Conciliado
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+										<a href="<?= url('financeiro/excluir_lancamento/'.$c['financeiro_conta_id']) ?>"
+										   class="btn btn-sm btn-outline-danger" title="Excluir"
+										   onclick="return confirm('Tem certeza que deseja excluir este agendamento?')">
+											<i class="bi bi-trash"></i>
+										</a>
+									<?php else: ?>
+										<span class="badge bg-light text-muted border py-2 px-3">
+											<i class="bi bi-lock-fill me-1"></i> Conciliado
+										</span>
+									<?php endif; ?>
+								</div>
+							</td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="modalAnexo" tabindex="-1">
+    <div class="modal-dialog modal-md modal-dialog-centered"> <form action="<?= url('financeiro/uploadAnexo') ?>" method="POST" enctype="multipart/form-data" class="modal-content border-0 shadow-lg">
+            <input type="hidden" name="conta_id" id="anexo_conta_id">
+            <input type="hidden" name="tipo_arquivo" id="anexo_tipo">
+            <input type="hidden" name="ano_referencia" value="<?= $anoSelecionado ?>">
+            <input type="hidden" name="mes_referencia" value="<?= $mesSelecionado ?>">
+
+            <div class="modal-header bg-light border-bottom-0">
+                <h6 class="modal-title fw-bold" id="titulo_anexo">Anexar Documento</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-        </div>
+
+            <div class="modal-body p-4">
+                <div id="area_visualizacao" class="d-none mb-3">
+                    <label class="small fw-bold text-primary mb-2"><i class="bi bi-eye"></i> Arquivo Atual:</label>
+                    <div id="wrapper_preview" style="width: 100%; height: 350px; overflow: auto; border: 2px solid #e9ecef; border-radius: 8px; background: #f8f9fa; display: flex; justify-content: center; align-items: flex-start;">
+                        <div id="content_preview" style="min-width: 100%;"></div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <a id="link_abrir_externo" href="#" target="_blank" class="btn btn-sm btn-link text-decoration-none">
+                            <i class="bi bi-box-arrow-up-right"></i> Abrir em tela cheia
+                        </a>
+                    </div>
+                    <hr>
+                </div>
+
+                <div class="upload-section">
+                    <label class="small fw-bold text-muted mb-2" id="label_upload">Substituir arquivo:</label>
+                    <div class="input-group">
+                        <input type="file" name="arquivo" class="form-control" required>
+                    </div>
+                    <small class="text-muted mt-1 d-block" style="font-size: 0.75rem;">Formatos aceitos: JPG, PNG, PDF.</small>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light border-top-0 p-3">
+                <button type="submit" class="btn btn-primary w-100 fw-bold">
+                    <i class="bi bi-cloud-arrow-up"></i> SALVAR ARQUIVO
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -150,19 +229,35 @@
                         <label class="small fw-bold">Descrição do Lançamento</label>
                         <input type="text" name="descricao" id="input_descricao" class="form-control" placeholder="Ex: Conta de Luz" required>
                     </div>
-                    <div class="col-md-12">
-                        <label class="small fw-bold text-secondary">Classificação</label>
-                        <select name="subcategoria_id" id="select_subcategoria" class="form-select" required onchange="atualizarTipoLancamento()">
-                            <option value="">Selecione...</option>
-                            <?php foreach($categorias_agrupadas as $cat): ?>
-                                <optgroup label="<?= strtoupper($cat['nome']) ?>">
-                                    <?php foreach($cat['subs'] as $sub): ?>
-                                        <option value="<?= $sub['id'] ?>" data-tipo="<?= $cat['tipo'] ?>"><?= $sub['nome'] ?></option>
-                                    <?php endforeach; ?>
-                                </optgroup>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+					<div class="col-md-12">
+						<label class="small fw-bold text-secondary">Classificação</label>
+						<select name="subcategoria_id" id="select_subcategoria" class="form-select" required onchange="atualizarTipoLancamento()">
+							<option value="">Selecione a Classificação...</option>
+
+							<?php foreach($categorias_agrupadas as $cat):
+								$ehEntrada = ($cat['tipo'] == 'entrada');
+								$cor = $ehEntrada ? '#006437' : '#d9534f'; // Verde IPB ou Vermelho Despesa
+								$prefixo = $ehEntrada ? '[ RECEITA ] ' : '[ DESPESA ] ';
+							?>
+								<optgroup label="<?= $prefixo . strtoupper($cat['nome']) ?>" style="color: <?= $cor ?>; background: #f8f9fa;">
+									<?php foreach($cat['subs'] as $sub): ?>
+										<option value="<?= $sub['id'] ?>" data-tipo="<?= $cat['tipo'] ?>" style="color: #333;">
+											<?= $sub['nome'] ?>
+										</option>
+									<?php endforeach; ?>
+								</optgroup>
+							<?php endforeach; ?>
+						</select>
+					</div>
+
+					<div class="col-md-12">
+						<div class="form-check form-switch mt-2">
+							<input class="form-check-input" type="checkbox" name="reembolso" id="check_reembolso" value="1">
+							<label class="form-check-label small fw-bold text-primary" for="check_reembolso">
+								<i class="bi bi-cash-stack"></i> Este lançamento é um Reembolso?
+							</label>
+						</div>
+					</div>
                     <div class="col-md-4">
                         <label class="small fw-bold">Tipo</label>
                         <select name="tipo" id="select_tipo" class="form-select">
@@ -189,41 +284,39 @@
 
 <div class="modal fade" id="modalBaixa" tabindex="-1">
     <div class="modal-dialog modal-sm modal-dialog-centered">
-        <form action="<?= url('financeiro/baixar_conta') ?>" method="POST" enctype="multipart/form-data" class="modal-content border-0 shadow-lg">
+        <form action="<?= url('financeiro/baixar_conta') ?>" method="POST" class="modal-content border-0 shadow-lg">
             <input type="hidden" name="conta_id" id="baixa_id">
-            <div class="modal-header bg-success text-white">
+            <div class="modal-header bg-success text-white border-0">
                 <h5 class="modal-title fw-bold">Confirmar Baixa</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="small fw-bold">Valor</label>
-                    <input type="text" id="baixa_valor_display" class="form-control bg-light fw-bold" readonly>
+                    <label class="small fw-bold text-muted">VALOR</label>
+                    <input type="text" id="baixa_valor_display" class="form-control bg-light fw-bold border-0" readonly>
                     <input type="hidden" name="valor" id="baixa_valor_real">
                 </div>
-				<div class="mb-3">
-					<label class="small fw-bold">Conta Financeira (Origem/Destino)</label>
-					<select name="conta_financeira_id" class="form-select shadow-sm" required>
-						<option value="">Selecione a conta...</option>
-						<?php foreach($contas_bancarias as $cb): ?>
-							<option value="<?= $cb['financeiro_conta_financeira_id'] ?>">
-								<?= $cb['financeiro_conta_financeira_nome'] ?>
-								(R$ <?= number_format($cb['financeiro_conta_financeira_saldo'], 2, ',', '.') ?>)
-							</option>
-						<?php endforeach; ?>
-					</select>
-				</div>
                 <div class="mb-3">
-                    <label class="small fw-bold">Data Pagamento</label>
-                    <input type="date" name="data_pagamento" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                    <label class="small fw-bold text-muted">CONTA FINANCEIRA</label>
+                    <select name="conta_financeira_id" class="form-select shadow-sm" required>
+                        <option value="">Selecione a conta...</option>
+                        <?php foreach($contas_bancarias as $cb): ?>
+                            <option value="<?= $cb['financeiro_conta_financeira_id'] ?>">
+                                <?= $cb['financeiro_conta_financeira_nome'] ?>
+                                (R$ <?= number_format($cb['financeiro_conta_financeira_saldo'], 2, ',', '.') ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="mb-0">
-                    <label class="small fw-bold">Comprovante</label>
-                    <input type="file" name="comprovante" class="form-control form-control-sm">
+                    <label class="small fw-bold text-muted">DATA DO PAGAMENTO</label>
+                    <input type="date" name="data_pagamento" class="form-control" value="<?= date('Y-m-d') ?>" required>
                 </div>
             </div>
-            <div class="modal-footer bg-light p-2">
-                <button type="submit" class="btn btn-success w-100 fw-bold">Confirmar e Baixar</button>
+            <div class="modal-footer bg-light p-2 border-0">
+                <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm">
+                    <i class="bi bi-check-circle me-1"></i> Confirmar e Baixar
+                </button>
             </div>
         </form>
     </div>
@@ -417,4 +510,55 @@ async function salvarRateioFinal() {
         else { alert("Erro: " + result.erro); btn.innerHTML = 'Gravar Rateio'; btn.classList.remove('disabled'); }
     } catch (error) { alert("Erro de conexão."); btn.innerHTML = 'Gravar Rateio'; btn.classList.remove('disabled'); }
 }
+
+function abrirModalAnexo(id, tipo, arquivoAtual) {
+    // Configura os campos ocultos
+    document.getElementById('anexo_conta_id').value = id;
+    document.getElementById('anexo_tipo').value = tipo;
+
+    // Título dinâmico
+    const titulo = (tipo === 'comprovante') ? 'Comprovante de Pagamento' : 'Nota Fiscal';
+    document.getElementById('titulo_anexo').innerText = titulo;
+
+    const areaVisu = document.getElementById('area_visualizacao');
+    const contentPreview = document.getElementById('content_preview');
+    const linkExterno = document.getElementById('link_abrir_externo');
+    const labelUpload = document.getElementById('label_upload');
+
+    if (arquivoAtual && arquivoAtual !== "") {
+        areaVisu.classList.remove('d-none');
+        labelUpload.innerText = "Substituir arquivo atual:";
+
+        const urlArquivo = '<?= url("public/assets/uploads/") ?>' + arquivoAtual;
+        linkExterno.href = urlArquivo;
+
+        // Verifica a extensão para decidir como exibir
+        const extensao = arquivoAtual.split('.').pop().toLowerCase();
+
+        if (extensao === 'pdf') {
+            // Se for PDF, mostra um botão amigável (PDFs não renderizam bem em divs pequenas)
+            contentPreview.innerHTML = `
+                <div class="text-center p-5">
+                    <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 4rem;"></i>
+                    <p class="fw-bold mt-2">Documento PDF</p>
+                    <a href="${urlArquivo}" target="_blank" class="btn btn-outline-danger btn-sm">Clique para Abrir PDF</a>
+                </div>`;
+        } else {
+            // Se for Imagem (JPG, PNG, WEBP), renderiza no "Iframe" com scroll
+            contentPreview.innerHTML = `
+                <img src="${urlArquivo}" style="max-width: none; height: auto; cursor: zoom-in;"
+                     title="Clique no link abaixo para ver original"
+                     onclick="window.open('${urlArquivo}', '_blank')">`;
+        }
+    } else {
+        // Se não houver arquivo, esconde o preview e ajusta o label
+        areaVisu.classList.add('d-none');
+        labelUpload.innerText = "Selecione o arquivo para upload:";
+        contentPreview.innerHTML = '';
+    }
+
+    // Abre o modal
+    new bootstrap.Modal(document.getElementById('modalAnexo')).show();
+}
+
 </script>

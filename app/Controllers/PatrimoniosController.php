@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\Patrimonio;
+use App\Core\Utils;
 
 class PatrimoniosController extends Controller
 {
@@ -154,39 +155,39 @@ class PatrimoniosController extends Controller
 			$idIgreja = $_SESSION['usuario_igreja_id'];
 			$patrimonioId = $_POST['patrimonio_id'];
 
-			// Define a subpasta baseada no tipo
 			$subPasta = ($tipo === 'foto') ? 'fotos' : 'documentos';
-
-			// 1. Define a raiz do projeto subindo 2 níveis a partir de app/Controllers
 			$raizProjeto = dirname(__DIR__, 2);
-
-			// 2. Monta o caminho absoluto seguindo sua estrutura:
-			// /public/assets/uploads/<id_igreja>/patrimonios/<id_patrimonio>/<fotos ou documentos>/
 			$diretorioDestino = $raizProjeto . "/public/assets/uploads/{$idIgreja}/patrimonios/{$patrimonioId}/{$subPasta}/";
 
-			// 3. Cria o diretório com permissão total se não existir
 			if (!is_dir($diretorioDestino)) {
 				if (!mkdir($diretorioDestino, 0777, true)) {
-					die("Erro: Não foi possível criar o diretório: " . $diretorioDestino);
+					die("Erro: Não foi possível criar o diretório.");
 				}
 			}
 
 			$arquivos = $_FILES['arquivo'];
 			$total = count($arquivos['name']);
 
-			// Loop para processar múltiplos arquivos (conforme definido no modal)
 			for ($i = 0; $i < $total; $i++) {
 				if ($arquivos['error'][$i] === UPLOAD_ERR_OK) {
 
-					$extensao = strtolower(pathinfo($arquivos['name'][$i], PATHINFO_EXTENSION));
-					// Nome único para evitar sobrescrita: tipo_timestamp_random.ext
-					$novoNome = $tipo . "_" . time() . "_" . rand(1000, 9999) . "." . $extensao;
+					$extensaoOriginal = strtolower(pathinfo($arquivos['name'][$i], PATHINFO_EXTENSION));
 
-					if (move_uploaded_file($arquivos['tmp_name'][$i], $diretorioDestino . $novoNome)) {
-						// Salva no banco de dados via Model
+					// Se for foto, forçamos .jpg devido ao Utils::otimizarImagem
+					// Se for documento, mantemos a extensão original
+					$extensaoFinal = ($tipo === 'foto') ? 'jpg' : $extensaoOriginal;
+
+					$novoNome = $tipo . "_" . time() . "_" . rand(1000, 9999) . "." . $extensaoFinal;
+					$caminhoCompleto = $diretorioDestino . $novoNome;
+
+					if (move_uploaded_file($arquivos['tmp_name'][$i], $caminhoCompleto)) {
+
 						if ($tipo === 'foto') {
+							// Otimiza a imagem (limite de 800px para patrimônio é ideal para carregar rápido no celular)
+							Utils::otimizarImagem($caminhoCompleto, $caminhoCompleto, 800, 75);
 							$this->model->inserirFoto($patrimonioId, $novoNome);
 						} else {
+							// Apenas registra o documento no banco (PDF, DOCX, etc)
 							$this->model->inserirDocumento($patrimonioId, $novoNome);
 						}
 					}
@@ -195,10 +196,11 @@ class PatrimoniosController extends Controller
 
 			header('Location: ' . url('patrimonios') . '?sucesso=upload_concluido');
 			exit;
-		}
-	}
+        }
 
-	public function detalhes($id)
+    }
+
+    public function detalhes($id)
 	{
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 

@@ -207,4 +207,35 @@ class ProfessorController extends Controller {
 		exit;
 	}
 
+	// Dentro de ProfessorController.php
+
+	public function registrarPresencaAjax() {
+		header('Content-Type: application/json');
+
+		try {
+			// Pega a igreja da sessão do professor (verifique se o nome da chave é este mesmo)
+			$igrejaId = $_SESSION['usuario_igreja_id'] ?? null;
+			$classeId = $_POST['classe_id'] ?? null;
+			$membroRegistro = $_POST['membro_id'] ?? null;
+
+			if (!$igrejaId || !$classeId || !$membroRegistro) {
+				echo json_encode(['status' => 'erro', 'mensagem' => 'Dados incompletos.']);
+				exit;
+			}
+
+			// Instancia o model da Escola Dominical
+			$modelEbd = new \App\Models\EscolaDominical();
+
+			// REUTILIZA o método que já existe no seu Model!
+			$resultado = $modelEbd->registrarPresencaQRCode($igrejaId, $classeId, $membroRegistro);
+
+			echo json_encode($resultado);
+
+		} catch (\Exception $e) {
+			echo json_encode(['status' => 'erro', 'mensagem' => 'Erro: ' . $e->getMessage()]);
+		}
+		exit;
+	}
+
+
 }

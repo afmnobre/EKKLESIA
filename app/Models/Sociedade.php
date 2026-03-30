@@ -215,9 +215,11 @@ class Sociedade
 		$stmtR->execute([$idIgreja]);
 		$redes = $stmtR->fetchAll(\PDO::FETCH_ASSOC);
 
-		// 3. Busca Membros da Sociedade + Foto + Endereço + Dados de Pasta
+		// 3. Busca Membros da Sociedade + Foto + Dados de Endereço Completos
 		$sqlMembros = "SELECT m.membro_id, m.membro_nome, m.membro_registro_interno, m.membro_igreja_id,
-					   f.membro_foto_arquivo, e.membro_endereco_rua
+					   f.membro_foto_arquivo,
+					   e.membro_endereco_rua, e.membro_endereco_numero,
+					   e.membro_endereco_bairro, e.membro_endereco_cidade
 					   FROM sociedades_membros sm
 					   INNER JOIN membros m ON m.membro_id = sm.sociedade_membro_membro_id
 					   LEFT JOIN membros_fotos f ON f.membro_foto_membro_id = m.membro_id

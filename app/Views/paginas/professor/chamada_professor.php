@@ -96,6 +96,15 @@
     </a>
 </nav>
 
+
+<button type="button"
+        class="btn btn-success shadow-lg d-flex align-items-center justify-content-center"
+        data-bs-toggle="modal"
+        data-bs-target="#modalScanner"
+        style="position: fixed; bottom: 20px; right: 20px; width: 65px; height: 65px; border-radius: 50%; z-index: 1050; border: 3px solid #fff;">
+    <i class="bi bi-qr-code-scan fs-2"></i>
+</button>
+
 <div class="container pb-5">
 
     <div class="sticky-menu">
@@ -147,6 +156,27 @@
                 </div>
             </div>
         <?php endforeach; ?>
+    </div>
+</div>
+
+
+<div class="modal fade" id="modalScanner" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-camera-fill me-2"></i>Scanner de Presença</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" id="btnFecharScanTop"></button>
+            </div>
+            <div class="modal-body p-0 position-relative">
+                <div id="scannerFeedback" class="text-center p-3 d-none fw-bold" style="position: absolute; top: 10px; left: 0; width: 100%; z-index: 1000;"></div>
+                <div id="reader" style="width: 100%; background: #000; min-height: 350px;"></div>
+            </div>
+            <div class="modal-footer bg-light justify-content-center">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                    <i class="bi bi-camera-video-off me-2"></i>Parar Câmera
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -205,6 +235,74 @@ function registrarPresenca(alunoId, status, btn) {
 }
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const feedbackDiv = document.getElementById('scannerFeedback');
+    const html5QrCode = new Html5Qrcode("reader");
+    let isProcessing = false;
+
+    function mostraFeedback(mensagem, tipo) {
+        feedbackDiv.textContent = mensagem;
+        feedbackDiv.classList.remove('d-none', 'bg-success', 'bg-danger', 'bg-warning', 'text-white', 'text-dark');
+        if (tipo === 'sucesso') feedbackDiv.classList.add('bg-success', 'text-white');
+        else if (tipo === 'aviso') feedbackDiv.classList.add('bg-warning', 'text-dark');
+        else feedbackDiv.classList.add('bg-danger', 'text-white');
+    }
+
+    const onScanSuccess = (decodedText) => {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        mostraFeedback("Processando...", 'aviso');
+
+        const formData = new FormData();
+        formData.append('classe_id', '<?= $classe["classe_id"] ?>');
+        formData.append('membro_id', decodedText.trim()); // O model espera o registro interno aqui
+
+        fetch("<?= url('professor/registrarPresencaAjax') ?>", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            mostraFeedback(data.mensagem, data.status);
+
+            // Se foi sucesso, recarregamos a página após 2 segundos para atualizar a lista
+            if(data.status === 'sucesso') {
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                setTimeout(() => { isProcessing = false; }, 3000);
+            }
+        })
+        .catch(error => {
+            mostraFeedback("Erro na conexão com o servidor", 'erro');
+            isProcessing = false;
+        });
+    };
+
+    const modalEl = document.getElementById('modalScanner');
+    modalEl.addEventListener('shown.bs.modal', () => {
+        isProcessing = false;
+        feedbackDiv.classList.add('d-none');
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess
+        ).catch(err => mostraFeedback("Erro ao acessar câmera", 'erro'));
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        if (html5QrCode.isScanning) {
+            html5QrCode.stop().catch(err => console.error(err));
+        }
+    });
+});
+</script>
+
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 </body>
 </html>
+
+

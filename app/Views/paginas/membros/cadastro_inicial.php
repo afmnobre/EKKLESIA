@@ -63,7 +63,7 @@
 
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Nome Completo</label>
-                    <input type="text" name="nome" class="form-control text-uppercase shadow-sm" placeholder="DIGITE SEU NOME COMPLETO" required>
+                    <input type="text" name="nome" id="nome_membro" class="form-control text-uppercase shadow-sm" placeholder="DIGITE SEU NOME COMPLETO" required>
                 </div>
 
                 <div class="row mb-3">
@@ -77,13 +77,26 @@
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Sexo</label>
-                    <select name="sexo" class="form-select shadow-sm" required>
-                        <option value="" selected disabled>Selecione...</option>
-                        <option value="Masculino">Masculino</option>
-                        <option value="Feminino">Feminino</option>
-                    </select>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Sexo</label>
+                        <select name="sexo" class="form-select shadow-sm" required>
+                            <option value="" selected disabled>Selecione...</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Feminino">Feminino</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Estado Civil</label>
+                        <select name="estado_civil" class="form-select shadow-sm" required>
+                            <option value="" selected disabled>Selecione...</option>
+                            <option value="Solteiro(a)">Solteiro(a)</option>
+                            <option value="Casado(a)">Casado(a)</option>
+                            <option value="Viúvo(a)">Viúvo(a)</option>
+                            <option value="Divorciado(a)">Divorciado(a)</option>
+                            <option value="Separado(a)">Separado(a)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -127,6 +140,11 @@
     VMasker(document.getElementById("cep")).maskPattern("99999-999");
     VMasker(document.getElementById("telefone")).maskPattern("(99) 99999-9999");
 
+    // Forçar nome em maiúsculo enquanto digita
+    document.getElementById('nome_membro').addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase();
+    });
+
     // Lógica de Busca de CEP
     document.getElementById('cep').addEventListener('blur', function() {
         const cep = this.value.replace(/\D/g, '');
@@ -162,5 +180,6 @@
     .btn-primary { background-color: #004a8d; border: none; }
     .form-control-lg { font-size: 1.1rem; }
     input[readonly] { background-color: #e9ecef !important; cursor: not-allowed; }
-    .form-select { height: 45px; } /* Ajuste de altura para combinar com os inputs */
+    .form-select { height: 45px; }
+    .text-uppercase { text-transform: uppercase; }
 </style>
