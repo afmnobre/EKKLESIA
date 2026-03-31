@@ -91,8 +91,8 @@
         <a href="<?= url('sociedadeLider/novoEvento') ?>" class="nav-link-soc">
             <i class="bi bi-calendar-event"></i> Eventos
         </a>
-        <a href="<?= url('sociedadeLider/presenca') ?>" class="nav-link-soc">
-            <i class="bi bi-card-checklist"></i> Chamada/Presença
+        <a href="<?= url('sociedadeLider/banner') ?>" class="nav-link-soc">
+            <i class="bi bi-card-checklist"></i> Banner/Flyier
         </a>
     </div>
 </div>

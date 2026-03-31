@@ -7,96 +7,75 @@
     </div>
 
     <?php if (!empty($igreja)): ?>
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm mb-4">
+
+    <div class="row mb-4">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 text-primary">📄 Ficha Cadastral</h5>
+                    <h5 class="mb-0 text-primary small fw-bold text-uppercase">📄 Ficha Cadastral</h5>
                 </div>
                 <div class="card-body p-4">
-                    <div class="row mb-4">
-                        <div class="col-md-12">
-                            <label class="text-muted small fw-bold text-uppercase">Nome da Igreja</label>
-                            <p class="fs-5 mb-0 text-dark"><?= htmlspecialchars($igreja['igreja_nome']) ?></p>
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold text-uppercase d-block">Nome da Igreja</label>
+                        <p class="fs-6 mb-0 text-dark fw-bold"><?= htmlspecialchars($igreja['igreja_nome']) ?></p>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="text-muted small fw-bold text-uppercase d-block">CNPJ</label>
+                            <p class="small mb-0 text-dark"><?= !empty($igreja['igreja_cnpj']) ? htmlspecialchars($igreja['igreja_cnpj']) : 'Não informado' ?></p>
+                        </div>
+                        <div class="col-6">
+                            <label class="text-muted small fw-bold text-uppercase d-block">Pastor Titular</label>
+                            <div class="d-flex align-items-center">
+                                <p class="small mb-0 text-primary fw-bold me-1"><?= htmlspecialchars($pastorNome ?? 'Não definido') ?></p>
+                                <button type="button" class="btn btn-sm p-0 text-primary" data-bs-toggle="modal" data-bs-target="#modalPastor" title="Alterar">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label class="text-muted small fw-bold text-uppercase">CNPJ</label>
-                            <p class="mb-0 text-dark"><?= !empty($igreja['igreja_cnpj']) ? htmlspecialchars($igreja['igreja_cnpj']) : '<span class="text-muted italic">Não informado</span>' ?></p>
-                        </div>
-
-                    <div class="col-md-6">
-                        <label class="text-muted small fw-bold text-uppercase">Pastor Titular</label>
-                        <div class="d-flex align-items-center">
-                            <p class="mb-0 text-dark fw-bold text-primary me-2"><?= htmlspecialchars($pastorNome ?? 'Não definido') ?></p>
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0" data-bs-toggle="modal" data-bs-target="#modalPastor">
-                                <i class="bi bi-person-badge"></i> Alterar
-                            </button>
-                        </div>
-                    </div>
-
-                    </div>
-
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label class="text-muted small fw-bold text-uppercase">Data de Registro no Sistema</label>
-                            <p class="mb-0 text-dark"><?= date('d/m/Y H:i', strtotime($igreja['igreja_data_criacao'])) ?></p>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small fw-bold text-uppercase">Endereço Sede</label>
-                            <p class="mb-0 text-dark"><?= !empty($igreja['igreja_endereco']) ? htmlspecialchars($igreja['igreja_endereco']) : '<span class="text-muted italic">Não informado</span>' ?></p>
-                        </div>
+                    <div class="mb-0">
+                        <label class="text-muted small fw-bold text-uppercase d-block">Endereço Sede</label>
+                        <p class="small mb-0 text-dark"><?= !empty($igreja['igreja_endereco']) ? htmlspecialchars($igreja['igreja_endereco']) : 'Não informado' ?></p>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="card border-0 shadow-sm">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-primary">📱 Redes Sociais & Contatos</h5>
-                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalRedeSocial">
-                        <i class="bi bi-plus-lg"></i> Adicionar Rede
+                    <h5 class="mb-0 text-primary small fw-bold text-uppercase">📱 Redes Sociais</h5>
+                    <button type="button" class="btn btn-sm btn-success py-0" data-bs-toggle="modal" data-bs-target="#modalRedeSocial">
+                        <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
                             <thead class="table-light">
                                 <tr>
-                                    <th class="ps-4">Plataforma</th>
-                                    <th>Usuário / Identificador</th>
-                                    <th>Status</th>
-                                    <th class="text-end pe-4">Ações</th>
+                                    <th class="ps-3">Plataforma</th>
+                                    <th>Usuário</th>
+                                    <th class="text-end pe-3">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (!empty($redes)): foreach ($redes as $rede): ?>
                                     <tr>
-                                        <td class="ps-4">
-                                            <span class="fw-bold"><?= htmlspecialchars($rede['rede_nome']) ?></span>
-                                        </td>
-                                        <td><?= htmlspecialchars($rede['rede_usuario']) ?></td>
-                                        <td>
-                                            <?php if ($rede['rede_status'] == 'ativo'): ?>
-                                                <span class="badge rounded-pill bg-success-soft text-success border border-success">Ativo</span>
-                                            <?php else: ?>
-                                                <span class="badge rounded-pill bg-secondary-soft text-secondary border border-secondary">Inativo</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-end pe-4">
-                                            <a href="<?= url('igreja/excluirRedeSocial/' . $rede['rede_id']) ?>"
-                                               class="btn btn-sm btn-outline-danger"
-                                               onclick="return confirm('Deseja realmente excluir esta rede social?')">
+                                        <td class="ps-3 fw-bold"><?= htmlspecialchars($rede['rede_nome']) ?></td>
+                                        <td class="text-truncate" style="max-width: 100px;"><?= htmlspecialchars($rede['rede_usuario']) ?></td>
+                                        <td class="text-end pe-3">
+                                            <a href="<?= url('igreja/excluirRedeSocial/' . $rede['rede_id']) ?>" class="text-danger" onclick="return confirm('Excluir?')">
                                                 <i class="bi bi-trash"></i>
                                             </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; else: ?>
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">
-                                            <i class="bi bi-info-circle me-1"></i> Nenhuma rede social cadastrada para esta igreja.
-                                        </td>
+                                        <td colspan="3" class="text-center text-muted py-3 small">Nenhuma cadastrada.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -106,29 +85,196 @@
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm bg-primary text-white mb-3">
-                <div class="card-body text-center py-5">
-                    <img src="<?= url('assets/img/logo_ipb.png') ?>"
-                         alt="Logo IPB"
-                         class="mb-3"
-                         style="max-width: 150px; height: auto; filter: brightness(0) invert(1);">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white h-100">
+                <div class="card-body text-center d-flex flex-column justify-content-center align-items-center position-relative">
+                    <button class="btn btn-sm btn-light position-absolute top-0 end-0 m-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalLogo">
+                        <i class="bi bi-camera"></i>
+                    </button>
 
-                    <h4 class="mt-2 mb-0"><?= htmlspecialchars($igreja['igreja_nome']) ?></h4>
-                    <p class="small opacity-75">Jurisdição IPB</p>
+                    <?php
+                        $logoPath = !empty($igreja['igreja_logo'])
+                            ? url("assets/uploads/{$igreja['igreja_id']}/logo/{$igreja['igreja_logo']}")
+                            : url("assets/img/logo_placeholder.png");
+                    ?>
+
+                    <div class="bg-white rounded p-2 mb-2 shadow-sm">
+                        <img src="<?= $logoPath ?>" alt="Logo" style="width: 80px; height: 80px; object-fit: contain;">
+                    </div>
+                    <p class="small fw-bold mb-0 text-uppercase" style="font-size: 0.7rem;">Logo Institucional</p>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-body">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-info-circle-fill text-info me-3 fs-4"></i>
-                        <div>
-                            <h6 class="mb-1">Informação Importante</h6>
-                            <p class="small text-muted mb-0">
-                                As redes sociais marcadas como <strong>Ativas</strong> serão exibidas automaticamente no verso da carteirinha de membro e em documentos oficiais.
-                            </p>
+
+	<div class="row mb-4">
+			<div class="col-12">
+				<div class="card border-0 shadow-sm">
+					<div class="card-header bg-white py-3">
+						<h5 class="mb-0 text-primary small fw-bold text-uppercase">👥 Corpo de Oficiais e Liderança</h5>
+					</div>
+					<div class="card-body p-0">
+						<div class="table-responsive">
+							<table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+								<thead class="table-light">
+									<tr>
+										<th class="ps-4" style="width: 60px;">Foto</th>
+										<th>Nome do Oficial</th>
+										<th>Cargo / Ofício</th>
+										<th class="text-end pe-4">Status</th>
+									</tr>
+								</thead>
+								<tbody>
+									<?php if (!empty($lideranca)):
+										// Mapeamento das siglas por Código do Cargo
+										$siglas = [
+											1 => 'Rev.',   // Pastor
+											2 => 'Pr. Aux.', // Pastor Auxiliar
+											5 => 'Pb.',    // Presbítero Regente
+											7 => 'Diác.',  // Diácono
+											3 => 'Sem.'    // Seminarista
+										];
+
+										foreach ($lideranca as $lider):
+											// Busca a sigla baseada no ID do cargo retornado pela query
+											$prefixo = $siglas[$lider['vinculo_cargo_id']] ?? '';
+									?>
+										<tr>
+											<td class="ps-4">
+												<?php if (!empty($lider['membro_foto_arquivo'])): ?>
+													<img src="<?= url("assets/uploads/{$igreja['igreja_id']}/membros/{$lider['membro_registro_interno']}/{$lider['membro_foto_arquivo']}") ?>"
+														 alt="<?= htmlspecialchars($lider['membro_nome']) ?>"
+														 class="rounded-circle shadow-sm border"
+														 style="width: 40px; height: 40px; object-fit: cover;">
+												<?php else: ?>
+													<div class="rounded-circle bg-light border d-flex align-items-center justify-content-center text-secondary shadow-sm"
+														 style="width: 40px; height: 40px;"
+														 title="Sem foto">
+														<i class="bi bi-person-fill"></i>
+													</div>
+												<?php endif; ?>
+											</td>
+											<td class="fw-bold text-dark text-uppercase">
+												<?php if ($prefixo): ?>
+													<span class="text-primary fw-bold me-1"><?= $prefixo ?></span>
+												<?php endif; ?>
+												<?= htmlspecialchars($lider['membro_nome']) ?>
+											</td>
+											<td>
+												<span class="badge bg-secondary-soft text-secondary border px-2 py-1">
+													<?= htmlspecialchars($lider['cargo_nome']) ?>
+												</span>
+											</td>
+											<td class="text-end pe-4">
+												<small class="text-success fw-bold" title="Vínculo Ativo">
+													<i class="bi bi-check-circle-fill"></i>
+												</small>
+											</td>
+										</tr>
+									<?php endforeach; else: ?>
+										<tr>
+											<td colspan="4" class="text-center text-muted py-4 small">
+												<i class="bi bi-info-circle me-1"></i> Nenhum oficial cadastrado nos cargos principais.
+											</td>
+										</tr>
+									<?php endif; ?>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 text-primary small fw-bold text-uppercase">📅 Programação e Cultos Recorrentes</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form action="<?= url('igreja/salvarProgramacao') ?>" method="POST" class="mb-4">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <label class="text-muted small fw-bold text-uppercase mb-1">Atividade</label>
+                                <input type="text" name="prog_titulo" class="form-control" placeholder="Ex: Culto Público" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="text-muted small fw-bold text-uppercase mb-1">Dia da Semana</label>
+                                <select name="prog_dia" class="form-select" required>
+                                    <option value="Domingo">Domingo</option>
+                                    <option value="Segunda">Segunda</option>
+                                    <option value="Terça">Terça</option>
+                                    <option value="Quarta">Quarta</option>
+                                    <option value="Quinta">Quinta</option>
+                                    <option value="Sexta">Sexta</option>
+                                    <option value="Sábado">Sábado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="text-muted small fw-bold text-uppercase mb-1">Horário</label>
+                                <input type="time" name="prog_hora" class="form-control" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="text-muted small fw-bold text-uppercase mb-1">Recorrência Mensal</label>
+                                <select name="prog_recorrencia" class="form-select">
+                                    <option value="0">Toda Semana</option>
+                                    <option value="1">1º da Semana</option>
+                                    <option value="2">2º da Semana</option>
+                                    <option value="3">3º da Semana</option>
+                                    <option value="4">4º da Semana</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-center">
+                                <div class="form-check me-3">
+                                    <input class="form-check-input" type="checkbox" name="prog_is_ceia" id="checkCeia">
+                                    <label class="form-check-label small fw-bold text-danger" for="checkCeia">SANTA CEIA</label>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">Adicionar</button>
+                            </div>
                         </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Dia / Horário</th>
+                                    <th>Atividade</th>
+                                    <th>Frequência</th>
+                                    <th class="text-end">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($programacoes)): foreach ($programacoes as $p): ?>
+                                <tr>
+                                    <td class="fw-bold"><?= $p['programacao_dia_semana'] ?> às <?= date('H:i', strtotime($p['programacao_hora'])) ?></td>
+                                    <td>
+                                        <?= htmlspecialchars($p['programacao_titulo']) ?>
+                                        <?= $p['programacao_is_ceia'] ? '<span class="badge bg-danger ms-1 small"><i class="bi bi-cup-hot"></i> SANTA CEIA</span>' : '' ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                            $semanas = [0 => 'Semanal', 1 => '1ª semana', 2 => '2ª semana', 3 => '3ª semana', 4 => '4ª semana'];
+                                            echo $semanas[$p['programacao_recorrencia_mensal']];
+                                        ?>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="<?= url('igreja/excluirProgramacao/'.$p['programacao_id']) ?>"
+                                           class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <?php endforeach; else: ?>
+                                <tr><td colspan="4" class="text-center text-muted py-3">Nenhuma programação cadastrada.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -137,8 +283,7 @@
 
     <?php else: ?>
     <div class="alert alert-warning border-0 shadow-sm">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        Dados da igreja não encontrados no banco de dados.
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> Dados não encontrados.
     </div>
     <?php endif; ?>
 </div>
@@ -153,7 +298,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Plataforma</label>
+                        <label class="form-label fw-bold small text-uppercase text-muted">Plataforma</label>
                         <select name="rede_nome" class="form-select" required>
                             <option value="Instagram">Instagram</option>
                             <option value="WhatsApp">WhatsApp (Telefone)</option>
@@ -164,12 +309,12 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Usuário ou Identificador</label>
+                        <label class="form-label fw-bold small text-uppercase text-muted">Usuário ou Identificador</label>
                         <input type="text" name="rede_usuario" class="form-control" placeholder="Ex: @igreja ou (11) 99999-9999" required>
                         <div class="form-text">Como você deseja que apareça no documento.</div>
                     </div>
                     <div class="mb-0">
-                        <label class="form-label fw-bold">Exibir na Carteirinha?</label>
+                        <label class="form-label fw-bold small text-uppercase text-muted">Exibir na Carteirinha?</label>
                         <select name="rede_status" class="form-select">
                             <option value="ativo">Sim, manter Ativo</option>
                             <option value="inativo">Não, manter Oculto</option>
@@ -194,7 +339,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <p class="small text-muted">Selecione o membro que será o Pastor Titular. Esta alteração atualizará automaticamente os cargos de vínculo.</p>
+                    <p class="small text-muted">Selecione o membro que será o Pastor Titular da instituição.</p>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-uppercase text-muted">Pesquisar por nome</label>
@@ -236,40 +381,29 @@
     </div>
 </div>
 
-
-<style>
-    .bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
-    .bg-secondary-soft { background-color: rgba(108, 117, 125, 0.1); }
-</style>
+<div class="modal fade" id="modalLogo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <form action="<?= url('igreja/uploadLogo') ?>" method="POST" enctype="multipart/form-data" style="width: 100%;">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">🖼️ Logo da Igreja</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="small text-muted mb-3">Escolha uma imagem PNG ou JPG.</p>
+                    <input type="file" name="igreja_logo" class="form-control mb-2" accept="image/*" required>
+                    <div class="form-text">O arquivo antigo será removido.</div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="submit" class="btn btn-primary w-100">Substituir Logo</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
-/**
- * Filtra as opções do select de acordo com o texto digitado (Lógica %nome%)
- */
-window.filtrarMembrosPastor = function(termo) {
-    const busca = termo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").trim();
-    const select = document.getElementById('selectMembrosPastor');
-    const options = select.options;
-
-    for (let i = 0; i < options.length; i++) {
-        // Ignora a primeira opção "Selecione"
-        if (options[i].value === "") continue;
-
-        // Pega o nome do atributo data ou do texto, removendo acentos para facilitar a busca
-        const nomeMembro = (options[i].getAttribute('data-nome') || options[i].text)
-                           .toLowerCase()
-                           .normalize('NFD')
-                           .replace(/[\u0300-\u036f]/g, "");
-
-        if (nomeMembro.includes(busca)) {
-            options[i].style.display = "";
-        } else {
-            options[i].style.display = "none";
-        }
-    }
-};
-
-// Limpa a busca quando o modal for fechado para não travar a lista na próxima vez
+// Reinicializa o filtro caso o modal seja reaberto
 document.getElementById('modalPastor').addEventListener('hidden.bs.modal', function () {
     const input = document.getElementById('inputBuscaPastor');
     if(input) {
@@ -277,4 +411,23 @@ document.getElementById('modalPastor').addEventListener('hidden.bs.modal', funct
         window.filtrarMembrosPastor("");
     }
 });
+</script>
+
+<style>
+    .bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
+    .bg-secondary-soft { background-color: rgba(108, 117, 125, 0.1); }
+    .card-header h5 { font-size: 0.85rem; letter-spacing: 0.5px; }
+</style>
+
+<script>
+window.filtrarMembrosPastor = function(termo) {
+    const busca = termo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").trim();
+    const select = document.getElementById('selectMembrosPastor');
+    const options = select.options;
+    for (let i = 0; i < options.length; i++) {
+        if (options[i].value === "") continue;
+        const nomeMembro = (options[i].getAttribute('data-nome') || options[i].text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+        options[i].style.display = nomeMembro.includes(busca) ? "" : "none";
+    }
+};
 </script>

@@ -26,6 +26,7 @@
             <div class="collapse submenu" id="igreja">
                 <a href="<?= url('igreja') ?>">Dados da Igreja</a>
                 <a href="<?= url('igreja/editar') ?>">Atualizar Dados</a>
+                <a href="<?= url('boletim') ?>">Boletins Dominicais</a>
             </div>
 
             <a class="menu-link" data-bs-toggle="collapse" href="#membros">👥 Membros</a>

@@ -4,11 +4,13 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\SociedadeLider;
 
+
 class SociedadeLiderController extends Controller {
 
-    /**
-     * Tela de Operação Principal (Membros e Sugestões)
-     */
+
+	/**
+	 * Tela de Operação Principal (Dashboard com Métricas)
+	 */
 	public function index() {
 		if (!isset($_SESSION['membro_id']) || !isset($_SESSION['sociedade_ativa_id'])) {
 			header("Location: " . url('sociedadeLider/login'));
@@ -22,12 +24,52 @@ class SociedadeLiderController extends Controller {
 		// Pegamos os dados da sociedade para o cabeçalho
 		$sociedade = $model->getSociedadeVinculada($_SESSION['membro_id']);
 
-		$this->rawview('sociedade_portal/index', [
+		// Buscamos as novas métricas para alimentar os gráficos do Chart.js
+        $metricas = $model->getMetricasDashboard($idSociedade);
+
+		// Cálculo de aproveitamento para o novo card
+		$stats = $model->getEstatisticasAproveitamento($idSociedade);
+
+		$this->rawview('sociedade_portal/index', [ // Alterado de index para dashboard
 			'sociedade' => $sociedade,
-			'membros' => $model->getMeusMembros($idSociedade),
+            'membros'   => $model->getMeusMembros($idSociedade),
+            'aproveitamento'    => $stats['porcentagem'],
 			'sugestoes' => $model->getSugestoesNovosMembros($idSociedade, $idIgreja),
-			'eventos' => $model->getMeusEventos($idSociedade),
-			'titulo' => 'Gerenciar ' . $sociedade['sociedade_nome']
+			'eventos'   => $model->getMeusEventos($idSociedade),
+			'metricas'  => $metricas, // Enviando os dados de Gênero e Presença
+			'titulo'    => 'Dashboard - ' . $sociedade['sociedade_nome']
+		]);
+	}
+
+	public function dashboard() {
+		if (!isset($_SESSION['membro_id']) || !isset($_SESSION['sociedade_ativa_id'])) {
+			header("Location: " . url('sociedadeLider/login'));
+			exit;
+		}
+
+		$model = new SociedadeLider();
+		$idSociedade = $_SESSION['sociedade_ativa_id'];
+		$idIgreja = $_SESSION['usuario_igreja_id'];
+
+		// Pegamos os dados da sociedade para o cabeçalho
+		$sociedade = $model->getSociedadeVinculada($_SESSION['membro_id']);
+
+		// Buscamos as novas métricas para alimentar os gráficos do Chart.js
+        $metricas = $model->getMetricasDashboard($idSociedade);
+
+		// Cálculo de aproveitamento para o novo card
+		$stats = $model->getEstatisticasAproveitamento($idSociedade);
+
+		$this->rawview('sociedade_portal/dashboard', [ // Alterado de index para dashboard
+			'sociedade' => $sociedade,
+            'membros'   => $model->getMeusMembros($idSociedade),
+            'aproveitamento'    => $stats['porcentagem'],
+            'membros_ativos'    => $stats['ativos'],      // FALTAVA ESTA
+            'membros_possiveis' => $stats['possiveis'],   // FALTAVA ESTA
+			'sugestoes' => $model->getSugestoesNovosMembros($idSociedade, $idIgreja),
+			'eventos'   => $model->getMeusEventos($idSociedade),
+			'metricas'  => $metricas, // Enviando os dados de Gênero e Presença
+			'titulo'    => 'Dashboard - ' . $sociedade['sociedade_nome']
 		]);
 	}
 
@@ -189,15 +231,28 @@ class SociedadeLiderController extends Controller {
 		}
 
 		$model = new SociedadeLider();
+		$idSociedade = $_SESSION['sociedade_ativa_id'];
+		$idMembroLogado = $_SESSION['membro_id'];
 
-		// 2. Buscamos os dados da sociedade para o Header não dar erro
-		$sociedade = $model->getSociedadeVinculada($_SESSION['membro_id']);
+		// 2. Buscamos os dados da sociedade para o Header
+		$sociedade = $model->getSociedadeVinculada($idMembroLogado);
 
-		// 3. Enviamos TUDO para a view
+		// Pegamos o ID da igreja que vem do vínculo da sociedade
+		$idIgreja = $sociedade['membro_igreja_id'];
+
+		// 3. BUSCAMOS OS DADOS FALTANTES PARA O FORMULÁRIO E PARA A LISTA LATERAL
+		$igrejaEndereço = $model->getEnderecoIgreja($idIgreja);
+		$membrosEndereços = $model->getMembrosComEndereco($idSociedade);
+		$eventosCadastrados = $model->getMeusEventos($idSociedade);
+
+		// 4. Enviamos TUDO para a view
 		$this->rawview('sociedade_portal/novo_evento', [
 			'titulo'    => 'Novo Evento',
-			'ativo'     => 'eventos', // <--- Isso resolve a marcação do menu
-			'sociedade' => $sociedade  // <--- Isso resolve os Warnings do Header
+			'ativo'     => 'eventos',
+			'sociedade' => $sociedade,
+			'igreja'    => $igrejaEndereço,      // <--- Resolve o erro da variável $igreja
+			'membros'   => $membrosEndereços,   // <--- Resolve o erro da variável $membros
+			'eventos'   => $eventosCadastrados  // <--- Carrega a lista da direita
 		]);
 	}
 
@@ -217,9 +272,186 @@ class SociedadeLiderController extends Controller {
 			];
 
 			if ($model->salvarEvento($dados)) {
-				header("Location: " . url('sociedadeLider/index?sucesso=1'));
+				header("Location: " . url('sociedadeLider/NovoEvento?sucesso=1'));
 			} else {
 				header("Location: " . url('sociedadeLider/novoEvento?erro=1'));
+			}
+			exit;
+		}
+	}
+
+	public function deletarEvento($id) {
+		// 1. Validação de segurança
+		if (!isset($_SESSION['sociedade_ativa_id'])) {
+			header("Location: " . url('sociedadeLider/login'));
+			exit;
+		}
+
+		$idSociedade = $_SESSION['sociedade_ativa_id'];
+		$model = new \App\Models\SociedadeLider();
+
+		// 2. Executa a exclusão
+		if ($model->excluirEvento($id, $idSociedade)) {
+			// Você pode adicionar uma mensagem de sucesso na sessão aqui
+			header("Location: " . url('sociedadeLider/novoEvento?sucesso=1'));
+		} else {
+			header("Location: " . url('sociedadeLider/novoEvento?erro=1'));
+		}
+		exit;
+	}
+
+	/**
+	 * Exibe a página de edição de um evento
+	 */
+	public function editarEvento($id) {
+		$idSociedade = $_SESSION['sociedade_ativa_id'];
+		$model = new \App\Models\SociedadeLider();
+
+		$evento = $model->getEventoPorId($id, $idSociedade);
+
+		if (!$evento) {
+			header("Location: " . url('sociedadeLider/novoEvento?erro=404'));
+			exit;
+		}
+
+		// Buscamos os dados da sociedade
+		$dadosSociedade = $model->getSociedade($idSociedade);
+
+		// Se o array vindo do banco não tiver o nome do membro,
+		// injetamos o nome que está na sessão para o header não quebrar
+		if (!isset($dadosSociedade['membro_nome'])) {
+			$dadosSociedade['membro_nome'] = $_SESSION['usuario_nome'] ?? 'Líder';
+		}
+
+		$dados = [
+			'sociedade' => $dadosSociedade,
+			'membros'   => $model->getMembrosComEndereco($idSociedade),
+			'igreja'    => $_SESSION['igreja_nome_sede'] ?? 'Sede Principal',
+			'evento'    => $evento,
+			'eventos'   => $model->getMeusEventos($idSociedade)
+		];
+
+		$this->rawview('sociedade_portal/novo_evento', $dados);
+	}
+
+	/**
+	 * Processa a atualização via POST
+	 */
+	public function processarEditarEvento($id) {
+		$idSociedade = $_SESSION['sociedade_ativa_id'];
+		$model = new \App\Models\SociedadeLider();
+
+		// Captura os dados do formulário
+		$dados = $_POST;
+
+		if ($model->atualizarEvento($id, $idSociedade, $dados)) {
+			header("Location: " . url('sociedadeLider/novoEvento?sucesso=alterado'));
+		} else {
+			header("Location: " . url('sociedadeLider/editarEvento/'.$id.'?erro=falha'));
+		}
+		exit;
+	}
+
+	public function carregarListaPresenca() {
+		$idEvento = $_POST['evento_id'];
+		$idSociedade = $_SESSION['sociedade_ativa_id'];
+
+		$model = new \App\Models\SociedadeLider();
+		$lista = $model->getListaPresencaEvento($idEvento, $idSociedade);
+
+		echo json_encode($lista);
+		exit;
+	}
+
+	public function registrarPresenca() {
+		// Recebemos os IDs via POST enviados pelo JavaScript acima
+		$igrejaId    = $_POST['igreja_id'] ?? 0;
+		$sociedadeId = $_POST['sociedade_id'] ?? 0;
+		$eventoId    = $_POST['evento_id'] ?? 0;
+		$membroId    = $_POST['membro_id'] ?? 0;
+		$status      = $_POST['status'] ?? 'Presente';
+
+		// Validação mínima para evitar erros de Foreign Key
+		if ($igrejaId > 0 && $eventoId > 0 && $membroId > 0) {
+			$model = new \App\Models\SociedadeLider();
+
+			$dados = [
+				'igreja_id'    => (int)$igrejaId,
+				'sociedade_id' => (int)$sociedadeId,
+				'evento_id'    => (int)$eventoId,
+				'membro_id'    => (int)$membroId,
+				'status'       => $status
+			];
+
+			try {
+				// O Model deve usar estes índices para o INSERT/UPDATE
+				$model->salvarPresenca($dados);
+			} catch (\Exception $e) {
+				error_log("Erro ao salvar presença: " . $e->getMessage());
+			}
+		}
+
+		// Como é um envio via Iframe, apenas encerramos a execução
+		exit;
+    }
+
+	public function banner()
+	{
+		$idSociedade = $_SESSION['sociedade_ativa_id'] ?? null;
+
+		if (!$idSociedade) {
+			header("Location: " . url("sociedadeLider?erro=acesso_negado"));
+			exit;
+		}
+
+		$model = new \App\Models\SociedadeLider();
+		$dados = $model->getDadosBannerPortal($idSociedade);
+
+		if (!$dados) {
+			die("Sociedade não encontrada.");
+		}
+
+		// RESOLUÇÃO DO ERRO DO HEADER E DA FOTO:
+		// Mapeamos os aliases da query para as chaves que o header.php espera
+		$sociedadeData = $dados['sociedade'];
+
+		// Dados de Identidade
+		$sociedadeData['membro_nome']             = $sociedadeData['lider_nome'];
+		$sociedadeData['membro_igreja_id']        = $sociedadeData['sociedade_igreja_id'];
+
+		// Dados para o caminho da imagem (URL do assets)
+		$sociedadeData['membro_registro_interno'] = $sociedadeData['lider_registro'];
+		$sociedadeData['lider_foto']              = $sociedadeData['lider_foto'];
+
+		// Renderização da View
+		$this->rawview('sociedade_portal/banner_builder', [
+			'sociedade' => $sociedadeData, // Contém agora todas as chaves para o header e para o builder
+			'redes'     => $dados['redes'],
+			'membros'   => $dados['membros']
+		]);
+	}
+
+	public function salvarBanner() {
+		// 1. Verifica se a requisição é POST
+		if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+
+			// 2. Instancia o Model (conforme seu padrão nos outros métodos)
+			$model = new \App\Models\SociedadeLider();
+
+			// 3. Captura os dados da sessão e do post (conforme seu padrão)
+			$idSociedade = $_SESSION['sociedade_ativa_id'] ?? null;
+			$jsonLayout = $_POST['layout'] ?? null;
+
+			if (!$idSociedade || !$jsonLayout) {
+				echo json_encode(['status' => 'error', 'message' => 'Dados incompletos ou sessão expirada.']);
+				exit;
+			}
+
+			// 4. Executa a gravação usando o Model instanciado localmente
+			if ($model->salvarLayoutBanner($idSociedade, $jsonLayout)) {
+				echo json_encode(['status' => 'success', 'message' => 'Layout do Banner salvo com sucesso!']);
+			} else {
+				echo json_encode(['status' => 'error', 'message' => 'Erro ao gravar no banco de dados.']);
 			}
 			exit;
 		}

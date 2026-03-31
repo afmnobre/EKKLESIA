@@ -19,16 +19,21 @@ class IgrejaController extends Controller
 	public function index()
 	{
 		$igrejaId = $_SESSION['usuario_igreja_id'];
+
+		// Dados principais vindos do Model
 		$igreja = $this->model->getByIgreja($igrejaId);
 		$redes = $this->model->getRedesSociais($igrejaId);
+		$programacoes = $this->model->getProgramacoes($igrejaId);
 
-		// Buscar lista de membros para o modal de seleção de pastor
+		// NOVA CHAMADA: Liderança vindo do Model
+		$lideranca = $this->model->getLideranca($igrejaId);
+
+		// Mantemos a busca de membros e pastor aqui por enquanto (ou pode mover também se preferir)
 		$db = \App\Core\Database::getInstance();
 		$stMembros = $db->prepare("SELECT membro_id, membro_nome FROM membros WHERE membro_igreja_id = ? ORDER BY membro_nome");
 		$stMembros->execute([$igrejaId]);
 		$membros = $stMembros->fetchAll(\PDO::FETCH_ASSOC);
 
-		// Buscar nome do pastor atual
 		$pastorNome = "Não definido";
 		if (!empty($igreja['igreja_pastor_id'])) {
 			$stP = $db->prepare("SELECT membro_nome FROM membros WHERE membro_id = ?");
@@ -38,13 +43,14 @@ class IgrejaController extends Controller
 		}
 
 		$this->view('igreja/index', [
-			'igreja' => $igreja,
-			'redes'  => $redes,
-			'membros' => $membros,
-			'pastorNome' => $pastorNome
+			'igreja'       => $igreja,
+			'redes'        => $redes,
+			'membros'      => $membros,
+			'pastorNome'   => $pastorNome,
+			'programacoes' => $programacoes,
+			'lideranca'    => $lideranca // Objeto limpo enviado para a View
 		]);
 	}
-
 
     // EDITAR FORM
     public function editar()
@@ -121,6 +127,76 @@ class IgrejaController extends Controller
 			exit;
 		}
 	}
+
+	public function uploadLogo()
+	{
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+
+		if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['igreja_logo'])) {
+			$file = $_FILES['igreja_logo'];
+			$ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+			$allowed = ['jpg', 'jpeg', 'png', 'webp'];
+
+			if (!in_array(strtolower($ext), $allowed)) {
+				header("Location: " . url('igreja?erro_extensao=1'));
+				exit;
+			}
+
+			// Caminho do diretório: assets/uploads/{id}/logo/
+			$dir = "assets/uploads/{$igrejaId}/logo/";
+			if (!is_dir($dir)) {
+				mkdir($dir, 0755, true);
+			}
+
+			// 1. Buscar logo antigo para excluir
+			$igrejaAtual = $this->model->getByIgreja($igrejaId);
+			if (!empty($igrejaAtual['igreja_logo'])) {
+				$oldFile = $dir . $igrejaAtual['igreja_logo'];
+				if (file_exists($oldFile)) {
+					unlink($oldFile); // Deleta o arquivo antigo
+				}
+			}
+
+			// 2. Novo nome de arquivo (evita cache do navegador com timestamp)
+			$novoNome = "logo_" . time() . "." . $ext;
+			$destino = $dir . $novoNome;
+
+			if (move_uploaded_file($file['tmp_name'], $destino)) {
+				$this->model->updateLogo($igrejaId, $novoNome);
+				header("Location: " . url('igreja?sucesso_logo=1'));
+			} else {
+				header("Location: " . url('igreja?erro_upload=1'));
+			}
+			exit;
+		}
+	}
+
+    // PROGRAMAÇÔES DA IGREJA
+
+	public function salvarProgramacao()
+	{
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$dados = [
+				'igreja_id'   => $_SESSION['usuario_igreja_id'],
+				'titulo'      => $_POST['prog_titulo'],
+				'dia_semana'  => $_POST['prog_dia'],
+				'hora'        => $_POST['prog_hora'],
+				'recorrencia' => $_POST['prog_recorrencia'] ?? 0,
+				'is_ceia'     => isset($_POST['prog_is_ceia']) ? 1 : 0
+			];
+
+			$this->model->addProgramacao($dados);
+			header("Location: " . url('igreja?sucesso_prog=1'));
+			exit;
+		}
+	}
+
+    public function excluirProgramacao($id)
+    {
+        $this->model->deleteProgramacao($id, $_SESSION['usuario_igreja_id']);
+        header("Location: " . url('igreja?excluido_prog=1'));
+        exit;
+    }
 
 }
 

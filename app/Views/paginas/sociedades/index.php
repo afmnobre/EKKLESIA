@@ -461,4 +461,37 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
+
+//Copiar parao clipboard()
+window.copyToClipboard = function(inputId, msgId) {
+    const copyText = document.getElementById(inputId);
+    const msgElement = document.getElementById(msgId);
+
+    // Tenta usar a API moderna primeiro
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            exibirSucesso();
+        });
+    } else {
+        // Fallback para navegadores antigos ou contextos não seguros (HTTP)
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // Para dispositivos móveis
+        try {
+            document.execCommand("copy");
+            exibirSucesso();
+        } catch (err) {
+            alert("Erro ao copiar link.");
+        }
+    }
+
+    function exibirSucesso() {
+        if (msgElement) {
+            msgElement.style.display = 'block';
+            setTimeout(() => {
+                msgElement.style.display = 'none';
+            }, 2000);
+        }
+    }
+};
+
 </script>

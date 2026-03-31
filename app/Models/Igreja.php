@@ -119,6 +119,72 @@ class Igreja
 			$this->db->rollBack();
 			return false;
 		}
+    }
+
+	public function updateLogo($igrejaId, $nomeArquivo)
+	{
+		$sql = "UPDATE igrejas SET igreja_logo = ? WHERE igreja_id = ?";
+		return $this->db->prepare($sql)->execute([$nomeArquivo, $igrejaId]);
+	}
+
+	public function getProgramacoes($igrejaId)
+	{
+		// A ordenação por FIELD garante que o Domingo apareça primeiro na lista
+		$sql = "SELECT * FROM igrejas_programacao
+				WHERE programacao_igreja_id = ?
+				ORDER BY FIELD(programacao_dia_semana, 'Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'),
+				programacao_hora ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	public function addProgramacao($dados)
+	{
+		$sql = "INSERT INTO igrejas_programacao (programacao_igreja_id, programacao_titulo, programacao_dia_semana, programacao_hora, programacao_recorrencia_mensal, programacao_is_ceia)
+				VALUES (?, ?, ?, ?, ?, ?)";
+		$stmt = $this->db->prepare($sql);
+		return $stmt->execute([
+			$dados['igreja_id'],
+			$dados['titulo'],
+			$dados['dia_semana'],
+			$dados['hora'],
+			$dados['recorrencia'],
+			$dados['is_ceia']
+		]);
+	}
+
+	public function deleteProgramacao($id, $igrejaId)
+	{
+		$stmt = $this->db->prepare("DELETE FROM igrejas_programacao WHERE programacao_id = ? AND programacao_igreja_id = ?");
+		return $stmt->execute([$id, $igrejaId]);
+	}
+
+	/**
+	 * Busca a liderança oficial da igreja com ordenação hierárquica
+	 * Pastor(1), Auxiliar(2), Presbítero(5), Diácono(7), Seminarista(3)
+	 */
+	public function getLideranca($igrejaId)
+	{
+	    $sql = "SELECT
+					c.cargo_id AS vinculo_cargo_id, -- Adicionado para identificar a sigla
+					c.cargo_nome,
+					m.membro_id,
+					m.membro_nome,
+					m.membro_registro_interno,
+					mf.membro_foto_arquivo
+				FROM membros m
+				INNER JOIN membros_cargos_vinculo v ON m.membro_id = v.vinculo_membro_id
+				INNER JOIN cargos c ON v.vinculo_cargo_id = c.cargo_id
+				LEFT JOIN membros_fotos mf ON m.membro_id = mf.membro_foto_membro_id
+				WHERE m.membro_igreja_id = ?
+				AND c.cargo_id IN (1, 2, 5, 7, 3)
+				ORDER BY FIELD(c.cargo_id, 1, 2, 5, 7, 3), m.membro_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
 

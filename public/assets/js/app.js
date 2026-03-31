@@ -37,13 +37,15 @@
 		const sidebar = document.querySelector('.sidebar');
 
 		// Salva qual menu foi clicado
-		sidebar.addEventListener('click', function(e) {
-			const target = e.target.closest('.menu-link');
-			if (target) {
-				const menuId = target.getAttribute('href');
-				localStorage.setItem('openMenu', menuId);
-			}
-		});
+		if (sidebar) {
+			sidebar.addEventListener('click', function(e) {
+				const target = e.target.closest('.menu-link');
+				if (target) {
+					const menuId = target.getAttribute('href');
+					localStorage.setItem('openMenu', menuId);
+				}
+			});
+		}
 
 		// Ao carregar, verifica se existe um menu para abrir
 		const openMenuId = localStorage.getItem('openMenu');
