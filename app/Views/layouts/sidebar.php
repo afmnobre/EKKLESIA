@@ -26,7 +26,9 @@
             <div class="collapse submenu" id="igreja">
                 <a href="<?= url('igreja') ?>">Dados da Igreja</a>
                 <a href="<?= url('igreja/editar') ?>">Atualizar Dados</a>
-                <a href="<?= url('boletim') ?>">Boletins Dominicais</a>
+                <a href="<?= url('mensagemDominical') ?>">Mensagens Dominicais</a>
+                <a href="<?= url('liturgia') ?>">Ordem Litúrgica</a>
+                <a href="<?= url('boletimSemanal') ?>">Boletim Semanal</a>
             </div>
 
             <a class="menu-link" data-bs-toggle="collapse" href="#membros">👥 Membros</a>
@@ -85,13 +87,17 @@
             </div>
         <?php endif; ?>
 
+        <a class="menu-link text-warning" href="<?= url('igreja/acessos') ?>" target="_blank">
+            <i class="bi bi-qr-code-scan"></i> Canais de Acesso
+        </a>
+
         <hr class="text-white-50">
 
         <?php if ($isAdmin): ?>
             <a class="menu-link" data-bs-toggle="collapse" href="#configuracoes">⚙️ Configurações</a>
             <div class="collapse submenu" id="configuracoes">
-                <a href="<?= url('admin/usuarios') ?>">Gestão de Usuários</a>
-                <a href="<?= url('admin/perfis') ?>">Perfis e Permissões</a>
+                <a target='_blank' href="<?= url('admin/usuarios') ?>">Gestão de Usuários</a>
+                <a target='_blank' href="<?= url('admin/perfis') ?>">Perfis e Permissões</a>
             </div>
             <hr class="text-white-50">
         <?php endif; ?>

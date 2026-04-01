@@ -198,5 +198,61 @@ class IgrejaController extends Controller
         exit;
     }
 
+	/**
+	 * Exibe a página de acessos externos (QR Codes) em modo RawView
+	 * Rota sugerida: /Igreja/acessos
+	 */
+	public function acessos()
+	{
+		// Recuperamos o ID da igreja da sessão
+		$igrejaId = $_SESSION['usuario_igreja_id'] ?? null;
+
+		if (!$igrejaId) {
+			die("Erro: Sessão de igreja não identificada.");
+		}
+
+		// Buscamos os dados básicos da igreja para exibir o nome na página, se desejar
+		$igreja = $this->model->getByIgreja($igrejaId);
+
+		// Definimos os links de acesso baseados na sua estrutura
+		$canais = [
+			[
+				'titulo' => 'Portal do Membro',
+				'desc'   => 'Consulta de dados, dízimos e relatórios',
+				'url'    => full_url('PortalMembro/login/' . $igrejaId),
+				'icon'   => 'bi-person-badge-fill',
+				'bg'     => 'bg-primary'
+			],
+			[
+				'titulo' => 'Cadastro Online',
+				'desc'   => 'Pré-cadastro de novos membros',
+				'url'    => full_url('PortalMembro/cadastro/' . $igrejaId),
+				'icon'   => 'bi-person-plus-fill',
+				'bg'     => 'bg-success'
+			],
+			[
+				'titulo' => 'Líder de Sociedade',
+				'desc'   => 'Painel de gestão de departamentos',
+				'url'    => full_url('sociedadeLider/login'),
+				'icon'   => 'bi-shield-lock-fill',
+				'bg'     => 'bg-dark'
+			],
+			[
+				'titulo' => 'Escola Dominical',
+				'desc'   => 'Portal do Professor e Chamadas',
+				'url'    => full_url('professor/login'),
+				'icon'   => 'bi-journal-check',
+				'bg'     => 'bg-info'
+			]
+		];
+
+		// Chamamos a view passando o parâmetro true para o RawView (limpa o layout)
+		$this->rawview('igreja/acessos_externos', [
+			'igreja' => $igreja,
+			'canais' => $canais
+		], true);
+	}
+
+
 }
 

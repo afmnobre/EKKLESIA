@@ -27,34 +27,59 @@
         </div>
     </div>
 
+	<style>
+		/* Força o layout da tabela a respeitar as larguras definidas */
+		.table-fixed {
+			table-layout: fixed;
+			width: 100%;
+		}
+
+		/* Define larguras fixas para as colunas (ajuste os % se necessário) */
+		.col-doc { width: 45%; }
+		.col-data { width: 20%; }
+		.col-status { width: 15%; }
+		.col-acoes { width: 20%; }
+
+		/* Garante que o texto longo na coluna documento não quebre o layout */
+		.text-truncate-custom {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	</style>
+
 	<div class="container-fluid py-4">
 		<?php if(!empty($documentosAgrupados)): ?>
 			<?php foreach($documentosAgrupados as $categoria => $lista): ?>
 				<div class="mb-4">
 					<h5 class="fw-bold text-secondary border-bottom pb-2 mb-3">
-						<i class="bi bi-folder me-2"></i><?= $categoria ?>
+						<i class="bi bi-folder me-2"></i><?= htmlspecialchars($categoria) ?>
 					</h5>
 					<div class="card shadow-sm border-0 mb-4">
 						<div class="card-body p-0">
 							<div class="table-responsive">
-								<table class="table table-hover align-middle mb-0">
+								<table class="table table-hover align-middle mb-0 table-fixed">
 									<thead class="bg-light text-muted small">
 										<tr>
-											<th class="ps-4">Documento</th>
-											<th>Data Ref.</th>
-											<th>Status</th>
-											<th class="text-end pe-4">Ações</th>
+											<th class="ps-4 col-doc">Documento</th>
+											<th class="text-end col-data">Data Ref.</th>
+											<th class="text-end col-status">Status</th>
+											<th class="text-end pe-4 col-acoes">Ações</th>
 										</tr>
 									</thead>
 									<tbody>
 										<?php foreach($lista as $doc): ?>
 										<tr>
 											<td class="ps-4">
-												<div class="fw-bold"><?= $doc['documento_nome'] ?></div>
-												<small class="text-muted"><?= mb_strimwidth($doc['documento_descricao'], 0, 60, "...") ?></small>
+												<div class="fw-bold text-truncate-custom"><?= htmlspecialchars($doc['documento_nome']) ?></div>
+												<small class="text-muted d-block text-truncate-custom">
+													<?= mb_strimwidth($doc['documento_descricao'], 0, 80, "...") ?>
+												</small>
 											</td>
-											<td><?= date('d/m/Y', strtotime($doc['documento_data_referencia'])) ?></td>
-											<td><span class="badge rounded-pill bg-success opacity-75 small">Ativo</span></td>
+											<td class="text-end"><?= date('d/m/Y', strtotime($doc['documento_data_referencia'])) ?></td>
+											<td class="text-end">
+												<span class="badge rounded-pill bg-success opacity-75 small">Ativo</span>
+											</td>
 											<td class="text-end pe-4">
 												<div class="btn-group">
 													<button class="btn btn-sm btn-outline-primary border-0" onclick="verArquivos(<?= $doc['documento_id'] ?>)" title="Ver Anexos">
@@ -75,7 +100,10 @@
 				</div>
 			<?php endforeach; ?>
 		<?php else: ?>
-			<div class="text-center py-5">Nenhum documento encontrado.</div>
+			<div class="alert alert-light text-center py-5 border shadow-sm">
+				<i class="bi bi-file-earmark-x d-block fs-1 text-muted mb-2"></i>
+				Nenhum documento encontrado para esta instituição.
+			</div>
 		<?php endif; ?>
 	</div>
 </div>
