@@ -298,6 +298,32 @@ class Membro
 		$stats['sem_cargo'] = $stmt->fetch()['total'];
 
 		return $stats;
+    }
+
+	public function getEstatisticaEstadoCivil($igreja_id, $apenasMaiores = false) {
+		$whereIdade = $apenasMaiores ? " AND (TIMESTAMPDIFF(YEAR, membro_data_nascimento, CURDATE()) >= 18)" : "";
+
+		$sql = "SELECT membro_estado_civil as estado, COUNT(*) as total
+				FROM membros
+				WHERE membro_igreja_id = :igreja_id
+				AND membro_estado_civil IS NOT NULL
+				AND membro_estado_civil != ''
+				$whereIdade
+				GROUP BY membro_estado_civil
+				ORDER BY total DESC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute(['igreja_id' => $igreja_id]);
+		$dadosBD = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+		$labels = [];
+		$valores = [];
+		foreach ($dadosBD as $item) {
+			$labels[] = $item['estado'];
+			$valores[] = (int)$item['total'];
+		}
+
+		return ['labels' => $labels, 'valores' => $valores];
 	}
 
 	public function getEstatisticasBairro($idIgreja)

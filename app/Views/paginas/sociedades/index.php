@@ -1,13 +1,16 @@
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold text-dark"><i class="bi bi-people-fill me-2"></i>Sociedades Internas</h3>
-        <button type="button" class="btn btn-warning fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalQrLoginLider">
-            <i class="bi bi-qr-code-scan me-2"></i> ACESSO DO LÍDER
-        </button>
-        <button class="btn btn-primary shadow-sm" onclick="window.novaSociedade()">
-            <i class="bi bi-plus-lg me-2"></i>Nova Sociedade
-        </button>
-    </div>
+	<div class="d-flex justify-content-between align-items-center mb-4">
+		<h3 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill me-2"></i>Sociedades Internas</h3>
+
+		<div class="d-flex gap-2">
+			<button type="button" class="btn btn-warning fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalQrLoginLider">
+				<i class="bi bi-qr-code-scan me-2"></i> ACESSO DO LÍDER
+			</button>
+			<button class="btn btn-primary shadow-sm" onclick="window.novaSociedade()">
+				<i class="bi bi-plus-lg me-2"></i>Nova Sociedade
+			</button>
+		</div>
+	</div>
 
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">

@@ -110,7 +110,25 @@ class MembrosController extends Controller
 						<span class="text-muted small italic">Membro Comum</span>
 					<?php endif; ?>
 				</td>
-                <td><small class="text-muted"><?= $m['membro_telefone'] ?></small></td>
+                <td>
+					<div class="d-flex align-items-center">
+						<small class="text-muted me-2"><?= $m['membro_telefone'] ?></small>
+
+						<?php if (!empty($m['membro_telefone'])):
+							// Remove caracteres não numéricos para o link
+							$telefoneLimpo = preg_replace('/[^0-9]/', '', $m['membro_telefone']);
+							// Se o número não tiver o código do país (55), adiciona automaticamente
+							if (strlen($telefoneLimpo) <= 11) { $telefoneLimpo = "55" . $telefoneLimpo; }
+
+							$mensagem = urlencode("Olá " . $m['membro_nome']);
+							$urlWhatsapp = "https://wa.me/{$telefoneLimpo}?text={$mensagem}";
+						?>
+							<a href="<?= $urlWhatsapp ?>" target="_blank" class="btn btn-sm btn-outline-success p-0 px-1" title="Enviar WhatsApp" style="border-radius: 5px; line-height: 1;">
+								<i class="bi bi-whatsapp" style="font-size: 0.75rem;"></i>
+							</a>
+						<?php endif; ?>
+					</div>
+				</td>
                 <td>
                     <span class="badge rounded-pill <?= $m['membro_status'] == 'Ativo' ? 'bg-success' : 'bg-danger' ?>">
                         <?= strtoupper($m['membro_status']) ?>

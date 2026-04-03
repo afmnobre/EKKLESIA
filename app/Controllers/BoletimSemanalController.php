@@ -11,124 +11,133 @@ class BoletimSemanalController extends Controller
 
     public function __construct()
     {
-        exigirLogin();
+        // MODIFICAÇÃO AQUI:
+        // Se não houver sessão de usuário (Admin) E não houver sessão de membro, aí sim exige login.
+        if (!isset($_SESSION['usuario_id']) && !isset($_SESSION['membro_id'])) {
+            exigirLogin();
+        }
+
         $this->model = new BoletimSemanal();
     }
 
     /**
      * Exibe o Boletim Semanal consolidado
      */
-	public function index()
-	{
-		$igrejaId = $_SESSION['usuario_igreja_id'];
+    public function index()
+    {
+        // Busca o ID da igreja de quem estiver logado (Admin ou Membro)
+        $igrejaId = $_SESSION['usuario_igreja_id'] ?? $_SESSION['membro_igreja_id'];
 
-		// 1. LITURGIA (Busca os dados brutos com os Joins de Fotos e Igreja)
-		$liturgia = $this->model->getUltimaLiturgia($igrejaId);
+        if (!$igrejaId) {
+            die("Acesso negado: Igreja não identificada.");
+        }
 
-		// PROCESSAMENTO DE FOTOS DO DIRIGENTE E PREGADOR
-		$dirigente_foto = null;
-		$pregador_foto  = null;
+        // 1. LITURGIA
+        $liturgia = $this->model->getUltimaLiturgia($igrejaId);
 
-		if ($liturgia) {
-			// Foto Dirigente
-			if (!empty($liturgia['membro_foto_dirigente']) && !empty($liturgia['registro_dirigente'])) {
-				$dirigente_foto = "assets/uploads/{$igrejaId}/membros/{$liturgia['registro_dirigente']}/{$liturgia['membro_foto_dirigente']}";
-			}
+        // PROCESSAMENTO DE FOTOS DO DIRIGENTE E PREGADOR
+        $dirigente_foto = null;
+        $pregador_foto  = null;
 
-			// Foto Pregador
-			if (!empty($liturgia['membro_foto_pregador']) && !empty($liturgia['registro_pregador'])) {
-				$pregador_foto = "assets/uploads/{$igrejaId}/membros/{$liturgia['registro_pregador']}/{$liturgia['membro_foto_pregador']}";
-			}
-		}
+        if ($liturgia) {
+            // Foto Dirigente
+            if (!empty($liturgia['membro_foto_dirigente']) && !empty($liturgia['registro_dirigente'])) {
+                $dirigente_foto = "assets/uploads/{$igrejaId}/membros/{$liturgia['registro_dirigente']}/{$liturgia['membro_foto_dirigente']}";
+            }
 
-		// 2. EVENTOS DAS SOCIEDADES
-		$eventosBrutos = $this->model->buscarProximosEventos($igrejaId);
-		$eventos = [];
+            // Foto Pregador
+            if (!empty($liturgia['membro_foto_pregador']) && !empty($liturgia['registro_pregador'])) {
+                $pregador_foto = "assets/uploads/{$igrejaId}/membros/{$liturgia['registro_pregador']}/{$liturgia['membro_foto_pregador']}";
+            }
+        }
 
-		foreach ($eventosBrutos as $ev) {
-			$logo = !empty($ev['sociedade_logo'])
-					? "assets/uploads/" . $ev['sociedade_logo']
-					: "assets/img/logo-placeholder.png";
+        // 2. EVENTOS DAS SOCIEDADES
+        $eventosBrutos = $this->model->buscarProximosEventos($igrejaId);
+        $eventos = [];
 
-			$eventos[] = [
-				'titulo'    => $ev['sociedade_evento_titulo'],
-				'sociedade' => $ev['sociedade_nome'],
-				'data'      => date('d/m', strtotime($ev['sociedade_evento_data_hora_inicio'])),
-				'hora'      => date('H:i', strtotime($ev['sociedade_evento_data_hora_inicio'])),
-				'local'     => $ev['sociedade_evento_local'],
-				'logo'      => $logo
-			];
-		}
+        foreach ($eventosBrutos as $ev) {
+            $logo = !empty($ev['sociedade_logo'])
+                    ? "assets/uploads/" . $ev['sociedade_logo']
+                    : "assets/img/logo-placeholder.png";
 
-		// 3. ANIVERSARIANTES
-		$aniversariantes = $this->model->buscarAniversariantesMes($igrejaId);
-		$mesAtual = (int)date('m');
-		$nascidos = [];
-		$batizados = [];
+            $eventos[] = [
+                'titulo'    => $ev['sociedade_evento_titulo'],
+                'sociedade' => $ev['sociedade_nome'],
+                'data'      => date('d/m', strtotime($ev['sociedade_evento_data_hora_inicio'])),
+                'hora'      => date('H:i', strtotime($ev['sociedade_evento_data_hora_inicio'])),
+                'local'     => $ev['sociedade_evento_local'],
+                'logo'      => $logo
+            ];
+        }
 
-		foreach ($aniversariantes as $m) {
-			$registro = $m['membro_registro_interno'];
-			$arquivo  = $m['membro_foto_arquivo'];
+        // 3. ANIVERSARIANTES
+        $aniversariantes = $this->model->buscarAniversariantesMes($igrejaId);
+        $mesAtual = (int)date('m');
+        $nascidos = [];
+        $batizados = [];
 
-			$caminhoFoto = (!empty($arquivo) && !empty($registro))
-				? "assets/uploads/{$igrejaId}/membros/{$registro}/{$arquivo}"
-				: null;
+        foreach ($aniversariantes as $m) {
+            $registro = $m['membro_registro_interno'];
+            $arquivo  = $m['membro_foto_arquivo'];
 
-			$nomeMembro = $m['membro_nome'] ?? 'Membro';
+            $caminhoFoto = (!empty($arquivo) && !empty($registro))
+                ? "assets/uploads/{$igrejaId}/membros/{$registro}/{$arquivo}"
+                : null;
 
-			if (!empty($m['membro_data_nascimento']) && $m['membro_data_nascimento'] != '0000-00-00') {
-				$timestamp = strtotime($m['membro_data_nascimento']);
-				if ((int)date('m', $timestamp) === $mesAtual) {
-					$nascidos[] = [
-						'nome' => $nomeMembro,
-						'foto' => $caminhoFoto,
-						'dia'  => (int)date('d', $timestamp)
-					];
-				}
-			}
+            $nomeMembro = $m['membro_nome'] ?? 'Membro';
 
-			if (!empty($m['membro_data_batismo']) && $m['membro_data_batismo'] != '0000-00-00') {
-				$timestampBat = strtotime($m['membro_data_batismo']);
-				if ((int)date('m', $timestampBat) === $mesAtual) {
-					$batizados[] = [
-						'nome' => $nomeMembro,
-						'foto' => $caminhoFoto,
-						'dia'  => (int)date('d', $timestampBat),
-						'anos' => date('Y') - date('Y', $timestampBat)
-					];
-				}
-			}
-		}
+            if (!empty($m['membro_data_nascimento']) && $m['membro_data_nascimento'] != '0000-00-00') {
+                $timestamp = strtotime($m['membro_data_nascimento']);
+                if ((int)date('m', $timestamp) === $mesAtual) {
+                    $nascidos[] = [
+                        'nome' => $nomeMembro,
+                        'foto' => $caminhoFoto,
+                        'dia'  => (int)date('d', $timestamp)
+                    ];
+                }
+            }
 
-		usort($nascidos, fn($a, $b) => $a['dia'] <=> $b['dia']);
-		usort($batizados, fn($a, $b) => $a['dia'] <=> $b['dia']);
+            if (!empty($m['membro_data_batismo']) && $m['membro_data_batismo'] != '0000-00-00') {
+                $timestampBat = strtotime($m['membro_data_batismo']);
+                if ((int)date('m', $timestampBat) === $mesAtual) {
+                    $batizados[] = [
+                        'nome' => $nomeMembro,
+                        'foto' => $caminhoFoto,
+                        'dia'  => (int)date('d', $timestampBat),
+                        'anos' => date('Y') - date('Y', $timestampBat)
+                    ];
+                }
+            }
+        }
 
-		$meses = [
-			1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
-			5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
-			9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
-		];
+        usort($nascidos, fn($a, $b) => $a['dia'] <=> $b['dia']);
+        usort($batizados, fn($a, $b) => $a['dia'] <=> $b['dia']);
 
-		// 4. PROGRAMAÇÃO RECORRENTE (Agenda Semanal)
-		// Chama o método que busca na tabela igrejas_programacao
-		$programacao = $this->model->getProgramacao($igrejaId);
+        $meses = [
+            1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
+            5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
+            9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
+        ];
 
-		// 5. Monta o array de dados final enviando tudo para a View
-		$dados = [
-			'nomeMes'        => $meses[$mesAtual],
-			'eventos'        => $eventos,
-			'liturgia'       => $liturgia,
-			'programacao'    => $programacao, // ADICIONADO AQUI
-			'lideranca'      => $this->model->getLideranca($igrejaId),
-			'mensagem'       => $this->model->getUltimaMensagem($igrejaId),
-			'nascidos'       => $nascidos,
-			'batizados'      => $batizados,
-			'dirigente_nome' => $liturgia ? ($liturgia['nome_membro_dirigente'] ?: $liturgia['igreja_liturgia_dirigente_nome']) : 'Não informado',
-			'dirigente_foto' => $dirigente_foto,
-			'pregador_nome'  => $liturgia ? ($liturgia['nome_membro_pregador'] ?: $liturgia['igreja_liturgia_pregador_nome']) : 'Não informado',
-			'pregador_foto'  => $pregador_foto
-		];
+        // 4. PROGRAMAÇÃO RECORRENTE
+        $programacao = $this->model->getProgramacao($igrejaId);
 
-		$this->rawview('boletinssemanais/index', $dados);
-	}
+        // 5. Monta o array de dados final
+        $dados = [
+            'nomeMes'        => $meses[$mesAtual],
+            'eventos'        => $eventos,
+            'liturgia'       => $liturgia,
+            'programacao'    => $programacao,
+            'lideranca'      => $this->model->getLideranca($igrejaId),
+            'mensagem'       => $this->model->getUltimaMensagem($igrejaId),
+            'nascidos'       => $nascidos,
+            'batizados'      => $batizados,
+            'dirigente_nome' => $liturgia ? ($liturgia['nome_membro_dirigente'] ?: $liturgia['igreja_liturgia_dirigente_nome']) : 'Não informado',
+            'dirigente_foto' => $dirigente_foto,
+            'pregador_nome'  => $liturgia ? ($liturgia['nome_membro_pregador'] ?: $liturgia['igreja_liturgia_pregador_nome']) : 'Não informado',
+            'pregador_foto'  => $pregador_foto
+        ];
+
+        $this->rawview('boletinssemanais/index', $dados);
+    }
 }

@@ -47,9 +47,11 @@ class BoletimSemanal
 
 		if ($liturgia) {
 			$sqlItems = "SELECT
+							liturgia_item_id, -- Adicionado para o ID do collapse ser único
 							liturgia_item_tipo as tipo,
 							liturgia_item_descricao as `desc`,
-							liturgia_item_referencia as ref
+							liturgia_item_referencia as ref,
+							liturgia_item_conteudo_api as conteudo -- Adicionamos o campo aqui!
 						 FROM igrejas_liturgias_itens
 						 WHERE liturgia_item_liturgia_id = ?
 						 ORDER BY liturgia_item_ordem ASC";

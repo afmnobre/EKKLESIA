@@ -87,92 +87,164 @@
 </div>
 
 <div class="print-container">
+	<div class="row align-items-center border-bottom pb-3 mb-4">
 
-    <div class="row align-items-center border-bottom pb-3 mb-4">
-        <div class="col-3">
-            <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 65px;">
-        </div>
+		<div class="col-6 col-md-3 mb-3 mb-md-0 text-start order-1">
+			<img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 60px; width: auto;">
+		</div>
 
-        <div class="col-6 text-center">
-            <h6 class="fw-bold mb-0 text-primary small text-uppercase"><?= htmlspecialchars($liturgia['igreja_nome']) ?></h6>
-            <h2 class="fw-black mb-0" style="letter-spacing: -1px; font-size: 2.2rem;">BOLETIM SEMANAL</h2>
-            <span class="badge bg-dark px-4 mt-1" style="font-size: 0.9rem;"><?= date('d/m/Y', strtotime($liturgia['igreja_liturgia_data'] ?? 'now')) ?></span>
-        </div>
+		<div class="col-12 col-md-6 mb-3 mb-md-0 order-3 order-md-2 text-center">
+			<h6 class="fw-bold mb-0 text-primary small text-uppercase" style="font-size: 0.75rem;">
+				<?= htmlspecialchars($liturgia['igreja_nome']) ?>
+			</h6>
+			<h2 class="fw-black mb-0 display-6 text-nowrap" style="letter-spacing: -1.5px; font-weight: 900;">
+				BOLETIM SEMANAL
+			</h2>
+			<div class="d-flex justify-content-center align-items-center gap-2 mt-1">
+				<span class="badge bg-dark px-4" style="font-size: 0.9rem;">
+					<?= date('d/m/Y', strtotime($liturgia['igreja_liturgia_data'] ?? 'now')) ?>
+				</span>
+			</div>
 
-        <div class="col-3">
-            <div class="d-flex align-items-center justify-content-end">
-                <div class="me-3 p-2 border-start border-primary" style="background: #f8f9fa; min-width: 170px;">
-                    <h6 class="fw-bold small mb-1 text-primary text-uppercase" style="font-size: 0.6rem;">Nossa Agenda</h6>
-                    <ul class="list-unstyled mb-0" style="font-size: 0.65rem; line-height: 1.2;">
-                        <?php if(!empty($programacao)): $count = 0; foreach($programacao as $prog):
-                            if($prog['programacao_recorrencia_mensal'] == 0 && $count < 5): $count++; ?>
-                                <li class="mb-1 text-nowrap text-truncate">
-                                    <strong class="text-primary"><?= substr($prog['programacao_dia_semana'], 0, 3) ?> <?= date('H:i', strtotime($prog['programacao_hora'])) ?>h</strong> -
-                                    <?= htmlspecialchars($prog['programacao_titulo']) ?>
-                                </li>
-                        <?php endif; endforeach; endif; ?>
-                    </ul>
-                </div>
-                <?php if(!empty($liturgia['igreja_logo'])): ?>
-                    <img src="<?= url("assets/uploads/{$liturgia['igreja_liturgia_igreja_id']}/logo/{$liturgia['igreja_logo']}") ?>" style="height: 75px; max-width: 75px; object-fit: contain;">
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
+			<div class="d-md-none mt-4 text-start">
+				<div class="p-3 border rounded bg-light shadow-sm">
+					<h6 class="fw-bold small mb-2 text-primary text-uppercase text-center border-bottom pb-2">Nossa Agenda</h6>
+					<ul class="list-unstyled mb-0" style="font-size: 0.85rem;">
+						<?php if(!empty($programacao)): foreach($programacao as $prog):
+							if($prog['programacao_recorrencia_mensal'] == 0): ?>
+								<li class="mb-2 border-bottom pb-1 border-white">
+									<strong class="text-primary"><?= substr($prog['programacao_dia_semana'], 0, 3) ?> <?= date('H:i', strtotime($prog['programacao_hora'])) ?>h</strong> -
+									<?= htmlspecialchars($prog['programacao_titulo']) ?>
+								</li>
+						<?php endif; endforeach; endif; ?>
+					</ul>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-6 col-md-3 mb-3 mb-md-0 order-2 order-md-3">
+			<div class="d-flex align-items-center justify-content-end">
+
+				<div class="d-none d-md-block me-3 p-2 border-start border-primary shadow-sm text-start" style="background: #f8f9fa; font-size: 0.62rem; min-width: 170px;">
+					<h6 class="fw-bold mb-1 text-primary text-uppercase" style="font-size: 0.6rem;">Nossa Agenda</h6>
+					<ul class="list-unstyled mb-0">
+						<?php if(!empty($programacao)): foreach($programacao as $prog):
+							if($prog['programacao_recorrencia_mensal'] == 0): ?>
+								<li class="mb-1 border-bottom border-light pb-1 text-truncate">
+									<strong class="text-primary"><?= substr($prog['programacao_dia_semana'], 0, 3) ?> <?= date('H:i', strtotime($prog['programacao_hora'])) ?>h</strong> -
+									<?= htmlspecialchars($prog['programacao_titulo']) ?>
+								</li>
+						<?php endif; endforeach; endif; ?>
+					</ul>
+				</div>
+
+				<?php if(!empty($liturgia['igreja_logo'])): ?>
+					<img src="<?= url("assets/uploads/{$liturgia['igreja_liturgia_igreja_id']}/logo/{$liturgia['igreja_logo']}") ?>"
+						 style="height: 65px; max-width: 65px; object-fit: contain;">
+				<?php endif; ?>
+
+			</div>
+		</div>
+
+	</div>
 
     <div class="row g-4">
-        <div class="col-lg-3 border-end">
-            <h5 class="col-titulo"><i class="bi bi-collection me-2"></i>Liturgia</h5>
-            <?php if ($liturgia): ?>
-                <div class="mb-3 bg-light p-2 rounded border-start border-primary border-4">
-                    <strong class="d-block text-dark text-uppercase mb-2" style="font-size: 0.75rem;"><?= $liturgia['igreja_liturgia_tema'] ?></strong>
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <div class="d-flex align-items-center bg-white border rounded shadow-sm overflow-hidden" style="height: 55px;">
-                                <div style="width: 45px; height: 55px; flex-shrink: 0;">
-                                    <?php if (!empty($dirigente_foto)): ?>
-                                        <img src="<?= url($dirigente_foto) ?>" style="width: 100%; height: 100%; object-fit: cover;">
-                                    <?php else: ?>
-                                        <div class="bg-light d-flex align-items-center justify-content-center text-muted h-100"><i class="bi bi-person"></i></div>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="p-1 overflow-hidden"><small class="text-primary fw-bold d-block" style="font-size: 0.55rem;">DIRIGENTE</small><small class="fw-bold text-dark d-block text-truncate" style="font-size: 0.7rem;"><?= $dirigente_nome ?></small></div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex align-items-center bg-white border rounded shadow-sm overflow-hidden" style="height: 55px;">
-                                <div style="width: 45px; height: 55px; flex-shrink: 0;">
-                                    <?php if (!empty($pregador_foto)): ?>
-                                        <img src="<?= url($pregador_foto) ?>" style="width: 100%; height: 100%; object-fit: cover;">
-                                    <?php else: ?>
-                                        <div class="bg-light d-flex align-items-center justify-content-center text-muted h-100"><i class="bi bi-person-fill"></i></div>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="p-1 overflow-hidden"><small class="text-primary fw-bold d-block" style="font-size: 0.55rem;">PREGADOR</small><small class="fw-bold text-dark d-block text-truncate" style="font-size: 0.7rem;"><?= $pregador_nome ?></small></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+		<div class="col-lg-3 border-end">
+			<h5 class="col-titulo"><i class="bi bi-collection me-2"></i>Liturgia</h5>
+			<?php if ($liturgia): ?>
+				<div class="mb-3 bg-light p-2 rounded border-start border-primary border-4">
+					<strong class="d-block text-dark text-uppercase mb-2" style="font-size: 0.75rem;"><?= $liturgia['igreja_liturgia_tema'] ?></strong>
+					<div class="row g-2 mb-2">
+						<div class="col-6">
+							<div class="d-flex align-items-center bg-white border rounded shadow-sm overflow-hidden" style="height: 55px;">
+								<div style="width: 45px; height: 55px; flex-shrink: 0;">
+									<?php if (!empty($dirigente_foto)): ?>
+										<img src="<?= url($dirigente_foto) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+									<?php else: ?>
+										<div class="bg-light d-flex align-items-center justify-content-center text-muted h-100"><i class="bi bi-person"></i></div>
+									<?php endif; ?>
+								</div>
+								<div class="p-1 overflow-hidden">
+									<small class="text-primary fw-bold d-block" style="font-size: 0.55rem;">DIRIGENTE</small>
+									<small class="fw-bold text-dark d-block text-truncate" style="font-size: 0.7rem;"><?= $dirigente_nome ?></small>
+								</div>
+							</div>
+						</div>
+						<div class="col-6">
+							<div class="d-flex align-items-center bg-white border rounded shadow-sm overflow-hidden" style="height: 55px;">
+								<div style="width: 45px; height: 55px; flex-shrink: 0;">
+									<?php if (!empty($pregador_foto)): ?>
+										<img src="<?= url($pregador_foto) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+									<?php else: ?>
+										<div class="bg-light d-flex align-items-center justify-content-center text-muted h-100"><i class="bi bi-person-fill"></i></div>
+									<?php endif; ?>
+								</div>
+								<div class="p-1 overflow-hidden">
+									<small class="text-primary fw-bold d-block" style="font-size: 0.55rem;">PREGADOR</small>
+									<small class="fw-bold text-dark d-block text-truncate" style="font-size: 0.7rem;"><?= $pregador_nome ?></small>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 
-                <div class="mt-2">
-                    <?php if (!empty($liturgia['itens'])): foreach ($liturgia['itens'] as $item): ?>
-                        <div class="item-liturgia">
-                            <div class="liturgia-flex">
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle badge-tipo"><?= strtoupper($item['tipo']) ?></span>
-                                <div class="fw-semibold small text-dark flex-grow-1" style="font-size: 0.85rem;"><?= $item['desc'] ?></div>
-                            </div>
-                            <?php if($item['ref']): ?>
-                                <div class="text-primary fw-bold mt-1" style="margin-left: 73px; font-size: 0.75rem;"><?= $item['ref'] ?></div>
-                            <?php endif; ?>
-                        </div>
-                    <?php endforeach; else: ?>
-                        <p class="text-muted small text-center p-3">Não cadastrada.</p>
-                    <?php endif; ?>
-                </div>
-            <?php else: ?>
-                <div class="alert alert-warning small">Nenhuma liturgia disponível.</div>
-            <?php endif; ?>
-        </div>
+				<div class="mt-2">
+					<?php if (!empty($liturgia['itens'])): foreach ($liturgia['itens'] as $index => $item):
+						$tipo      = $item['tipo'] ?? '';
+						$descricao = $item['desc'] ?? '';
+						$referencia = $item['ref'] ?? '';
+						$conteudo  = $item['conteudo'] ?? ''; // Agora o Model envia como 'conteudo'
+						$tipoLower = strtolower($tipo);
+					?>
+						<div class="item-liturgia mb-2">
+							<div class="liturgia-flex">
+								<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle badge-tipo">
+									<?= strtoupper($tipo) ?>
+								</span>
+								<div class="fw-semibold small text-dark flex-grow-1" style="font-size: 0.85rem;">
+									<?= htmlspecialchars($descricao) ?>
+								</div>
+							</div>
+
+							<?php if(!empty($referencia)): ?>
+								<div class="text-primary fw-bold mt-1" style="margin-left: 73px; font-size: 0.75rem;">
+									<?= htmlspecialchars($referencia) ?>
+								</div>
+							<?php endif; ?>
+
+							<?php if(($tipoLower == 'leitura' || $tipoLower == 'mensagem') && !empty($conteudo)):
+								$id_collapse = "coll_" . ($item['liturgia_item_id'] ?? $index);
+							?>
+								<div style="margin-left: 73px;" class="mt-1">
+									<div class="text-muted small" style="font-size: 0.75rem; font-style: italic;">
+										<?= mb_strimwidth(strip_tags($conteudo), 0, 85, "...") ?>
+
+										<button class="btn btn-link p-0 text-primary fw-bold no-print"
+												type="button"
+												data-bs-toggle="collapse"
+												data-bs-target="#<?= $id_collapse ?>"
+												style="font-size: 0.7rem; text-decoration: none;">
+											[Ler texto]
+										</button>
+									</div>
+
+									<div class="collapse mt-2" id="<?= $id_collapse ?>">
+										<div class="card card-body p-3 bg-light border-0 shadow-sm"
+											 style="font-size: 0.85rem; white-space: pre-line; font-family: 'Georgia', serif; line-height: 1.5; color: #444;">
+											<?= $conteudo ?>
+										</div>
+									</div>
+								</div>
+							<?php endif; ?>
+						</div>
+					<?php endforeach; else: ?>
+						<p class="text-muted small text-center p-3">Não cadastrada.</p>
+					<?php endif; ?>
+				</div>
+			<?php else: ?>
+				<div class="alert alert-warning small">Nenhuma liturgia disponível.</div>
+			<?php endif; ?>
+		</div>
 
         <div class="col-lg-6">
             <div class="mensagem-container mb-4">
@@ -219,24 +291,34 @@
         </div>
 
         <div class="col-lg-3 border-start bg-light bg-opacity-10">
-            <div class="mb-4">
-                <h5 class="col-titulo"><i class="bi bi-person-badge me-2"></i>Liderança</h5>
-                <?php foreach ($lideranca as $lider): ?>
-                    <div class="d-flex align-items-center mb-2 p-2 bg-white border rounded shadow-sm">
-                        <div class="me-3">
-                            <?php if (!empty($lider['membro_foto_arquivo'])): ?>
-                                <img src="<?= url("assets/uploads/{$_SESSION['usuario_igreja_id']}/membros/{$lider['membro_registro_interno']}/{$lider['membro_foto_arquivo']}") ?>" class="foto-lider">
-                            <?php else: ?>
-                                <div class="placeholder-avatar"><i class="bi bi-person"></i></div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="overflow-hidden">
-                            <p class="lider-cargo"><?= $lider['cargo_nome'] ?></p>
-                            <p class="lider-nome text-truncate"><?= $lider['membro_nome'] ?></p>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
+			<div class="mb-4">
+				<h5 class="col-titulo"><i class="bi bi-person-badge me-2"></i>Liderança</h5>
+
+				<?php
+					// Define o ID da igreja de forma segura para a View
+					$idIgrejaAtual = $_SESSION['usuario_igreja_id'] ?? $_SESSION['membro_igreja_id'];
+				?>
+
+				<?php foreach ($lideranca as $lider): ?>
+					<div class="d-flex align-items-center mb-2 p-2 bg-white border rounded shadow-sm">
+						<div class="me-3">
+							<?php if (!empty($lider['membro_foto_arquivo'])): ?>
+								<?php
+									// Caminho da foto utilizando a variável definida acima
+									$caminhoFotoLider = "assets/uploads/{$idIgrejaAtual}/membros/{$lider['membro_registro_interno']}/{$lider['membro_foto_arquivo']}";
+								?>
+								<img src="<?= url($caminhoFotoLider) ?>" class="foto-lider">
+							<?php else: ?>
+								<div class="placeholder-avatar"><i class="bi bi-person"></i></div>
+							<?php endif; ?>
+						</div>
+						<div class="overflow-hidden">
+							<p class="lider-cargo"><?= $lider['cargo_nome'] ?></p>
+							<p class="lider-nome text-truncate"><?= $lider['membro_nome'] ?></p>
+						</div>
+					</div>
+				<?php endforeach; ?>
+			</div>
 
             <div>
                 <h5 class="col-titulo"><i class="bi bi-calendar-event me-2"></i>Próximos Eventos</h5>

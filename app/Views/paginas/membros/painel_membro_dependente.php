@@ -13,45 +13,65 @@
 
     /* Estilo do Cabeçalho Unificado */
     .header-perfil { padding: 40px 0 80px 0; margin-bottom: -60px; }
+    .logo-igreja-local { max-height: 105px; width: auto; filter: brightness(0) invert(1); }
 </style>
 
 <div class="container-fluid p-0" style="background-color: #f8f9fa; min-height: 100vh;">
 
-    <div class="bg-ipb text-white header-perfil shadow-sm">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-auto">
-                    <?php
-                        $diretorio = ($perfil['membro_status'] === 'Ativo') ? $perfil['membro_registro_interno'] : "PENDENTE_{$perfil['membro_id']}";
-                        $fotoUrl = !empty($perfil['membro_foto_arquivo'])
-                            ? asset("uploads/{$perfil['membro_igreja_id']}/membros/{$diretorio}/{$perfil['membro_foto_arquivo']}")
-                            : asset("img/avatar-default.png");
-                    ?>
-                    <img src="<?= $fotoUrl ?>" class="rounded-circle shadow-sm border border-3 border-white" style="width: 70px; height: 70px; object-fit: cover;">
-                </div>
-                <div class="col">
-                    <h5 class="fw-bold mb-0 text-white">Olá, <?= explode(' ', $perfil['membro_nome'])[0] ?>!</h5>
-                    <p class="small mb-0 opacity-75">
-                        <i class="bi bi-arrow-left me-1"></i> <a href="<?= url('PortalMembro/painel') ?>" class="text-white text-decoration-none">Voltar ao Painel</a>
-                    </p>
-                </div>
-                <div class="col-auto d-flex align-items-center">
-                    <a href="<?= url('PortalMembro/logout') ?>" class="btn btn-outline-light btn-sm px-3 fw-bold border-2 me-3 rounded-0">
-                        <i class="bi bi-box-arrow-right me-1"></i> SAIR
-                    </a>
-                    <div class="d-none d-md-block">
-                        <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 40px; filter: brightness(0) invert(1);">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+	<div class="bg-ipb text-white header-perfil shadow-sm">
+		<div class="container">
+			<div class="row align-items-center g-3">
+
+				<div class="col-auto d-none d-md-block pe-4 border-end border-white border-opacity-25">
+					<?php
+						$idIgreja = $igreja_dados['igreja_id'] ?? $_SESSION['membro_igreja_id'];
+						$nomeLogo = $igreja_dados['igreja_logo'] ?? '';
+						$urlLogoLocal = !empty($nomeLogo)
+							? url("assets/uploads/{$idIgreja}/logo/{$nomeLogo}")
+							: url("assets/img/logo_ipb.png");
+					?>
+					<img src="<?= $urlLogoLocal ?>" class="logo-igreja-local" style="max-height: 60px;">
+				</div>
+
+				<div class="col d-flex align-items-center ps-md-4">
+					<?php
+						$diretorio = ($perfil['membro_status'] === 'Ativo') ? $perfil['membro_registro_interno'] : "PENDENTE_{$perfil['membro_id']}";
+						$fotoUrl = !empty($perfil['membro_foto_arquivo'])
+							? url("assets/uploads/{$perfil['membro_igreja_id']}/membros/{$diretorio}/{$perfil['membro_foto_arquivo']}")
+							: url("assets/img/avatar-default.png");
+					?>
+					<img src="<?= $fotoUrl ?>" class="rounded-circle shadow-sm border border-3 border-white me-3" style="width: 65px; height: 65px; object-fit: cover;">
+
+					<div>
+						<h5 class="fw-bold mb-0 text-white">Olá, <?= explode(' ', $perfil['membro_nome'])[0] ?>!</h5>
+						<p class="small mb-0 opacity-75">
+							<a href="<?= url('PortalMembro/painel') ?>" class="text-white text-decoration-none hover-opacity">
+								<i class="bi bi-arrow-left-circle me-1"></i> Voltar ao Painel
+							</a>
+						</p>
+					</div>
+				</div>
+
+				<div class="col-auto d-flex align-items-center gap-2 ms-auto">
+
+					<a href="<?= url('PortalMembro/logout') ?>" class="btn btn-outline-light btn-sm px-4 fw-bold border-2 rounded-pill shadow-sm">
+						<i class="bi bi-box-arrow-right me-1"></i> SAIR
+					</a>
+
+					<div class="d-none d-lg-block ms-2 ps-3 border-start border-white border-opacity-25">
+						<img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 40px; filter: brightness(0) invert(1);">
+					</div>
+				</div>
+
+			</div>
+		</div>
+	</div>
 
     <div class="container pb-5">
         <div class="card border-0 shadow rounded-4">
             <div class="card-header bg-white p-3 border-0 rounded-top-4 d-flex align-items-center justify-content-between">
                 <h6 class="mb-0 fw-bold text-ipb"><i class="bi bi-person-plus me-2"></i>NOVO DEPENDENTE</h6>
-                <small class="text-muted fw-bold"><?= $perfil['igreja_nome'] ?? 'EKKLESIA' ?></small>
+                <small class="text-muted fw-bold"><?= $igreja_dados['igreja_nome'] ?? $perfil['igreja_nome'] ?? 'EKKLESIA' ?></small>
             </div>
 
             <div class="card-body p-4">
@@ -101,6 +121,7 @@
                                 <option value="Casado(a)">Casado(a)</option>
                                 <option value="Viúvo(a)">Viúvo(a)</option>
                                 <option value="Divorciado(a)">Divorciado(a)</option>
+                                <option value="Separado(a)">Separado(a)</option>
                             </select>
                         </div>
                         <div class="col-12">
@@ -180,9 +201,16 @@
             </div>
         </div>
 
-        <div class="mt-5 pb-3 text-center">
-            <h6 class="fw-bold text-muted small mb-1"><?= $perfil['igreja_nome'] ?? $nomeIgreja ?></h6>
-            <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 35px; opacity: 0.5;">
+        <div class="mt-5 pb-5 text-center">
+            <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
+                <img src="<?= url('assets/img/logo_ipb.png') ?>" style="height: 40px; opacity: 0.6;">
+                <div class="text-start border-start ps-3">
+                    <h6 class="fw-bold text-muted mb-0 small text-uppercase"><?= $nomeIgreja ?></h6>
+                    <p class="text-muted mb-0" style="font-size: 0.65rem;">Igreja Presbiteriana do Brasil</p>
+                </div>
+            </div>
+            <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 35px; opacity: 0.4;">
+            <p class="mt-3 text-muted" style="font-size: 0.65rem;">&copy; <?= date('Y') ?> - Sistema Ekklesia | Gestão Eclesiástica</p>
         </div>
     </div>
 </div>
