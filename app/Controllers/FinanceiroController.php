@@ -92,30 +92,41 @@ class FinanceiroController extends Controller {
 	}
 
 	public function lancamentos() {
+		// 1. Identificação da Igreja
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 
-		// --- NOVA LÓGICA DE FILTRO ---
+		// 2. Lógica de Filtro de Datas (Mês/Ano)
 		$anoAtual = isset($_GET['ano']) ? (int)$_GET['ano'] : date('Y');
 		$mesAtual = isset($_GET['mes']) ? (int)$_GET['mes'] : date('n');
 
-		// Busca os anos que possuem movimentação para o Combo (Crie no Model)
+		// 3. Busca de Anos Disponíveis para o Combo de Filtro
 		$anosDisponiveis = $this->model->getAnosComMovimentacao($igrejaId);
-		if (empty($anosDisponiveis)) { $anosDisponiveis = [['ano' => date('Y')]]; }
+		if (empty($anosDisponiveis)) {
+			$anosDisponiveis = [['ano' => date('Y')]];
+		}
 
-		// 1. Pega as contas filtradas por Mês/Ano (Ajuste o método no Model)
+		// 4. Carregamento de Dados para a View
+		// Contas agendadas filtradas por período
 		$contas = $this->model->getContasAgendadas($igrejaId, $mesAtual, $anoAtual);
 
-		// Mantemos os dados dos modais
+		// Dados para Modais de Cadastro (Categorias e Bancos)
 		$categoriasAgrupadas = $this->model->getCategoriasAgrupadas($igrejaId);
 		$contasBancarias = $this->model->getContasBancarias($igrejaId);
+
+		// Lista Geral de Membros (usada em outros modais de lançamento)
 		$membros = $this->model->getMembrosAtivos($igrejaId);
 
+		// NOVA BUSCA: Apenas Presbíteros e Diáconos (IDs 5, 6 e 7)
+		// Este método deve usar o JOIN com a tabela membros_cargos_vinculo
+		$oficiais = $this->model->getOficiaisConferentes($igrejaId);
+
+		// 5. Renderização da View com todos os dados
 		$this->view('financeiro/lancamentos', [
 			'contas_agendadas'     => $contas,
 			'categorias_agrupadas' => $categoriasAgrupadas,
 			'contas_bancarias'     => $contasBancarias,
-			'membros'              => $membros,
-			// Passamos os dados do filtro para a View
+			'membros'              => $membros,       // Lista completa para lançamentos
+			'oficiais'             => $oficiais,      // Lista filtrada para o modal de conferência
 			'anoSelecionado'       => $anoAtual,
 			'mesSelecionado'       => $mesAtual,
 			'anosDisponiveis'      => $anosDisponiveis
@@ -585,4 +596,199 @@ class FinanceiroController extends Controller {
 			die("Erro: O servidor não permitiu criar o ZIP mesmo na pasta de uploads. Verifique as permissões da pasta: " . $raizUploads);
 		}
 	}
+
+	public function relatorio_raw() {
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+
+		// Captura dados do GET (enviados pelo JavaScript do Modal)
+		$data      = $_GET['data'] ?? date('Y-m-d');
+		$diacono1  = $_GET['d1']   ?? 'Não informado';
+		$diacono2  = $_GET['d2']   ?? 'Não informado';
+
+		// Busca dados no Model
+		$movimentos = $this->model->getReceitasParaConferencia($igrejaId, $data);
+		$tesoureiro = $this->model->getTesoureiroIgreja($igrejaId);
+
+		// Carrega a view de impressão (crie este arquivo em views/financeiro/relatorio_conferencia_print.php)
+		$this->rawview('financeiro/relatorio_conferencia_print', [
+			'movimentos'  => $movimentos,
+			'data'        => $data,
+			'conferente1' => $diacono1,
+			'conferente2' => $diacono2,
+			'tesoureiro'  => $tesoureiro
+		]);
+	}
+
+	public function exportar_excel_dashboard() {
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+		$ano = date('Y');
+
+		// 1. Instancia o Model (ajuste conforme seu framework se necessário)
+		// Se estiver dentro do Controller Financeiro, geralmente é $this->financeiroModel ou similar
+		$relatorio = $this->model->getFluxoAnualPorCategorias($igrejaId, $ano);
+		$contas = $this->model->getContasBancarias($igrejaId);
+		$mesesNomes = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+		// Nome do arquivo
+		$filename = "Relatorio_Anual_" . $ano . ".xls";
+
+		// Cabeçalhos para Download
+		header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
+		header("Content-Disposition: attachment; filename=\"$filename\"");
+		header("Pragma: no-cache");
+		header("Expires: 0");
+
+		// Força o UTF-8 para evitar problemas com acentos (ç, ã, é)
+		echo "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>";
+
+		// Estilos Básicos para o Excel
+		echo "<style>
+				.header-receita { background-color: #198754; color: #ffffff; font-weight: bold; }
+				.header-despesa { background-color: #dc3545; color: #ffffff; font-weight: bold; }
+				.subcategoria { color: #666666; font-style: italic; }
+				.total-linha { font-weight: bold; }
+			  </style>";
+
+		// --- TABELA 1: RECEITAS ---
+		echo "<table border='1'>
+				<tr><th colspan='14' class='header-receita'>DETALHAMENTO DE RECEITAS ANUAL - $ano</th></tr>
+				<tr>
+					<th>RECEITAS</th>";
+					foreach($mesesNomes as $m) echo "<th>$m</th>";
+		echo "      <th>TOTAL GERAL</th>
+				</tr>";
+
+		if(isset($relatorio['entrada'])) {
+			foreach($relatorio['entrada'] as $cat) {
+				$totalAnualCat = array_sum($cat['meses']);
+				echo "<tr>
+						<td style='font-weight:bold; background-color: #f8fff9;'>{$cat['nome']}</td>";
+						foreach($cat['meses'] as $valor) {
+							echo "<td align='right'>" . number_format($valor, 2, ',', '.') . "</td>";
+						}
+				echo "  <td align='right' class='total-linha'>" . number_format($totalAnualCat, 2, ',', '.') . "</td>
+					  </tr>";
+
+				// Subcategorias
+				foreach($cat['subcategorias'] as $sub) {
+					echo "<tr>
+							<td class='subcategoria'>&nbsp;&nbsp;&nbsp;{$sub['nome']}</td>";
+							foreach($sub['meses'] as $vSub) {
+								echo "<td align='right' style='color:#666; font-size: 0.9em;'>" . number_format($vSub, 2, ',', '.') . "</td>";
+							}
+					echo "  <td align='right' style='color:#666;'>" . number_format(array_sum($sub['meses']), 2, ',', '.') . "</td>
+						  </tr>";
+				}
+			}
+		}
+		echo "</table><br>";
+
+		// --- TABELA 2: DESPESAS ---
+		echo "<table border='1'>
+				<tr><th colspan='14' class='header-despesa'>DETALHAMENTO DE DESPESAS ANUAL - $ano</th></tr>
+				<tr>
+					<th>DESPESAS</th>";
+					foreach($mesesNomes as $m) echo "<th>$m</th>";
+		echo "      <th>TOTAL GERAL</th>
+				</tr>";
+
+		if(isset($relatorio['saida'])) {
+			foreach($relatorio['saida'] as $cat) {
+				$totalAnualCat = array_sum($cat['meses']);
+				echo "<tr>
+						<td style='font-weight:bold; background-color: #fff9f9;'>{$cat['nome']}</td>";
+						foreach($cat['meses'] as $valor) {
+							echo "<td align='right'>" . number_format($valor, 2, ',', '.') . "</td>";
+						}
+				echo "  <td align='right' class='total-linha'>" . number_format($totalAnualCat, 2, ',', '.') . "</td>
+					  </tr>";
+
+				// Subcategorias
+				foreach($cat['subcategorias'] as $sub) {
+					echo "<tr>
+							<td class='subcategoria'>&nbsp;&nbsp;&nbsp;{$sub['nome']}</td>";
+							foreach($sub['meses'] as $vSub) {
+								echo "<td align='right' style='color:#666; font-size: 0.9em;'>" . number_format($vSub, 2, ',', '.') . "</td>";
+							}
+					echo "  <td align='right' style='color:#666;'>" . number_format(array_sum($sub['meses']), 2, ',', '.') . "</td>
+						  </tr>";
+				}
+			}
+		}
+		echo "</table><br>";
+
+		// --- TABELA 3: SALDO POR CONTA ---
+		echo "<table border='1'>
+				<tr><th colspan='3' style='background-color:#343a40; color:#ffffff;'>DISPONIBILIDADE POR CONTA</th></tr>
+				<tr><th>Conta</th><th>Tipo</th><th>Saldo Atual</th></tr>";
+		foreach($contas as $c) {
+			echo "<tr>
+					<td>{$c['financeiro_conta_financeira_nome']}</td>
+					<td>{$c['financeiro_conta_financeira_tipo']}</td>
+					<td align='right'>R$ " . number_format($c['financeiro_conta_financeira_saldo'], 2, ',', '.') . "</td>
+				  </tr>";
+		}
+		echo "</table>";
+
+		exit;
+	}
+
+	public function exportar_extrato() {
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+
+		// Pega as datas da URL (enviadas pelo JS) ou define um padrão
+		$dataInicio = $_GET['data_inicio'] ?? date('Y-m-01');
+		$dataFim = $_GET['data_fim'] ?? date('Y-m-t');
+
+		// Busca os dados usando o método que você já tem no Model
+		$movimentacoes = $this->model->getMovimentacoesPorPeriodo($igrejaId, $dataInicio, $dataFim);
+
+		$filename = "Extrato_Financeiro_" . $dataInicio . "_a_" . $dataFim . ".xls";
+
+		// Configuração do Header para Excel
+		header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
+		header("Content-Disposition: attachment; filename=\"$filename\"");
+		header("Pragma: no-cache");
+		header("Expires: 0");
+
+		echo "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>";
+
+		echo "<table border='1'>";
+		echo "<tr><th colspan='6' style='background-color:#0d6efd; color:white;'>EXTRATO DE MOVIMENTAÇÕES (" . date('d/m/Y', strtotime($dataInicio)) . " até " . date('d/m/Y', strtotime($dataFim)) . ")</th></tr>";
+		echo "<tr style='background-color:#f8f9fa;'>
+				<th>Data</th>
+				<th>Conta/Caixa</th>
+				<th>Descrição</th>
+				<th>Origem</th>
+				<th>Entrada (R$)</th>
+				<th>Saída (R$)</th>
+			  </tr>";
+
+		if (!empty($movimentacoes)) {
+			foreach ($movimentacoes as $mov) {
+				$data = date('d/m/Y H:i', strtotime($mov['financeiro_movimentacao_data']));
+				$conta = $mov['financeiro_conta_financeira_nome'];
+				$desc = $mov['financeiro_movimentacao_descricao'];
+				$origem = strtoupper($mov['financeiro_movimentacao_origem']);
+
+				$entrada = ($mov['financeiro_movimentacao_tipo'] == 'entrada') ? number_format($mov['financeiro_movimentacao_valor'], 2, ',', '.') : '-';
+				$saida = ($mov['financeiro_movimentacao_tipo'] == 'saida') ? number_format($mov['financeiro_movimentacao_valor'], 2, ',', '.') : '-';
+
+				echo "<tr>
+						<td>$data</td>
+						<td>$conta</td>
+						<td>$desc</td>
+						<td align='center'><small>$origem</small></td>
+						<td align='right' style='color:green;'>$entrada</td>
+						<td align='right' style='color:red;'>$saida</td>
+					  </tr>";
+			}
+		} else {
+			echo "<tr><td colspan='6' align='center'>Nenhuma movimentação no período.</td></tr>";
+		}
+		echo "</table>";
+		exit;
+	}
+
+
 }

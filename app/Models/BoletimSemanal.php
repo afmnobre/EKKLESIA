@@ -20,7 +20,8 @@ class BoletimSemanal
 		$sql = "SELECT
 					l.*,
 					i.igreja_nome, -- Adicionado para resolver o erro do cabeçalho
-					i.igreja_logo,
+                    i.igreja_logo,
+                    i.igreja_cnpj,
 					-- Dados do Dirigente
 					m_dir.membro_nome as nome_membro_dirigente,
 					m_dir.membro_registro_interno as registro_dirigente,
@@ -187,6 +188,13 @@ class BoletimSemanal
 		$st = $this->db->prepare($sql);
 		$st->execute([$igrejaId]);
 		return $st->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	public function getHinoPorNumero($numero) {
+		$sql = "SELECT titulo, letra FROM hinos_novo_cantico WHERE numero = ?";
+		$st = $this->db->prepare($sql);
+		$st->execute([$numero]);
+		return $st->fetch(PDO::FETCH_ASSOC);
 	}
 
 }

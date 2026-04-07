@@ -237,7 +237,7 @@
 				</div>
 
                 <div class="d-flex align-items-center justify-content-between mb-3 mt-4">
-                    <h6 class="fw-bold text-ipb mb-0 small text-uppercase">Dependentes</h6>
+                    <h6 class="fw-bold text-ipb mb-0 small text-uppercase">Filhos e Dependentes -18</h6>
                     <a href="<?= url('PortalMembro/novoDependente') ?>" class="btn btn-outline-ipb btn-sm rounded-pill px-3 fw-bold">
                         <i class="bi bi-plus-lg me-1"></i> ADICIONAR
                     </a>

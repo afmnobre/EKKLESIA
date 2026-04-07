@@ -1,3 +1,11 @@
+<?php if (isset($_GET['sucesso']) && $_GET['sucesso'] == 'senha_atualizada'): ?>
+    <div class="alert alert-success alert-dismissible fade show shadow-sm border-0" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>Sucesso!</strong> A senha do membro foi atualizada com segurança.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<?php endif; ?>
+
 <style>
 @keyframes pulse-red {
     0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
@@ -652,4 +660,17 @@ $(document).on('click', '#btn-gerar-img-carteirinha', function() {
         btn.prop('disabled', false);
     });
 });
+
+function toggleSenha() {
+    const input = document.getElementById('inputNovaSenha');
+    const icon = document.getElementById('iconEye');
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        input.type = "password";
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+}
+
 </script>

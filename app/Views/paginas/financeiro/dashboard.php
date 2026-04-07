@@ -1,12 +1,17 @@
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold mb-0 text-dark">Dashboard Financeiro</h3>
-        <div class="badge bg-white text-dark shadow-sm border p-2 px-3">
-            <i class="bi bi-calendar3 me-2 text-primary"></i>
-            <span class="text-uppercase"><?= date('M / Y') ?></span>
-        </div>
-    </div>
+	<div class="d-flex justify-content-between align-items-center mb-4">
+		<h3 class="fw-bold mb-0 text-dark">Dashboard Financeiro</h3>
+		<div>
+			<a href="<?= url('financeiro/exportar_excel_dashboard') ?>" class="btn btn-success shadow-sm me-2">
+				<i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
+			</a>
 
+			<div class="badge bg-white text-dark shadow-sm border p-2 px-3 d-inline-block">
+				<i class="bi bi-calendar3 me-2 text-primary"></i>
+				<span class="text-uppercase"><?= date('M / Y') ?></span>
+			</div>
+		</div>
+	</div>
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card border-0 shadow-sm border-start border-primary border-4">

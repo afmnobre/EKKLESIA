@@ -192,4 +192,54 @@ class Liturgia
 			}
 	}
 
+	// No seu Model
+	public function getHinoPorNumero($numero) {
+		$sql = "SELECT titulo, letra FROM hinos_novo_cantico WHERE numero = ?";
+		$st = $this->db->prepare($sql);
+		$st->execute([$numero]);
+		return $st->fetch(PDO::FETCH_ASSOC);
+	}
+
+	/**
+	 * Método auxiliar para processar a lista de itens e injetar as letras dos hinos
+	 */
+	public function processarItensHinos($itens) {
+		if (empty($itens)) return [];
+
+		foreach ($itens as &$item) {
+			if (strtolower($item['tipo'] ?? '') == 'hino') {
+				$numeroHino = preg_replace('/[^0-9]/', '', $item['desc'] ?? '');
+
+				if (!empty($numeroHino)) {
+					$hinoData = $this->getHinoPorNumero((int)$numeroHino);
+					if ($hinoData) {
+						$item['hino_titulo'] = trim(preg_replace('/\s+/', ' ', $hinoData['titulo']));
+
+						$letra = $hinoData['letra'];
+
+						// 1. Remove as tags do Quelea {it}, {/it}, etc.
+						$letra = preg_replace('/\{.*?\}/', '', $letra);
+
+						// 2. Remove espaços em branco e TABULAÇÕES no início e fim de cada linha
+						// O modificador /m (multiline) aplica a regra a cada linha individualmente
+						$letra = preg_replace('/^[ \t\r]+|[ \t\r]+$/m', '', $letra);
+
+						// 3. Normaliza as quebras de linha: transforma qualquer sequência de
+						// 3 ou mais quebras em apenas 2 (uma linha em branco entre estrofes)
+						$letra = preg_replace("/(\r\n|\n|\r){3,}/", "\n\n", $letra);
+
+						// 4. Se o espaçamento entre linhas comuns ainda estiver duplo,
+						// reduzimos de 2 quebras para 1 dentro da estrofe.
+						$letra = preg_replace("/(\r\n|\n|\r){2,}/", "\n\n", $letra);
+
+						$item['hino_letra'] = trim($letra);
+					}
+				}
+			}
+		}
+		return $itens;
+	}
+
+
+
 }

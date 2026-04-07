@@ -151,23 +151,29 @@ class LiturgiaController extends Controller
     /**
      * Visualização para Impressão
      */
-    public function imprimir($id)
-    {
-        $igrejaId = $_SESSION['usuario_igreja_id'];
+	public function imprimir($id)
+	{
+		// Verifica a sessão conforme seu padrão (Admin/Membro)
+		$igrejaId = $_SESSION['usuario_igreja_id'] ?? $_SESSION['membro_igreja_id'];
 
-        $liturgia = $this->model->getById($id, $igrejaId);
-        if (!$liturgia) die("Liturgia não encontrada.");
+		$liturgia = $this->model->getById($id, $igrejaId);
+		if (!$liturgia) die("Liturgia não encontrada.");
 
-        // Se o getById não trouxer itens automaticamente, usamos o método específico:
-        $itens = $liturgia['itens'] ?? $this->model->getItensByLiturgia($id);
+		// Busca os itens
+		$itens = $liturgia['itens'] ?? $this->model->getItensByLiturgia($id);
 
-        $igrejaModel = new \App\Models\Igreja();
-        $igreja = $igrejaModel->getById($igrejaId);
+		// --- INSERÇÃO DA LÓGICA DE HINOS ---
+		// Processamos os itens para que as letras dos hinos sejam carregadas
+		$itens = $this->model->processarItensHinos($itens);
+		// --- FIM DA INSERÇÃO ---
 
-        $this->rawview('liturgias/imprimir_liturgia', [
-            'liturgia' => $liturgia,
-            'itens'    => $itens,
-            'igreja'   => $igreja
-        ]);
-    }
+		$igrejaModel = new \App\Models\Igreja();
+		$igreja = $igrejaModel->getById($igrejaId);
+
+		$this->rawview('liturgias/imprimir_liturgia', [
+			'liturgia' => $liturgia,
+			'itens'    => $itens, // Agora os itens já possuem hino_titulo e hino_letra
+			'igreja'   => $igreja
+		]);
+	}
 }

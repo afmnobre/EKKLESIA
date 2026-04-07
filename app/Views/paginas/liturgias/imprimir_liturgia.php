@@ -170,31 +170,35 @@
 
     </div>
 
-    <div class="liturgia-list">
-        <?php foreach ($liturgia['itens'] as $item): ?>
-            <div class="item-row">
-                <div class="item-type">
-                    <?= htmlspecialchars($item['tipo']) ?>
-                </div>
+	<div class="liturgia-list">
+		<?php
+		// Garante que usaremos os itens processados que vieram do controller
+		$listaItens = $itens ?? $liturgia['itens'] ?? [];
+		foreach ($listaItens as $item):
+			$tipoLower = strtolower($item['tipo'] ?? '');
+		?>
+			<div class="item-row">
+				<div class="item-main">
+					<span class="item-title"><?= htmlspecialchars($item['desc']) ?></span>
 
-                <div class="item-main">
-                    <span class="item-title">
-                        <?= htmlspecialchars($item['desc']) ?>
-                    </span>
+					<?php if(!empty($item['ref'])): ?>
+						<span class="item-ref">(<?= htmlspecialchars($item['ref']) ?>)</span>
+					<?php endif; ?>
 
-                    <?php if(!empty($item['ref'])): ?>
-                        <span class="item-ref">(<?= htmlspecialchars($item['ref']) ?>)</span>
-                    <?php endif; ?>
+					<?php if(!empty($item['conteudo'])): ?>
+						<div class="biblia-content"><?= nl2br(htmlspecialchars($item['conteudo'])) ?></div>
+					<?php endif; ?>
 
-                    <?php if(!empty($item['conteudo'])): ?>
-                        <div class="biblia-content">
-                            <?= nl2br(htmlspecialchars($item['conteudo'])) ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </div>
+					<?php if($tipoLower == 'hino' && !empty($item['hino_letra'])): ?>
+                    <div class="biblia-content" style="border-left-color: #198754; font-family: 'Verdana', sans-serif; padding: 20px;">
+                        <div class="fw-bold mb-2 text-uppercase small" style="color: #198754; border-bottom: 1px solid #eee; padding-bottom: 5px;"><?= htmlspecialchars($item['hino_titulo']) ?></div>
+                        <div style="white-space: pre-wrap; margin-top: 10px; line-height: 1.6; color: #333;"><?= htmlspecialchars($item['hino_letra']) ?></div>
+                    </div>
+					<?php endif; ?>
+				</div>
+			</div>
+		<?php endforeach; ?>
+	</div>
 </div>
 
 </body>

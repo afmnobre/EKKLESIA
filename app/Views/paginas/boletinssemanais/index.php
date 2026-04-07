@@ -1,3 +1,24 @@
+<?php
+
+/**
+ * Retorna o número da semana do mês (1 a 5) baseado no dia atual
+ * @return int
+ */
+function getNumeroSemanaAtual() {
+    // j = Dia do mês sem zeros iniciais (1 a 31)
+    $diaDoMes = (int)date('j');
+
+    // Divide por 7 e arredonda para cima
+    // Ex: Dia 1 -> 1/7 = 0.14 -> ceil = 1
+    // Ex: Dia 8 -> 8/7 = 1.14 -> ceil = 2
+    return (int)ceil($diaDoMes / 7);
+}
+
+$semana = getNumeroSemanaAtual();
+
+?>
+
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -87,68 +108,62 @@
 </div>
 
 <div class="print-container">
-	<div class="row align-items-center border-bottom pb-3 mb-4">
-
-		<div class="col-6 col-md-3 mb-3 mb-md-0 text-start order-1">
-			<img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 60px; width: auto;">
+	<div class="row align-items-center border-bottom pb-2 mb-4">
+		<div class="col-3 col-md-2 order-1">
+			<img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="height: 70px; width:110px;">
 		</div>
 
-		<div class="col-12 col-md-6 mb-3 mb-md-0 order-3 order-md-2 text-center">
-			<h6 class="fw-bold mb-0 text-primary small text-uppercase" style="font-size: 0.75rem;">
+		<div class="col-6 col-md-5 text-center order-2">
+			<h6 class="fw-bold mb-0 text-primary small text-uppercase" style="font-size: 0.6rem; letter-spacing: 1px;">
 				<?= htmlspecialchars($liturgia['igreja_nome']) ?>
 			</h6>
-			<h2 class="fw-black mb-0 display-6 text-nowrap" style="letter-spacing: -1.5px; font-weight: 900;">
+			<h2 class="fw-black mb-0" style="letter-spacing: -1.5px; font-weight: 900; font-size: 1.6rem; line-height: 1;">
 				BOLETIM SEMANAL
 			</h2>
-			<div class="d-flex justify-content-center align-items-center gap-2 mt-1">
-				<span class="badge bg-dark px-4" style="font-size: 0.9rem;">
-					<?= date('d/m/Y', strtotime($liturgia['igreja_liturgia_data'] ?? 'now')) ?>
-				</span>
-			</div>
-
-			<div class="d-md-none mt-4 text-start">
-				<div class="p-3 border rounded bg-light shadow-sm">
-					<h6 class="fw-bold small mb-2 text-primary text-uppercase text-center border-bottom pb-2">Nossa Agenda</h6>
-					<ul class="list-unstyled mb-0" style="font-size: 0.85rem;">
-						<?php if(!empty($programacao)): foreach($programacao as $prog):
-							if($prog['programacao_recorrencia_mensal'] == 0): ?>
-								<li class="mb-2 border-bottom pb-1 border-white">
-									<strong class="text-primary"><?= substr($prog['programacao_dia_semana'], 0, 3) ?> <?= date('H:i', strtotime($prog['programacao_hora'])) ?>h</strong> -
-									<?= htmlspecialchars($prog['programacao_titulo']) ?>
-								</li>
-						<?php endif; endforeach; endif; ?>
-					</ul>
-				</div>
-			</div>
+			<span class="badge bg-dark mt-0 px-2" style="font-size: 0.7rem;">
+				<?= date('d/m/Y', strtotime($liturgia['igreja_liturgia_data'] ?? 'now')) ?>
+			</span>
 		</div>
 
-		<div class="col-6 col-md-3 mb-3 mb-md-0 order-2 order-md-3">
-			<div class="d-flex align-items-center justify-content-end">
+		<div class="col-3 col-md-1 text-end order-3">
+			<?php if(!empty($liturgia['igreja_logo'])): ?>
+				<img src="<?= url("assets/uploads/{$liturgia['igreja_liturgia_igreja_id']}/logo/{$liturgia['igreja_logo']}") ?>"
+					 style="height: 100px; max-width: 100px; object-fit: contain;">
+			<?php endif; ?>
+		</div>
 
-				<div class="d-none d-md-block me-3 p-2 border-start border-primary shadow-sm text-start" style="background: #f8f9fa; font-size: 0.62rem; min-width: 170px;">
-					<h6 class="fw-bold mb-1 text-primary text-uppercase" style="font-size: 0.6rem;">Nossa Agenda</h6>
+		<div class="col-12 col-md-4 order-4 order-md-3 mt-2 mt-md-0">
+			<div class="d-flex justify-content-center justify-content-md-end">
+				<div class="border rounded bg-light p-1 shadow-sm" style="min-width: 190px; font-size: 0.68rem; line-height: 1.1;">
+					<div class="text-center border-bottom mb-1 pb-0">
+						<strong class="text-primary text-uppercase" style="font-size: 0.6rem;">Nossa Agenda</strong>
+					</div>
 					<ul class="list-unstyled mb-0">
-						<?php if(!empty($programacao)): foreach($programacao as $prog):
-							if($prog['programacao_recorrencia_mensal'] == 0): ?>
-								<li class="mb-1 border-bottom border-light pb-1 text-truncate">
-									<strong class="text-primary"><?= substr($prog['programacao_dia_semana'], 0, 3) ?> <?= date('H:i', strtotime($prog['programacao_hora'])) ?>h</strong> -
-									<?= htmlspecialchars($prog['programacao_titulo']) ?>
-								</li>
-						<?php endif; endforeach; endif; ?>
+						<?php
+						if(!empty($programacao)):
+							foreach($programacao as $prog):
+								$ehSantaCeia = ($prog['programacao_recorrencia_mensal'] == $semana);
+								if($prog['programacao_recorrencia_mensal'] == 0 || $ehSantaCeia):
+									$cor = $ehSantaCeia ? 'text-danger' : 'text-primary';
+									$texto = $ehSantaCeia ? '<strong class="text-danger">SANTA CEIA</strong>' : htmlspecialchars($prog['programacao_titulo']);
+						?>
+									<li class="mb-0 border-bottom border-white pb-0 text-start">
+										<span class="<?= $cor ?> fw-bold" style="font-size: 0.65rem;">
+											<?= substr($prog['programacao_dia_semana'], 0, 3) ?> <?= date('H:i', strtotime($prog['programacao_hora'])) ?>h
+										</span> - <?= $texto ?>
+									</li>
+						<?php
+								endif;
+							endforeach;
+						endif;
+						?>
 					</ul>
 				</div>
-
-				<?php if(!empty($liturgia['igreja_logo'])): ?>
-					<img src="<?= url("assets/uploads/{$liturgia['igreja_liturgia_igreja_id']}/logo/{$liturgia['igreja_logo']}") ?>"
-						 style="height: 65px; max-width: 65px; object-fit: contain;">
-				<?php endif; ?>
-
 			</div>
 		</div>
-
 	</div>
 
-    <div class="row g-4">
+	<div class="row g-4">
 		<div class="col-lg-3 border-end">
 			<h5 class="col-titulo"><i class="bi bi-collection me-2"></i>Liturgia</h5>
 			<?php if ($liturgia): ?>
@@ -188,63 +203,102 @@
 					</div>
 				</div>
 
-				<div class="mt-2">
-					<?php if (!empty($liturgia['itens'])): foreach ($liturgia['itens'] as $index => $item):
-						$tipo      = $item['tipo'] ?? '';
-						$descricao = $item['desc'] ?? '';
-						$referencia = $item['ref'] ?? '';
-						$conteudo  = $item['conteudo'] ?? ''; // Agora o Model envia como 'conteudo'
-						$tipoLower = strtolower($tipo);
-					?>
-						<div class="item-liturgia mb-2">
-							<div class="liturgia-flex">
-								<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle badge-tipo">
-									<?= strtoupper($tipo) ?>
-								</span>
-								<div class="fw-semibold small text-dark flex-grow-1" style="font-size: 0.85rem;">
-									<?= htmlspecialchars($descricao) ?>
-								</div>
-							</div>
+<div class="mt-2">
+    <?php if (!empty($liturgia['itens'])): foreach ($liturgia['itens'] as $index => $item):
+        // Garantindo que as variáveis existam para cada item do loop
+        $tipo        = $item['tipo'] ?? 'Item';
+        $descricao   = $item['desc'] ?? '';
+        $referencia  = $item['ref'] ?? '';
+        $conteudo    = $item['conteudo'] ?? '';
+        $tipoLower   = strtolower($tipo);
+        $id_item     = $item['liturgia_item_id'] ?? $index;
+    ?>
+        <div class="item-liturgia mb-2">
+            <div class="liturgia-flex">
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle badge-tipo">
+                    <?= strtoupper($tipo) ?>
+                </span>
+                <div class="fw-semibold small text-dark flex-grow-1" style="font-size: 0.85rem;">
+                    <?= htmlspecialchars($descricao) ?>
+                </div>
+            </div>
 
-							<?php if(!empty($referencia)): ?>
-								<div class="text-primary fw-bold mt-1" style="margin-left: 73px; font-size: 0.75rem;">
-									<?= htmlspecialchars($referencia) ?>
-								</div>
-							<?php endif; ?>
+            <?php if(!empty($referencia)): ?>
+                <div class="text-primary fw-bold mt-1" style="margin-left: 73px; font-size: 0.75rem;">
+                    <?= htmlspecialchars($referencia) ?>
+                </div>
+            <?php endif; ?>
 
-							<?php if(($tipoLower == 'leitura' || $tipoLower == 'mensagem') && !empty($conteudo)):
-								$id_collapse = "coll_" . ($item['liturgia_item_id'] ?? $index);
-							?>
-								<div style="margin-left: 73px;" class="mt-1">
-									<div class="text-muted small" style="font-size: 0.75rem; font-style: italic;">
-										<?= mb_strimwidth(strip_tags($conteudo), 0, 85, "...") ?>
+            <?php if(($tipoLower == 'leitura' || $tipoLower == 'mensagem') && !empty($conteudo)):
+                $id_collapse = "coll_" . $id_item;
+            ?>
+                <div style="margin-left: 73px;" class="mt-1">
+                    <div class="text-muted small" style="font-size: 0.75rem; font-style: italic;">
+                        <?= mb_strimwidth(strip_tags($conteudo), 0, 85, "...") ?>
+                        <button class="btn btn-link p-0 text-primary fw-bold no-print" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $id_collapse ?>" style="font-size: 0.7rem; text-decoration: none;">
+                            [Ler texto]
+                        </button>
+                    </div>
+                    <div class="collapse mt-2" id="<?= $id_collapse ?>">
+                        <div class="card card-body p-3 bg-light border-0 shadow-sm" style="font-size: 0.85rem; white-space: pre-line; font-family: 'Georgia', serif; line-height: 1.5; color: #444;">
+                            <?= $conteudo ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
 
-										<button class="btn btn-link p-0 text-primary fw-bold no-print"
-												type="button"
-												data-bs-toggle="collapse"
-												data-bs-target="#<?= $id_collapse ?>"
-												style="font-size: 0.7rem; text-decoration: none;">
-											[Ler texto]
-										</button>
-									</div>
+            <?php if($tipoLower == 'hino' && !empty($item['hino_letra'])):
+                $id_hino = "hino_" . $id_item;
+            ?>
+                <div style="margin-left: 73px;" class="mt-1">
+                    <div class="text-muted small" style="font-size: 0.75rem; font-style: italic;">
+                        <strong><?= htmlspecialchars($item['hino_titulo'] ?? 'Hino') ?></strong>
+                        <button class="btn btn-link p-0 text-success fw-bold no-print" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $id_hino ?>" style="font-size: 0.7rem; text-decoration: none;">
+                            [Ver letra do hino]
+                        </button>
+                    </div>
+                    <div class="collapse mt-2" id="<?= $id_hino ?>">
+                        <div class="card card-body p-3 bg-white border shadow-sm" style="font-size: 0.85rem; white-space: pre-line; font-family: 'Verdana', sans-serif; line-height: 1.6; color: #333; border-left: 4px solid #198754 !important;">
+                            <div class="mb-2 text-uppercase fw-bold text-success small border-bottom pb-1">
+                                <?= htmlspecialchars($item['hino_titulo'] ?? 'Hino') ?>
+                            </div>
+                            <?= nl2br(htmlspecialchars($item['hino_letra'])) ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endforeach; else: ?>
+        <p class="text-muted small text-center p-3">Não cadastrada.</p>
+    <?php endif; ?>
+</div>
 
-									<div class="collapse mt-2" id="<?= $id_collapse ?>">
-										<div class="card card-body p-3 bg-light border-0 shadow-sm"
-											 style="font-size: 0.85rem; white-space: pre-line; font-family: 'Georgia', serif; line-height: 1.5; color: #444;">
-											<?= $conteudo ?>
-										</div>
-									</div>
-								</div>
-							<?php endif; ?>
+				<div class="mt-4 pt-3 border-top no-print-break">
+					<div class="bg-light rounded p-3 shadow-sm border text-center">
+						<h6 class="fw-bold text-primary mb-2" style="font-size: 0.85rem;">
+							<i class="bi bi-heart-fill me-1"></i> Contribua com a Igreja
+						</h6>
+
+						<div class="bg-white p-2 d-inline-block border rounded shadow-sm mb-2">
+							<div id="qrcode-pix"></div>
 						</div>
-					<?php endforeach; else: ?>
-						<p class="text-muted small text-center p-3">Não cadastrada.</p>
-					<?php endif; ?>
+
+						<div class="bg-white border rounded p-1 mb-1">
+							<small class="text-uppercase fw-bold text-secondary d-block" style="font-size: 0.6rem;">Chave PIX (CNPJ):</small>
+							<span class="fw-bold text-dark" style="font-size: 0.85rem;">
+								<?= !empty($liturgia['igreja_cnpj']) ? $liturgia['igreja_cnpj'] : 'Consulte a tesouraria' ?>
+							</span>
+						</div>
+						<p class="text-muted mb-0" style="font-size: 0.65rem; line-height: 1.2;">
+							Aponte a câmera do seu banco para o QR Code para dízimos e ofertas.
+						</p>
+					</div>
 				</div>
+
 			<?php else: ?>
 				<div class="alert alert-warning small">Nenhuma liturgia disponível.</div>
 			<?php endif; ?>
-		</div>
+        </div>
 
         <div class="col-lg-6">
             <div class="mensagem-container mb-4">
@@ -356,6 +410,26 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Pegamos o CNPJ limpo do PHP
+    const cnpjPix = "<?= preg_replace('/[^0-9]/', '', $liturgia['igreja_cnpj'] ?? '') ?>";
+    const container = document.getElementById("qrcode-pix");
+
+    if (cnpjPix && container) {
+        new QRCode(container, {
+            text: cnpjPix,
+            width: 120, // Tamanho menor para caber na coluna lateral
+            height: 120,
+            colorDark : "#005a32", // Verde IPB (conforme sua referência)
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    }
+});
+</script>
+
 
 </body>
 </html>

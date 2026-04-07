@@ -34,30 +34,39 @@
         <?php endforeach; ?>
     </div>
 
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <form method="GET" action="<?= url('financeiro/index') ?>" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="small fw-bold text-muted">Data Inicial</label>
-                    <input type="date" name="data_inicio" class="form-control" value="<?= $dataInicio ?>">
-                </div>
-                <div class="col-md-4">
-                    <label class="small fw-bold text-muted">Data Final</label>
-                    <input type="date" name="data_fim" class="form-control" value="<?= $dataFim ?>">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-dark w-100 fw-bold">
-                        <i class="bi bi-filter me-1"></i> Filtrar
-                    </button>
-                </div>
-                <div class="col-md-2">
-                    <a href="<?= url('financeiro/index') ?>" class="btn btn-outline-secondary w-100">
-                        Limpar
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
+	<div class="card border-0 shadow-sm mb-4">
+		<div class="card-body">
+			<form method="GET" action="<?= url('financeiro/index') ?>" class="row g-2 align-items-end">
+				<div class="col-md-3">
+					<label class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Data Inicial</label>
+					<input type="date" name="data_inicio" class="form-control form-control-sm" value="<?= $dataInicio ?>">
+				</div>
+
+				<div class="col-md-3">
+					<label class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Data Final</label>
+					<input type="date" name="data_fim" class="form-control form-control-sm" value="<?= $dataFim ?>">
+				</div>
+
+				<div class="col-md-2">
+					<button type="submit" class="btn btn-dark btn-sm w-100 fw-bold">
+						<i class="bi bi-filter"></i> Filtrar
+					</button>
+				</div>
+
+				<div class="col-md-2">
+					<a href="<?= url('financeiro/index') ?>" class="btn btn-outline-secondary btn-sm w-100">
+						Limpar
+					</a>
+				</div>
+
+				<div class="col-md-2">
+					<button type="button" onclick="exportarExcel()" class="btn btn-success btn-sm w-100 text-nowrap">
+						<i class="bi bi-file-earmark-excel"></i> Excel
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
 
     <div class="col-md-12">
         <div class="card border-0 shadow-sm">
@@ -162,3 +171,18 @@
         </form>
     </div>
 </div>
+
+<script>
+function exportarExcel() {
+    // Pega os valores das datas que estão nos inputs de filtro
+    const dataInicio = document.querySelector('input[name="data_inicio"]').value;
+    const dataFim = document.querySelector('input[name="data_fim"]').value;
+
+    // Constrói a URL com os parâmetros
+    const baseUrl = "<?= url('financeiro/exportar_extrato') ?>";
+    const finalUrl = `${baseUrl}?data_inicio=${dataInicio}&data_fim=${dataFim}`;
+
+    // Redireciona para baixar o arquivo
+    window.location.href = finalUrl;
+}
+</script>

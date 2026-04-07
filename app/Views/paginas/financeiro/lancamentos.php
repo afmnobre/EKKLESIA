@@ -55,6 +55,10 @@
 				<i class="bi bi-file-earmark-excel"></i> Exportar Excel
 			</a>
 
+            <button class="btn btn-outline-dark shadow-sm me-2" onclick="abrirModalRelatorioConferencia()">
+                <i class="bi bi-printer"></i> Relatório de Conferência
+            </button>
+
 			<button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNovaConta">
 				<i class="bi bi-plus-lg"></i> Novo Lançamento
 			</button>
@@ -79,6 +83,11 @@
 						<?php foreach($contas_agendadas as $c):
 							$hoje = date('Y-m-d');
 							$atrasado = ($c['financeiro_conta_data_vencimento'] < $hoje && !$c['financeiro_conta_pago']);
+
+							// Verifica se existe data de pagamento válida
+							$dataPagamento = (!empty($c['financeiro_conta_data_pagamento']) && $c['financeiro_conta_data_pagamento'] != '0000-00-00')
+											 ? date('d/m/Y', strtotime($c['financeiro_conta_data_pagamento']))
+											 : null;
 						?>
 						<tr>
 							<td class="ps-4 <?= $atrasado ? 'text-danger fw-bold' : '' ?>">
@@ -96,26 +105,32 @@
 							</td>
 							<td>
 								<?php if($c['financeiro_conta_pago']): ?>
-									<span class="badge bg-success-subtle text-success px-3">Pago</span>
+									<span class="badge bg-success-subtle text-success px-3 d-block mb-1">Pago</span>
+									<?php if($dataPagamento): ?>
+										<small class="text-muted d-block" style="font-size: 0.75rem;" title="Data do Pagamento">
+											<i class="bi bi-calendar-check me-1"></i><?= $dataPagamento ?>
+										</small>
+									<?php endif; ?>
 								<?php else: ?>
 									<span class="badge bg-warning-subtle text-warning px-3">Pendente</span>
 								<?php endif; ?>
 							</td>
+
 							<td class="text-end pe-4">
 
-<?php if($c['financeiro_conta_pago']): ?>
-    <div class="btn-group">
-        <button type="button" class="btn btn-sm <?= !empty($c['financeiro_conta_comprovante']) ? 'btn-success' : 'btn-outline-secondary' ?>"
-                onclick="abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, 'comprovante', '<?= $c['financeiro_conta_comprovante'] ?? '' ?>')" title="Comprovante">
-            <i class="bi bi-receipt"></i>
-        </button>
+							<?php if($c['financeiro_conta_pago']): ?>
+								<div class="btn-group">
+									<button type="button" class="btn btn-sm <?= !empty($c['financeiro_conta_comprovante']) ? 'btn-success' : 'btn-outline-secondary' ?>"
+											onclick="abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, 'comprovante', '<?= $c['financeiro_conta_comprovante'] ?? '' ?>')" title="Comprovante">
+										<i class="bi bi-receipt"></i>
+									</button>
 
-        <button type="button" class="btn btn-sm <?= !empty($c['financeiro_conta_nota_fiscal']) ? 'btn-info' : 'btn-outline-secondary' ?>"
-                onclick="abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, 'notafiscal', '<?= $c['financeiro_conta_nota_fiscal'] ?? '' ?>')" title="Nota Fiscal">
-            <i class="bi bi-file-earmark-text"></i>
-        </button>
-    </div>
-<?php endif; ?>
+									<button type="button" class="btn btn-sm <?= !empty($c['financeiro_conta_nota_fiscal']) ? 'btn-info' : 'btn-outline-secondary' ?>"
+											onclick="abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, 'notafiscal', '<?= $c['financeiro_conta_nota_fiscal'] ?? '' ?>')" title="Nota Fiscal">
+										<i class="bi bi-file-earmark-text"></i>
+									</button>
+								</div>
+							<?php endif; ?>
 
 
                                 <div class="btn-group">
@@ -214,6 +229,72 @@
         </form>
     </div>
 </div>
+
+<div class="modal fade" id="modalRelatorioConferencia" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-shield-check me-2"></i>Conferência de Receitas
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <label class="small fw-bold text-muted text-uppercase mb-1 d-block">Data do Movimento</label>
+                    <input type="date" id="rel_data_movimento" class="form-control form-control-lg fw-bold" value="<?= date('Y-m-d') ?>">
+                </div>
+
+                <hr class="text-muted opacity-25">
+
+				<div class="mb-4">
+					<label class="small fw-bold text-muted text-uppercase mb-1 d-block">1º Conferente</label>
+					<select id="rel_diacono_1" class="form-select choice-select">
+						<option value="">Pesquisar Diácono ou Presbítero...</option>
+						<?php if (!empty($oficiais)): foreach($oficiais as $o): ?>
+							<?php
+								// Evita o erro de Undefined Index e Deprecated htmlspecialchars
+								$nome = $o['membro_nome'] ?? '';
+								$cargo = $o['cargo_nome'] ?? '';
+							?>
+							<?php if ($nome): ?>
+								<option value="<?= htmlspecialchars($nome) ?>">
+									<?= htmlspecialchars($nome) ?> (<?= htmlspecialchars($cargo) ?>)
+								</option>
+							<?php endif; ?>
+						<?php endforeach; endif; ?>
+					</select>
+				</div>
+
+				<div class="mb-2">
+					<label class="small fw-bold text-muted text-uppercase mb-1 d-block">2º Conferente</label>
+					<select id="rel_diacono_2" class="form-select choice-select">
+						<option value="">Pesquisar Diácono ou Presbítero...</option>
+						<?php if (!empty($oficiais)): foreach($oficiais as $o): ?>
+							<?php
+								$nome = $o['membro_nome'] ?? '';
+								$cargo = $o['cargo_nome'] ?? '';
+							?>
+							<?php if ($nome): ?>
+								<option value="<?= htmlspecialchars($nome) ?>">
+									<?= htmlspecialchars($nome) ?> (<?= htmlspecialchars($cargo) ?>)
+								</option>
+							<?php endif; ?>
+						<?php endforeach; endif; ?>
+					</select>
+				</div>
+            </div>
+
+            <div class="modal-footer bg-light border-0 p-3">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-dark px-4 fw-bold" onclick="executarGerarRelatorio()">
+                    <i class="bi bi-printer me-2"></i> GERAR PARA IMPRESSÃO
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <div class="modal fade" id="modalNovaConta" tabindex="-1">
     <div class="modal-dialog">
@@ -560,5 +641,60 @@ function abrirModalAnexo(id, tipo, arquivoAtual) {
     // Abre o modal
     new bootstrap.Modal(document.getElementById('modalAnexo')).show();
 }
+
+
+function abrirModalRelatorioConferencia() {
+    new bootstrap.Modal(document.getElementById('modalRelatorioConferencia')).show();
+}
+
+function executarGerarRelatorio() {
+    const data = document.getElementById('rel_data_movimento').value;
+    const d1 = document.getElementById('rel_diacono_1').value;
+    const d2 = document.getElementById('rel_diacono_2').value;
+
+    // Validações básicas
+    if (!data) {
+        alert("Selecione a data do movimento.");
+        return;
+    }
+    if (!d1 || !d2) {
+        alert("Por favor, selecione os dois diáconos para a assinatura.");
+        return;
+    }
+    if (d1 === d2) {
+        alert("Os conferentes devem ser pessoas diferentes.");
+        return;
+    }
+
+    // Monta a URL para o controller que criamos no passo anterior
+    const urlBase = "<?= url('financeiro/relatorio_raw') ?>";
+    const params = new URLSearchParams({
+        data: data,
+        d1: d1,
+        d2: d2
+    });
+
+    // Abre em nova janela (Raw View)
+    window.open(`${urlBase}?${params.toString()}`, '_blank');
+
+    // Fecha o modal
+    const modalEl = document.getElementById('modalRelatorioConferencia');
+    const modalBus = bootstrap.Modal.getInstance(modalEl);
+    modalBus.hide();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const selects = document.querySelectorAll('.choice-select');
+    selects.forEach(select => {
+        new Choices(select, {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Digite o nome...',
+            noResultsText: 'Nenhum oficial encontrado',
+            itemSelectText: 'Pressione Enter',
+            allowHTML: true,
+            shouldSort: false
+        });
+    });
+});
 
 </script>

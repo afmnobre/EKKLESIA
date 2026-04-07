@@ -160,6 +160,11 @@ class MembrosController extends Controller
 
                         <button class="btn btn-white btn-sm btn-acao-dinamica"
                                 data-id="<?= $m['membro_id'] ?>"
+                                data-acao="senha"
+                                title="Alterar Senha de Acesso">🔑</button>
+
+                        <button class="btn btn-white btn-sm btn-acao-dinamica"
+                                data-id="<?= $m['membro_id'] ?>"
                                 data-acao="status" title="Alterar Status">🔄</button>
 
                         <button class="btn btn-white btn-sm btn-acao-dinamica"
@@ -226,7 +231,7 @@ class MembrosController extends Controller
 					$caminhoWeb = "assets/uploads/{$idIgreja}/membros/{$registro}/{$membro['membro_foto_arquivo']}";
 					$membro['foto_url'] = url($caminhoWeb);
 				}
-				break;
+                break;
 			case 'carteirinha':
 				$idIgreja = $_SESSION['usuario_igreja_id'];
 
@@ -560,5 +565,31 @@ class MembrosController extends Controller
 			rmdir($dir);
 		}
 	}
+
+	public function salvarNovaSenha()
+	{
+		// Captura os dados via POST seguindo o seu padrão
+		$membroId  = $_POST['membro_id'] ?? null;
+		$igrejaId  = $_SESSION['usuario_igreja_id'];
+		$novaSenha = $_POST['nova_senha'] ?? null;
+
+		// Validação básica
+		if (!$membroId || empty($novaSenha)) {
+			die("Dados incompletos.");
+		}
+
+		// Criptografia da senha
+		$hash = password_hash($novaSenha, PASSWORD_DEFAULT);
+
+		// Tenta salvar no model
+		if ($this->model->updateSenha($membroId, $igrejaId, $hash)) {
+			// Redireciona para a lista com mensagem de sucesso na URL
+			header("Location: " . url('membros') . "?sucesso=senha_atualizada");
+		} else {
+			die("Erro ao processar a nova senha.");
+		}
+		exit;
+	}
+
 
 }

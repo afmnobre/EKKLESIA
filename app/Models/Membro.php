@@ -550,4 +550,10 @@ class Membro
 		return $stmt->execute();
 	}
 
+    public function updateSenha($membroId, $igrejaId, $novaSenhaHash) {
+        $sql = "UPDATE membros SET membro_senha = ? WHERE membro_id = ? AND membro_igreja_id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$novaSenhaHash, $membroId, $igrejaId]);
+    }
+
 }

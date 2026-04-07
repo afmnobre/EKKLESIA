@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login do Membro | EKKLESIA</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
     <style>
         body { background-color: #f4f7f6; min-height: 100vh; display: flex; align-items: center; padding: 20px 0; }
         .card-login { border: none; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        .btn-primary { border-radius: 10px; padding: 12px; font-weight: bold; background: #005a32; border: none; } /* Verde IPB */
+        .btn-primary { border-radius: 10px; padding: 12px; font-weight: bold; background: #005a32; border: none; }
         .btn-primary:hover { background: #004426; }
         .form-control { border-radius: 10px; padding: 12px; border: 1px solid #dee2e6; }
         .logo-area { text-align: center; margin-bottom: 25px; }
@@ -25,7 +27,6 @@
 
             <div class="logo-area">
                 <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" alt="IPB Logo" class="logo-ipb">
-
                 <h4 class="fw-bold mt-2 mb-0">Portal do Membro</h4>
                 <p class="church-name fw-bold mb-0"><?= $igreja['igreja_nome'] ?></p>
                 <p class="text-muted small">Acesse seus dados e sua família</p>
@@ -47,7 +48,7 @@
                             <label class="form-label small fw-bold text-muted">Seu Celular (WhatsApp)</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-whatsapp"></i></span>
-                                <input type="text" name="membro_telefone" id="telefone" class="form-control border-start-0" placeholder="(00) 00000-0000" required>
+                                <input type="text" name="membro_telefone" id="telefone" class="form-control border-start-0" placeholder="(00) 00000-0000" required autocomplete="off">
                             </div>
                         </div>
 
@@ -80,12 +81,11 @@
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-masker/1.2.0/vanilla-masker.min.js"></script>
+
 <script>
-    $(document).ready(function(){
-        $('#telefone').mask('(00) 00000-0000');
-    });
+    VMasker(document.getElementById("telefone")).maskPattern("(99) 99999-9999");
 </script>
 
 </body>

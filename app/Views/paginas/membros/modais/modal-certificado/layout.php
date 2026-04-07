@@ -1,8 +1,23 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <?php
-$formatter = new IntlDateFormatter('pt_BR', IntlDateFormatter::LONG, IntlDateFormatter::NONE);
-$dataHojeExtenso = $formatter->format(new DateTime());
+// Fallback manual caso o IntlDateFormatter não exista
+if (class_exists('IntlDateFormatter')) {
+    $formatter = new IntlDateFormatter('pt_BR', IntlDateFormatter::LONG, IntlDateFormatter::NONE);
+    $dataHojeExtenso = $formatter->format(new DateTime());
+} else {
+    // Lógica manual para não quebrar o sistema
+    $meses = [
+        1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
+        5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
+        9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro'
+    ];
+    $dia = date('d');
+    $mes = $meses[(int)date('m')];
+    $ano = date('Y');
+    $dataHojeExtenso = "$dia de $mes de $ano";
+}
+
 $pNome = $membro['pastor_nome'] ?? $membro['igreja_pastor_nome'] ?? '';
 $pastorExibicao = !empty($pNome) ? "Reverendo: " . $pNome : "Reverendo: ____________________";
 ?>

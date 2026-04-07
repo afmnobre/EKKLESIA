@@ -671,4 +671,74 @@ class Financeiro {
 		return !empty($resultado) ? $resultado : [['ano' => date('Y')]];
 	}
 
+	// Busca receitas de um dia específico com detalhes de rateio/membros
+	public function getReceitasParaConferencia($igrejaId, $data) {
+		$sql = "SELECT
+					c.financeiro_conta_id,
+					c.financeiro_conta_descricao,
+					c.financeiro_conta_valor,
+					cat.financeiro_categoria_nome as categoria_pai,
+					sub.subcategoria_nome as subcategoria,
+					m.membro_nome as ofertante,
+					i.igreja_nome,
+					i.igreja_logo,
+					-- Busca o nome da conta de destino através da tabela de pagamentos
+					cf.financeiro_conta_financeira_nome as destino,
+					COALESCE(rm.receita_membro_valor, c.financeiro_conta_valor) as valor_exibir
+				FROM financeiro_contas c
+				INNER JOIN igrejas i ON c.financeiro_conta_igreja_id = i.igreja_id
+				-- Relacionamento Categorias
+				INNER JOIN financeiro_subcategorias sub ON c.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
+				INNER JOIN financeiro_categorias cat ON sub.subcategoria_categoria_id = cat.financeiro_categoria_id
+				-- Relacionamento para pegar o destino do dinheiro (através de pagamentos)
+				LEFT JOIN financeiro_pagamentos p ON c.financeiro_conta_id = p.financeiro_pagamento_financeiro_conta_id
+				LEFT JOIN financeiro_contas_financeiras cf ON p.financeiro_pagamento_conta_financeira_id = cf.financeiro_conta_financeira_id
+				-- Relacionamento Membros/Rateio
+				LEFT JOIN financeiro_receita_membros rm ON c.financeiro_conta_id = rm.receita_membro_conta_id
+				LEFT JOIN membros m ON rm.receita_membro_usuario_id = m.membro_id
+				WHERE c.financeiro_conta_igreja_id = ?
+				  AND c.financeiro_conta_tipo = 'entrada'
+				  AND DATE(c.financeiro_conta_data_pagamento) = ?
+				  AND c.financeiro_conta_pago = 1
+				ORDER BY cat.financeiro_categoria_nome ASC, sub.subcategoria_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId, $data]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+	// Busca o nome do Tesoureiro atual da igreja (Cargo 11)
+	public function getTesoureiroIgreja($igrejaId) {
+		$sql = "SELECT m.membro_nome
+				FROM membros m
+				INNER JOIN membros_cargos_vinculo v ON m.membro_id = v.vinculo_membro_id
+				WHERE v.vinculo_cargo_id = 11 AND m.membro_igreja_id = ?
+				LIMIT 1";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		$res = $stmt->fetch(\PDO::FETCH_ASSOC);
+		return $res['membro_nome'] ?? 'A Designar';
+	}
+
+	public function getOficiaisConferentes($igrejaId) {
+		$sql = "SELECT DISTINCT
+					m.membro_id,
+					m.membro_nome,
+					c.cargo_nome
+				FROM membros m
+				INNER JOIN membros_cargos_vinculo v ON m.membro_id = v.vinculo_membro_id
+				INNER JOIN cargos c ON v.vinculo_cargo_id = c.cargo_id
+				WHERE m.membro_igreja_id = ?
+				  AND v.vinculo_cargo_id IN (5, 6, 7) -- 5,6: Presbíteros | 7: Diácono
+				  AND m.membro_status = 'Ativo'
+				ORDER BY m.membro_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+
+
 }
