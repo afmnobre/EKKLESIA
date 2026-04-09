@@ -25,8 +25,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
                         <div class="flex-shrink-0">
-                            <?php
-                            if (!empty($m['caminho_foto_pendente'])): ?>
+                            <?php if (!empty($m['caminho_foto_pendente'])): ?>
                                 <img src="<?= url($m['caminho_foto_pendente']) ?>"
                                      class="rounded-3 shadow-sm border"
                                      style="width: 70px; height: 70px; object-fit: cover;"
@@ -49,45 +48,63 @@
                             <span class="fw-bold"><?= $m['membro_genero'] ?? 'Não informado' ?></span>
                         </div>
                         <div class="col-6">
+                            <label class="text-muted d-block mb-0">Estado Civil:</label>
+                            <span class="fw-bold"><?= $m['membro_estado_civil'] ?? 'Não informado' ?></span>
+                        </div>
+
+                        <div class="col-6 mt-2">
+                            <label class="text-muted d-block mb-0">RG:</label>
+                            <span class="fw-bold"><?= $m['membro_rg'] ?? '---' ?></span>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <label class="text-muted d-block mb-0">CPF:</label>
+                            <span class="fw-bold"><?= $m['membro_cpf'] ?? '---' ?></span>
+                        </div>
+
+                        <div class="col-12 mt-2">
                             <label class="text-muted d-block mb-0">E-mail:</label>
                             <span class="fw-bold text-truncate d-block"><?= $m['membro_email'] ?></span>
                         </div>
 
-                        <div class="col-12 mt-3">
-                            <label class="text-muted d-block mb-0">Endereço:</label>
-                            <span class="fw-bold"><?= $m['membro_endereco_rua'] ?>, <?= $m['membro_endereco_numero'] ?></span>
-                            <div class="text-muted"><?= $m['membro_endereco_bairro'] ?> - <?= $m['membro_endereco_cidade'] ?>/<?= $m['membro_endereco_estado'] ?></div>
+                        <div class="col-12 mt-3 pt-3 border-top">
+                            <label class="text-muted d-block mb-0"><i class="bi bi-geo-alt-fill me-1"></i>Endereço Residencial:</label>
+                            <span class="fw-bold d-block">
+                                <?= $m['membro_endereco_rua'] ?>, <?= $m['membro_endereco_numero'] ?>
+                            </span>
+                            <div class="text-muted">
+                                <?= $m['membro_endereco_bairro'] ?> — <?= $m['membro_endereco_cidade'] ?>/<?= $m['membro_endereco_estado'] ?>
+                                <br><small>CEP: <?= $m['membro_endereco_cep'] ?></small>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mt-4 p-3 bg-light rounded border-start border-primary border-4">
                         <p class="small mb-0">
-                            <strong>Próximo passo:</strong> Sua ficha será analisada. Assim que aprovada, você poderá acessar o portal com sua senha.
+                            <strong>Próximo passo:</strong> Sua ficha será analisada pela secretaria. Assim que aprovada, você poderá acessar o portal com seu e-mail e senha cadastrados.
                         </p>
                     </div>
                 </div>
             </div>
 
-<?php
-    // Captura o ID da igreja vindo do redirecionamento
-    $idIgrejaRetorno = $_GET['igreja'] ?? null;
-?>
+            <?php
+                $idIgrejaRetorno = $_GET['igreja'] ?? null;
+            ?>
 
-<div class="mt-5 text-center">
-    <p class="text-muted small mb-3">Seu cadastro foi enviado para aprovação.</p>
+            <div class="mt-5 text-center">
+                <p class="text-muted small mb-3">Seu cadastro foi enviado para aprovação.</p>
 
-    <?php if ($idIgrejaRetorno): ?>
-        <a href="<?= full_url('PortalMembro/login/' . $idIgrejaRetorno) ?>"
-           class="btn btn-lg px-5 fw-bold shadow-sm rounded-pill"
-           style="background-color: #005a32; color: white; border: none;">
-            <i class="bi bi-box-arrow-in-right me-2"></i> IR PARA TELA DE LOGIN
-        </a>
-    <?php else: ?>
-        <a href="<?= url('PortalMembro/login') ?>" class="btn btn-outline-secondary rounded-pill px-4">
-            VOLTAR AO INÍCIO
-        </a>
-    <?php endif; ?>
-</div>
+                <?php if ($idIgrejaRetorno): ?>
+                    <a href="<?= url('PortalMembro/login/' . $idIgrejaRetorno) ?>"
+                       class="btn btn-lg px-5 fw-bold shadow-sm rounded-pill"
+                       style="background-color: #005a32; color: white; border: none;">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> IR PARA TELA DE LOGIN
+                    </a>
+                <?php else: ?>
+                    <a href="<?= url('PortalMembro/login') ?>" class="btn btn-outline-secondary rounded-pill px-4">
+                        VOLTAR AO INÍCIO
+                    </a>
+                <?php endif; ?>
+            </div>
 
             <div class="mt-5 pt-3 border-top">
                 <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" style="max-width: 130px; filter: grayscale(1); opacity: 0.6;">

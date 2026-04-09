@@ -58,14 +58,22 @@ class SociedadeEvento
 		return $stmt->execute($data);
 	}
 
-	public function getAllGlobal($igrejaId) {
+	// No seu Model (SociedadesEventos)
+	public function getAllGlobal($idIgreja, $mes, $ano) {
 		$sql = "SELECT e.*, s.sociedade_nome
 				FROM sociedades_eventos e
-				JOIN sociedades s ON s.sociedade_id = e.sociedade_evento_sociedade_id
-				WHERE e.sociedade_evento_igreja_id = ?
-				ORDER BY e.sociedade_evento_data_hora_inicio DESC";
+				JOIN sociedades s ON e.sociedade_evento_sociedade_id = s.sociedade_id
+				WHERE s.sociedade_igreja_id = :igrejaId
+				AND MONTH(e.sociedade_evento_data_hora_inicio) = :mes
+				AND YEAR(e.sociedade_evento_data_hora_inicio) = :ano
+				ORDER BY e.sociedade_evento_data_hora_inicio ASC";
+
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$igrejaId]);
+		$stmt->execute([
+			'igrejaId' => $idIgreja,
+			'mes'      => $mes,
+			'ano'      => $ano
+		]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 

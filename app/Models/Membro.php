@@ -61,60 +61,76 @@ class Membro
 
 	public function insert($data)
 	{
+		// Adicionado membro_rg e membro_cpf
 		$sql = "INSERT INTO membros (
 					membro_igreja_id,
 					membro_registro_interno,
 					membro_nome,
+					membro_rg,
+					membro_cpf,
 					membro_data_nascimento,
 					membro_genero,
-					membro_estado_civil, -- Novo campo
+					membro_estado_civil,
 					membro_email,
 					membro_telefone,
 					membro_data_batismo,
+					membro_data_casamento,
 					membro_status,
 					membro_data_criacao
 				) VALUES (
 					:igreja_id,
 					:registro_interno,
 					:nome,
+					:rg,
+					:cpf,
 					:nascimento,
 					:genero,
-					:estado_civil, -- Novo placeholder
+					:estado_civil,
 					:email,
 					:telefone,
 					:batismo,
-					:status,
+					:data_casamento,
+					'Ativo',
 					NOW()
 				)";
 
 		$stmt = $this->db->prepare($sql);
+
+		// O array $data vindo do Controller já possui as chaves corretas
 		return $stmt->execute($data);
 	}
 
 	public function update($id, $igrejaId, $data)
 	{
+		// Adicionado membro_rg e membro_cpf no SET
 		$sql = "UPDATE membros SET
 					membro_nome = :nome,
+					membro_rg = :rg,
+					membro_cpf = :cpf,
 					membro_genero = :genero,
-					membro_estado_civil = :estado_civil, -- Novo campo
+					membro_estado_civil = :estado_civil,
 					membro_email = :email,
 					membro_telefone = :telefone,
 					membro_data_nascimento = :nascimento,
-					membro_data_batismo = :batismo
+					membro_data_batismo = :batismo,
+					membro_data_casamento = :data_casamento
 				WHERE membro_id = :id AND membro_igreja_id = :igreja_id";
 
 		try {
 			$stmt = $this->db->prepare($sql);
 			return $stmt->execute([
-				'nome'         => $data['nome'],
-				'genero'       => $data['genero'] ?? null,
-				'estado_civil' => $data['estado_civil'] ?? null, // Inserido aqui
-				'email'        => $data['email'],
-				'telefone'     => $data['telefone'],
-				'nascimento'   => $data['data_nascimento'],
-				'batismo'      => $data['data_batismo'],
-				'id'           => (int)$id,
-				'igreja_id'    => (int)$igrejaId
+				'nome'           => $data['nome'],
+				'rg'             => $data['rg'] ?? null,
+				'cpf'            => $data['cpf'] ?? null,
+				'genero'         => $data['genero'] ?? null,
+				'estado_civil'   => $data['estado_civil'] ?? null,
+				'email'          => $data['email'],
+				'telefone'       => $data['telefone'],
+				'nascimento'     => $data['data_nascimento'], // Chave vinda do Controller
+				'batismo'        => $data['data_batismo'],    // Chave vinda do Controller
+				'data_casamento' => $data['data_casamento'],
+				'id'             => (int)$id,
+				'igreja_id'      => (int)$igrejaId
 			]);
 		} catch (\PDOException $e) {
 			error_log("Erro ao atualizar membro: " . $e->getMessage());
@@ -270,10 +286,13 @@ class Membro
 		$stmt->execute([$igrejaId]);
 		$stats['faixa_etaria'] = $stmt->fetch();
 
-		// 5. Aniversariantes do Mês (Nascimento)
-		$sqlAniv = "SELECT membro_nome, DAY(membro_data_nascimento) as dia
+		// 5. Aniversariantes do Mês (Nascimento) - ADICIONADO TIMESTAMPDIFF PARA IDADE
+		$sqlAniv = "SELECT membro_nome,
+						   DAY(membro_data_nascimento) as dia,
+						   TIMESTAMPDIFF(YEAR, membro_data_nascimento, CURDATE()) as idade
 					FROM membros
-					WHERE membro_igreja_id = ? AND MONTH(membro_data_nascimento) = MONTH(CURRENT_DATE)
+					WHERE membro_igreja_id = ?
+					AND MONTH(membro_data_nascimento) = MONTH(CURRENT_DATE)
 					ORDER BY dia ASC";
 		$stmt = $this->db->prepare($sqlAniv);
 		$stmt->execute([$igrejaId]);
@@ -289,7 +308,21 @@ class Membro
 		$stmt->execute([$igrejaId]);
 		$stats['aniv_batismo'] = $stmt->fetchAll();
 
-		// 7. Membros sem Cargo Atribuído (Usando sua tabela membros_cargos_vinculo)
+		// 7. NOVO: Aniversário de Casamento (Mês Atual)
+		$sqlCasamento = "SELECT membro_nome,
+								DAY(membro_data_casamento) as dia,
+								TIMESTAMPDIFF(YEAR, membro_data_casamento, CURDATE()) as anos
+						 FROM membros
+						 WHERE membro_igreja_id = ?
+						 AND MONTH(membro_data_casamento) = MONTH(CURRENT_DATE)
+						 AND membro_estado_civil = 'Casado(a)'
+						 AND membro_data_casamento IS NOT NULL
+						 ORDER BY dia ASC";
+		$stmt = $this->db->prepare($sqlCasamento);
+		$stmt->execute([$igrejaId]);
+		$stats['aniv_casamento'] = $stmt->fetchAll();
+
+		// 8. Membros sem Cargo Atribuído (ajuste o índice se necessário)
 		$sqlSemCargo = "SELECT COUNT(*) as total FROM membros m
 						LEFT JOIN membros_cargos_vinculo v ON m.membro_id = v.vinculo_membro_id
 						WHERE m.membro_igreja_id = ? AND v.vinculo_id IS NULL";
@@ -298,7 +331,7 @@ class Membro
 		$stats['sem_cargo'] = $stmt->fetch()['total'];
 
 		return $stats;
-    }
+	}
 
 	public function getEstatisticaEstadoCivil($igreja_id, $apenasMaiores = false) {
 		$whereIdade = $apenasMaiores ? " AND (TIMESTAMPDIFF(YEAR, membro_data_nascimento, CURDATE()) >= 18)" : "";
@@ -555,5 +588,8 @@ class Membro
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([$novaSenhaHash, $membroId, $igrejaId]);
     }
+
+
+
 
 }

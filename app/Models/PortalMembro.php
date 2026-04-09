@@ -11,68 +11,90 @@ class PortalMembro {
         $this->db = Database::getInstance();
     }
 
-    public function registrarPendente($dados) {
-        try {
-            $sqlMembro = "INSERT INTO membros (
-                membro_igreja_id,
-                membro_nome,
-                membro_data_nascimento,
-                membro_genero,
-                membro_estado_civil,
-                membro_data_batismo,
-                membro_email,
-                membro_senha,
-                membro_telefone,
-                membro_status,
-                membro_data_criacao
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', NOW())";
+	public function registrarPendente($dados) {
+		try {
+			// 1. Inserção na tabela de Membros
+			// Adicionada a coluna membro_data_casamento e corrigida a ordem para garantir membro_data_batismo
+			$sqlMembro = "INSERT INTO membros (
+				membro_igreja_id,
+				membro_nome,
+				membro_data_nascimento,
+				membro_genero,
+				membro_estado_civil,
+				membro_rg,
+				membro_cpf,
+				membro_email,
+				membro_senha,
+				membro_telefone,
+				membro_data_batismo,
+				membro_data_casamento,
+				membro_status,
+				membro_data_criacao,
+				membro_aceite_lgpd,
+				membro_data_aceite,
+				membro_ip_aceite
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', NOW(), ?, ?, ?)";
 
-            $stmt = $this->db->prepare($sqlMembro);
-            $stmt->execute([
-                $dados['igreja_id'],
-                $dados['nome'],
-                $dados['data_nasc'],
-                $dados['sexo'],
-                $dados['estado_civil'],
-                $dados['data_batismo'],
-                $dados['email'],
-                $dados['senha'],
-                $dados['telefone']
-            ]);
+			$stmt = $this->db->prepare($sqlMembro);
 
-            $membroId = $this->db->lastInsertId();
+			$stmt->execute([
+				$dados['igreja_id'],
+				$dados['nome'],
+				$dados['data_nasc'],
+				$dados['sexo'],
+				$dados['estado_civil'],
+				$dados['rg'],
+				$dados['cpf'],
+				$dados['email'],
+				$dados['senha'],
+				$dados['telefone'],
+				!empty($dados['data_batismo']) ? $dados['data_batismo'] : null,   // CORREÇÃO DATA BATISMO
+				!empty($dados['data_casamento']) ? $dados['data_casamento'] : null, // CORREÇÃO DATA CASAMENTO
+				$dados['aceite_lgpd'],
+				$dados['data_aceite_lgpd'],
+				$dados['ip_aceite_lgpd']
+			]);
 
-            if ($membroId) {
-                $sqlEnd = "INSERT INTO membros_enderecos (
-                    membro_endereco_membro_id,
-                    membro_endereco_rua,
-                    membro_endereco_numero,
-                    membro_endereco_bairro,
-                    membro_endereco_cidade,
-                    membro_endereco_estado,
-                    membro_endereco_cep
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)";
+			$membroId = $this->db->lastInsertId();
 
-                $stmtEnd = $this->db->prepare($sqlEnd);
-                $stmtEnd->execute([
-                    $membroId,
-                    $dados['rua'],
-                    $dados['numero'],
-                    $dados['bairro'],
-                    $dados['cidade'],
-                    $dados['estado'],
-                    $dados['cep']
-                ]);
+			if ($membroId) {
+				// 2. Inserção na tabela de Endereços
+				// Adicionado membro_endereco_complemento e membro_endereco_igreja_id
+				$sqlEnd = "INSERT INTO membros_enderecos (
+					membro_endereco_membro_id,
+					membro_endereco_igreja_id,
+					membro_endereco_rua,
+					membro_endereco_numero,
+					membro_endereco_complemento,
+					membro_endereco_bairro,
+					membro_endereco_cidade,
+					membro_endereco_estado,
+					membro_endereco_cep
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-                return $membroId;
-            }
+				$stmtEnd = $this->db->prepare($sqlEnd);
+				$stmtEnd->execute([
+					$membroId,
+					$dados['igreja_id'],            // CORREÇÃO IGREJA_ID NO ENDEREÇO
+					$dados['rua'],
+					$dados['numero'],
+					$dados['complemento'] ?? null,  // CORREÇÃO COMPLEMENTO
+					$dados['bairro'],
+					$dados['cidade'],
+					$dados['estado'],
+					$dados['cep']
+				]);
 
-            return false;
-        } catch (\PDOException $e) {
-            error_log("ERRO BANCO EKKLESIA: " . $e->getMessage());
-            return false;
-        }
-    }
+				return $membroId;
+			}
+
+			return false;
+		} catch (\PDOException $e) {
+			error_log("ERRO BANCO EKKLESIA: " . $e->getMessage());
+			// die($e->getMessage()); // Descomente para ver o erro na tela se falhar
+			return false;
+		}
+	}
 
     public function saveFoto($membroId, $nomeArquivo) {
         $sql = "INSERT INTO membros_fotos (membro_foto_membro_id, membro_foto_arquivo) VALUES (?, ?)";

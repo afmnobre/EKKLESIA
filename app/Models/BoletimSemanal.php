@@ -135,25 +135,30 @@ class BoletimSemanal
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
+	/**
+	 * Busca todos os membros que possuem alguma celebração no mês atual
+	 * (Nascimento, Batismo ou Casamento)
+	 */
 	public function buscarAniversariantesMes($igrejaId)
 	{
 		$sql = "SELECT
-					m.membro_id,
-					m.membro_nome,
-					m.membro_registro_interno,
-					m.membro_data_nascimento,
-					m.membro_data_batismo,
-					f.membro_foto_arquivo
-				FROM membros m
-				LEFT JOIN membros_fotos f ON f.membro_foto_membro_id = m.membro_id
-				WHERE m.membro_igreja_id = ?
+					membro_nome,
+					membro_registro_interno,
+					membro_data_nascimento,
+					membro_data_batismo,
+					membro_data_casamento,
+					membro_estado_civil
+				FROM membros
+				WHERE membro_igreja_id = ?
 				AND (
-					MONTH(m.membro_data_nascimento) = MONTH(CURRENT_DATE)
-					OR MONTH(membro_data_batismo) = MONTH(CURRENT_DATE)
-				)";
-		$st = $this->db->prepare($sql);
-		$st->execute([$igrejaId]);
-		return $st->fetchAll(\PDO::FETCH_ASSOC);
+					MONTH(membro_data_nascimento) = MONTH(CURRENT_DATE) OR
+					MONTH(membro_data_batismo) = MONTH(CURRENT_DATE) OR
+					MONTH(membro_data_casamento) = MONTH(CURRENT_DATE)
+				)
+				AND membro_status = 'Ativo'";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
 	/**
@@ -196,5 +201,40 @@ class BoletimSemanal
 		$st->execute([$numero]);
 		return $st->fetch(PDO::FETCH_ASSOC);
 	}
+
+	/**
+	 * Método para buscar hino e limpar a letra (removendo tags Quelea e espaços extras)
+	 */
+	public function getHinoLimpo($numero) {
+		$sql = "SELECT titulo, letra FROM hinos_novo_cantico WHERE numero = ?";
+		$st = $this->db->prepare($sql);
+		$st->execute([(int)$numero]);
+		$hinoData = $st->fetch(\PDO::FETCH_ASSOC);
+
+		if ($hinoData) {
+			// 1. Limpa o Título
+			$hinoData['titulo'] = trim(preg_replace('/\s+/', ' ', $hinoData['titulo']));
+
+			// 2. Limpa a Letra
+			$letra = $hinoData['letra'];
+
+			// Remove tags do Quelea {it}, {/it}, {b}, etc.
+			$letra = preg_replace('/\{.*?\}/', '', $letra);
+
+			// Remove espaços e TABULAÇÕES inúteis no início e fim de cada linha
+			$letra = preg_replace('/^[ \t\r]+|[ \t\r]+$/m', '', $letra);
+
+			// Normaliza quebras de linha (evita 3 ou mais seguidas)
+			$letra = preg_replace("/(\r\n|\n|\r){3,}/", "\n\n", $letra);
+
+			// Garante que espaços duplos virem quebras simples onde necessário
+			$letra = preg_replace("/(\r\n|\n|\r){2,}/", "\n\n", $letra);
+
+			$hinoData['letra'] = trim($letra);
+			return $hinoData;
+		}
+		return null;
+	}
+
 
 }

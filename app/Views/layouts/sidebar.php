@@ -36,6 +36,7 @@
                 <a href="<?= url('membros') ?>">Listagem de Membros</a>
                 <a href="<?= url('membros/create') ?>">Novo Cadastro</a>
                 <a href="<?= url('dashboardMembros') ?>">Dashboard</a>
+                <a href="<?= url('pesquisaMembro') ?>">Pesquisas</a>
             </div>
 
             <a class="menu-link" data-bs-toggle="collapse" href="#sociedades">🏛️ Sociedades</a>

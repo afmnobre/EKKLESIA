@@ -311,4 +311,12 @@ class SociedadesController extends Controller
 		exit;
 	}
 
+    public function orcamentos()
+    {
+        // Mantendo o padrão de segurança que você já usa no __construct
+        $this->view('sociedades/orcamentos', [
+            'titulo_pagina' => 'Orçamentos das Sociedades'
+        ]);
+    }
+
 }

@@ -92,16 +92,31 @@ class LiturgiaController extends Controller
 		if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 			$igrejaId = $_SESSION['usuario_igreja_id'];
 
-			// 1. Dados do Cabeçalho
+			// Recuperar nomes se for ID da lista (para não salvar 'vazio' no campo nome)
+			$pregador_nome = $_POST['pregador_nome_manual'] ?? '';
+			$dirigente_nome = $_POST['dirigente_nome_manual'] ?? '';
+
+			// Se selecionou da lista, precisamos buscar o nome do membro para salvar no campo _nome
+			if (!empty($_POST['pregador_id']) && $_POST['pregador_id'] !== 'outro') {
+				$m = $this->model->getMembroNome($_POST['pregador_id']); // Crie esse help no model se necessário
+				$pregador_nome = $m['membro_nome'] ?? '';
+			}
+
+			if (!empty($_POST['dirigente_id']) && $_POST['dirigente_id'] !== 'outro') {
+				$m = $this->model->getMembroNome($_POST['dirigente_id']);
+				$dirigente_nome = $m['membro_nome'] ?? '';
+			}
+
+			// 1. Dados do Cabeçalho - FOCO NO TEMA
 			$dadosCulto = [
 				'id'             => !empty($_POST['igreja_liturgia_id']) ? $_POST['igreja_liturgia_id'] : null,
 				'igreja_id'      => $igrejaId,
 				'data'           => $_POST['igreja_liturgia_data'],
-				'tema'           => $_POST['igreja_liturgia_tema'] ?? '',
+				'tema'           => $_POST['igreja_liturgia_tema'], // Removido o ?? '', deixe vir direto
 				'pregador_id'    => ($_POST['pregador_id'] !== 'outro' && !empty($_POST['pregador_id'])) ? $_POST['pregador_id'] : null,
-				'pregador_nome'  => $_POST['pregador_nome_manual'] ?? '',
+				'pregador_nome'  => $pregador_nome,
 				'dirigente_id'   => ($_POST['dirigente_id'] !== 'outro' && !empty($_POST['dirigente_id'])) ? $_POST['dirigente_id'] : null,
-                'dirigente_nome' => $_POST['dirigente_nome_manual'] ?? ''
+				'dirigente_nome' => $dirigente_nome
 			];
 
 			// 2. Coletar Itens Dinâmicos vindos do JS

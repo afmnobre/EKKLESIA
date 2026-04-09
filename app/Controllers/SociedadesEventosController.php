@@ -19,21 +19,37 @@ class SociedadesEventosController extends Controller
 	public function index() {
 		$idIgreja = $_SESSION['usuario_igreja_id'];
 
-		// Busca eventos e sociedades (Já estava funcionando)
-		$eventos = $this->model->getAllGlobal($idIgreja);
+		// 1. Captura o Mês e Ano selecionados ou define o atual como padrão
+		$mesSelecionado = isset($_GET['mes']) ? (int)$_GET['mes'] : (int)date('n');
+		$anoSelecionado = isset($_GET['ano']) ? (int)$_GET['ano'] : (int)date('Y');
+
+		// 2. Filtra os eventos por mês e ano (ajuste o método no seu Model para aceitar esses parâmetros)
+		// Se o seu getAllGlobal não suportar filtros, você precisará criar o getByMes no Model
+		$eventos = $this->model->getAllGlobal($idIgreja, $mesSelecionado, $anoSelecionado);
+
 		$sociedades = $this->sociedadeModel->getAll($idIgreja);
 
-		// 1. Busca os dados da Igreja para o endereço (Novo método no Model)
+		// 3. Busca os dados da Igreja para o endereço
 		$igreja = $this->model->getDadosIgreja($idIgreja);
 
-		// 2. Busca os Membros para o combo (Novo método no Model)
+		// 4. Busca os Membros para o combo
 		$membros = $this->model->getMembrosEndereco($idIgreja);
 
+		// 5. Gera a lista de anos para o select (ex: ano passado, atual e os próximos 2)
+		$anosDisponiveis = [];
+		$anoBase = (int)date('Y');
+		for ($i = $anoBase - 1; $i <= $anoBase + 2; $i++) {
+			$anosDisponiveis[] = ['ano' => $i];
+		}
+
 		$this->view('sociedades/eventos_geral', [
-			'eventos' => $eventos,
-			'sociedades' => $sociedades,
-			'igreja' => $igreja,
-			'membros' => $membros
+			'eventos'         => $eventos,
+			'sociedades'      => $sociedades,
+			'igreja'          => $igreja,
+			'membros'         => $membros,
+			'mesSelecionado'  => $mesSelecionado,
+			'anoSelecionado'  => $anoSelecionado,
+			'anosDisponiveis' => $anosDisponiveis
 		]);
 	}
 

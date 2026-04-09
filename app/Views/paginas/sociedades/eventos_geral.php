@@ -13,6 +13,53 @@
 <?php endif; ?>
 
 <div class="container-fluid py-4">
+ 	<div class="card border-0 shadow-sm mb-4">
+		<div class="card-body py-3">
+			<div class="row align-items-center">
+				<div class="col-md-3 border-end">
+					<label class="small fw-bold text-muted text-uppercase mb-1 d-block">Filtrar por Ano</label>
+					<div class="input-group">
+						<span class="input-group-text bg-white border-0"><i class="bi bi-calendar-event text-primary"></i></span>
+						<select class="form-select border-0 bg-light fw-bold"
+								onchange="location.href='?mes=<?= $mesSelecionado ?>&ano='+this.value">
+							<?php
+							// Se não vier do controller, define o ano atual
+							$anoAtual = date('Y');
+							$anos = $anosDisponiveis ?? [['ano' => $anoAtual], ['ano' => $anoAtual + 1]];
+							foreach($anos as $a):
+							?>
+								<option value="<?= $a['ano'] ?>" <?= $a['ano'] == $anoSelecionado ? 'selected' : '' ?>>
+									<?= $a['ano'] ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+				</div>
+
+				<div class="col-md-9">
+					<label class="small fw-bold text-muted text-uppercase mb-1 d-block text-center text-md-start ps-3">Mês do Calendário</label>
+					<div class="nav nav-pills nav-fill bg-light p-1 rounded-pill mx-md-2">
+						<?php
+						$meses = [
+							1=>'Jan', 2=>'Fev', 3=>'Mar', 4=>'Abr', 5=>'Mai', 6=>'Jun',
+							7=>'Jul', 8=>'Ago', 9=>'Set', 10=>'Out', 11=>'Nov', 12=>'Dez'
+						];
+						foreach($meses as $num => $nome):
+							$active = ($num == $mesSelecionado) ? 'active shadow-sm' : 'text-muted';
+						?>
+							<div class="nav-item">
+								<a class="nav-link py-1 rounded-pill <?= $active ?>"
+								   href="?mes=<?= $num ?>&ano=<?= $anoSelecionado ?>">
+									<?= $nome ?>
+								</a>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold text-dark"><i class="bi bi-calendar-week me-2 text-primary"></i>Calendário de Sociedades</h3>
         <button class="btn btn-primary shadow-sm" onclick="window.novoEvento()">
@@ -33,33 +80,52 @@
                         <th class="text-end pe-4">Ações</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <?php if (!empty($eventos)): foreach ($eventos as $ev): ?>
-                    <tr>
-                        <td class="ps-4">
-                            <div class="fw-bold"><?= date('d/m/Y', strtotime($ev['sociedade_evento_data_hora_inicio'])) ?></div>
-                            <small class="text-muted"><?= date('H:i', strtotime($ev['sociedade_evento_data_hora_inicio'])) ?></small>
-                        </td>
-                        <td><span class="badge bg-secondary"><?= $ev['sociedade_nome'] ?></span></td>
-                        <td><strong><?= $ev['sociedade_evento_titulo'] ?></strong></td>
-                        <td><small><?= $ev['sociedade_evento_local'] ?></small></td>
-                        <td><span class="badge rounded-pill bg-info text-white"><?= $ev['sociedade_evento_status'] ?></span></td>
-                        <td class="text-end pe-4">
-                            <button class="btn btn-sm btn-light border me-1" title="Gerar Flyer para Redes Sociais" onclick='window.prepararFlyer(<?= json_encode($ev) ?>)'>
-                                <i class="bi bi-megaphone text-success"></i>
-                            </button>
-							<button class="btn btn-sm btn-light border" onclick='window.editarEvento(<?= json_encode($ev) ?>)'>
-								<i class="bi bi-pencil-square text-primary"></i>
-							</button>
-							<button class="btn btn-sm btn-light border ms-1" onclick="window.excluirEvento(<?= $ev['sociedade_evento_id'] ?>)">
-								<i class="bi bi-trash text-danger"></i>
-							</button>
+					<tbody>
+					<?php if (!empty($eventos)): foreach ($eventos as $ev):
+						// Lógica simples para cores de status
+						$status = strtolower($ev['sociedade_evento_status']);
+						$badgeClass = 'bg-info'; // padrão
+						if (strpos($status, 'conclu') !== false) $badgeClass = 'bg-success';
+						if (strpos($status, 'cancela') !== false) $badgeClass = 'bg-danger';
+						if (strpos($status, 'prog') !== false) $badgeClass = 'bg-primary';
+					?>
+					<tr>
+						<td class="ps-4">
+							<div class="fw-bold"><?= date('d/m/Y', strtotime($ev['sociedade_evento_data_hora_inicio'])) ?></div>
+							<small class="text-muted"><?= date('H:i', strtotime($ev['sociedade_evento_data_hora_inicio'])) ?></small>
 						</td>
-                    </tr>
-                    <?php endforeach; else: ?>
-                    <tr><td colspan="6" class="text-center py-4">Nenhum evento agendado.</td></tr>
-                    <?php endif; ?>
-                </tbody>
+						<td><span class="badge bg-secondary"><?= $ev['sociedade_nome'] ?></span></td>
+						<td>
+							<strong><?= $ev['sociedade_evento_titulo'] ?></strong>
+							<?php if(!empty($ev['sociedade_evento_valor']) && $ev['sociedade_evento_valor'] > 0): ?>
+								<span class="ms-1 text-success small"><i class="bi bi-cash"></i></span>
+							<?php endif; ?>
+						</td>
+						<td><small class="text-muted"><?= $ev['sociedade_evento_local'] ?></small></td>
+						<td><span class="badge rounded-pill <?= $badgeClass ?>"><?= $ev['sociedade_evento_status'] ?></span></td>
+						<td class="text-end pe-4">
+							<div class="btn-group shadow-sm" role="group">
+								<button class="btn btn-sm btn-white border" title="Gerar Flyer" onclick='window.prepararFlyer(<?= json_encode($ev) ?>)'>
+									<i class="bi bi-megaphone text-success"></i>
+								</button>
+								<button class="btn btn-sm btn-white border" title="Editar" onclick='window.editarEvento(<?= json_encode($ev) ?>)'>
+									<i class="bi bi-pencil-square text-primary"></i>
+								</button>
+								<button class="btn btn-sm btn-white border" title="Excluir" onclick="window.excluirEvento(<?= $ev['sociedade_evento_id'] ?>)">
+									<i class="bi bi-trash text-danger"></i>
+								</button>
+							</div>
+						</td>
+					</tr>
+					<?php endforeach; else: ?>
+					<tr>
+						<td colspan="6" class="text-center py-5">
+							<i class="bi bi-calendar-x d-block mb-2 text-muted" style="font-size: 2rem;"></i>
+							<span class="text-muted">Nenhum evento agendado para <?= $meses[$mesSelecionado] ?> de <?= $anoSelecionado ?>.</span>
+						</td>
+					</tr>
+					<?php endif; ?>
+				</tbody>
             </table>
         </div>
     </div>

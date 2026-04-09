@@ -120,17 +120,33 @@
 
 							<?php if($c['financeiro_conta_pago']): ?>
 								<div class="btn-group">
-									<button type="button" class="btn btn-sm <?= !empty($c['financeiro_conta_comprovante']) ? 'btn-success' : 'btn-outline-secondary' ?>"
-											onclick="abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, 'comprovante', '<?= $c['financeiro_conta_comprovante'] ?? '' ?>')" title="Comprovante">
+									<?php
+										// Usamos json_encode para que o JS receba a string limpa e segura
+										$arqComp = json_encode($c['financeiro_conta_comprovante'] ?? '');
+										$arqNF = json_encode($c['financeiro_conta_nota_fiscal'] ?? '');
+									?>
+									<button type="button"
+											class="btn btn-sm <?= !empty($c['financeiro_conta_comprovante']) ? 'btn-success' : 'btn-outline-secondary' ?>"
+											onclick='abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, "comprovante", <?= $arqComp ?>)'
+											title="Comprovante">
 										<i class="bi bi-receipt"></i>
 									</button>
 
-									<button type="button" class="btn btn-sm <?= !empty($c['financeiro_conta_nota_fiscal']) ? 'btn-info' : 'btn-outline-secondary' ?>"
-											onclick="abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, 'notafiscal', '<?= $c['financeiro_conta_nota_fiscal'] ?? '' ?>')" title="Nota Fiscal">
+									<button type="button"
+											class="btn btn-sm <?= !empty($c['financeiro_conta_nota_fiscal']) ? 'btn-info' : 'btn-outline-secondary' ?>"
+											onclick='abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, "notafiscal", <?= $arqNF ?>)'
+											title="Nota Fiscal">
 										<i class="bi bi-file-earmark-text"></i>
 									</button>
-								</div>
-							<?php endif; ?>
+
+									<button type="button" class="btn btn-sm btn-outline-primary"
+										onclick="abrirModalQR('<?= $c['financeiro_conta_id'] ?>', 'comprovante')"
+										title="Upload via Celular">
+										<i class="bi bi-qr-code-scan"></i>
+									</button>
+
+                                </div>
+                            <?php endif; ?>
 
 
                                 <div class="btn-group">
@@ -160,7 +176,7 @@
 											</button>
 										<?php endif; ?>
 
-										<button class="btn btn-sm btn-outline-primary" title="Editar Lançamento"
+                                        <button class="btn btn-sm btn-outline-primary" title="Editar Lançamento"
 												onclick="editarLancamento(<?= htmlspecialchars(json_encode($c)) ?>)">
 											<i class="bi bi-pencil"></i>
 										</button>
@@ -184,6 +200,36 @@
 			</div>
 		</div>
 	</div>
+</div>
+
+<div class="modal fade" id="modalQRCode" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header bg-primary text-white border-0 py-2">
+                <h6 class="modal-title fw-bold small text-uppercase">Anexar pelo Celular</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+
+                <div id="qrcode_financeiro" class="d-flex justify-content-center p-3 border rounded-4 bg-white shadow-sm mb-3" style="min-height: 200px;">
+                </div>
+
+                <div class="card bg-light border-0 rounded-3 mb-3">
+                    <div class="card-body p-2">
+                        <small class="text-muted d-block fw-bold text-uppercase mb-1" style="font-size: 0.6rem;">Link de Acesso:</small>
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="inputLinkUpload" class="form-control form-control-sm border-0 bg-transparent text-center fw-bold" readonly style="font-size: 0.75rem;">
+                            <button class="btn btn-sm btn-outline-primary border-0" type="button" onclick="copiarLinkUpload()">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="small text-muted mb-0" style="font-size: 0.75rem;">Aponte a câmera ou use o link acima para testar.</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="modalAnexo" tabindex="-1">
@@ -593,53 +639,43 @@ async function salvarRateioFinal() {
 }
 
 function abrirModalAnexo(id, tipo, arquivoAtual) {
-    // Configura os campos ocultos
+    // Normaliza: remove barras invertidas e qualquer barra no início da string do banco
+    const arquivoLimpo = arquivoAtual ? arquivoAtual.trim().replace(/\\/g, '/').replace(/^\//, '') : "";
+
     document.getElementById('anexo_conta_id').value = id;
     document.getElementById('anexo_tipo').value = tipo;
-
-    // Título dinâmico
-    const titulo = (tipo === 'comprovante') ? 'Comprovante de Pagamento' : 'Nota Fiscal';
-    document.getElementById('titulo_anexo').innerText = titulo;
 
     const areaVisu = document.getElementById('area_visualizacao');
     const contentPreview = document.getElementById('content_preview');
     const linkExterno = document.getElementById('link_abrir_externo');
-    const labelUpload = document.getElementById('label_upload');
 
-    if (arquivoAtual && arquivoAtual !== "") {
+    contentPreview.innerHTML = '';
+
+    if (arquivoLimpo !== "") {
         areaVisu.classList.remove('d-none');
-        labelUpload.innerText = "Substituir arquivo atual:";
 
-        const urlArquivo = '<?= url("public/assets/uploads/") ?>' + arquivoAtual;
+        // Aqui usamos url() que já termina com / e o caminho sem / no começo
+        const urlArquivo = '<?= url("public/assets/uploads/") ?>' + arquivoLimpo;
+
         linkExterno.href = urlArquivo;
-
-        // Verifica a extensão para decidir como exibir
-        const extensao = arquivoAtual.split('.').pop().toLowerCase();
+        const extensao = arquivoLimpo.split('.').pop().toLowerCase();
 
         if (extensao === 'pdf') {
-            // Se for PDF, mostra um botão amigável (PDFs não renderizam bem em divs pequenas)
             contentPreview.innerHTML = `
                 <div class="text-center p-5">
                     <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 4rem;"></i>
                     <p class="fw-bold mt-2">Documento PDF</p>
-                    <a href="${urlArquivo}" target="_blank" class="btn btn-outline-danger btn-sm">Clique para Abrir PDF</a>
+                    <a href="${urlArquivo}" target="_blank" class="btn btn-outline-danger btn-sm">Abrir PDF</a>
                 </div>`;
         } else {
-            // Se for Imagem (JPG, PNG, WEBP), renderiza no "Iframe" com scroll
-            contentPreview.innerHTML = `
-                <img src="${urlArquivo}" style="max-width: none; height: auto; cursor: zoom-in;"
-                     title="Clique no link abaixo para ver original"
-                     onclick="window.open('${urlArquivo}', '_blank')">`;
+            contentPreview.innerHTML = `<img src="${urlArquivo}" style="max-width: 100%; height: auto; border-radius: 4px;">`;
         }
     } else {
-        // Se não houver arquivo, esconde o preview e ajusta o label
         areaVisu.classList.add('d-none');
-        labelUpload.innerText = "Selecione o arquivo para upload:";
-        contentPreview.innerHTML = '';
     }
 
-    // Abre o modal
-    new bootstrap.Modal(document.getElementById('modalAnexo')).show();
+    const modalEl = document.getElementById('modalAnexo');
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 
@@ -697,4 +733,37 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+function abrirModalQR(id, tipo) {
+    const container = document.getElementById('qrcode_financeiro');
+    const inputLink = document.getElementById('inputLinkUpload');
+    container.innerHTML = "";
+
+    // Dados da igreja para o acesso externo
+    const idIgreja = "<?= $_SESSION['usuario_igreja_id'] ?>";
+    const urlFinal = "<?= full_url('financeiro/uploadExterno/') ?>" + id + "?i=" + idIgreja;
+    // Atualiza o input de texto com o link gerado
+    inputLink.value = urlFinal;
+
+    // Gera o QR Code
+    new QRCode(container, {
+        text: urlFinal,
+        width: 180,
+        height: 180,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+
+    const modalEl = document.getElementById('modalQRCode');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+}
+
+// Função para abrir o link em uma nova aba para teste no PC
+function copiarLinkUpload() {
+    const link = document.getElementById('inputLinkUpload').value;
+    if(link) {
+        window.open(link, '_blank');
+    }
+}
 </script>

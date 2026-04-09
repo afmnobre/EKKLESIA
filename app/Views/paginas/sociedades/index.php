@@ -250,7 +250,7 @@
                     </div>
                 </div>
 
-                <img src="<?= url('assets/img/logo_ipb.png') ?>" alt="Sarça IPB" style="height: 40px; opacity: 0.5;">
+
             </div>
             <div class="modal-footer border-0 bg-light d-flex justify-content-center rounded-bottom-4">
                 <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Fechar</button>

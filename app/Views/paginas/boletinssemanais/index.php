@@ -203,75 +203,75 @@ $semana = getNumeroSemanaAtual();
 					</div>
 				</div>
 
-<div class="mt-2">
-    <?php if (!empty($liturgia['itens'])): foreach ($liturgia['itens'] as $index => $item):
-        // Garantindo que as variáveis existam para cada item do loop
-        $tipo        = $item['tipo'] ?? 'Item';
-        $descricao   = $item['desc'] ?? '';
-        $referencia  = $item['ref'] ?? '';
-        $conteudo    = $item['conteudo'] ?? '';
-        $tipoLower   = strtolower($tipo);
-        $id_item     = $item['liturgia_item_id'] ?? $index;
-    ?>
-        <div class="item-liturgia mb-2">
-            <div class="liturgia-flex">
-                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle badge-tipo">
-                    <?= strtoupper($tipo) ?>
-                </span>
-                <div class="fw-semibold small text-dark flex-grow-1" style="font-size: 0.85rem;">
-                    <?= htmlspecialchars($descricao) ?>
-                </div>
-            </div>
+				<div class="mt-2">
+					<?php if (!empty($liturgia['itens'])): foreach ($liturgia['itens'] as $index => $item):
+						// Garantindo que as variáveis existam para cada item do loop
+						$tipo        = $item['tipo'] ?? 'Item';
+						$descricao   = $item['desc'] ?? '';
+						$referencia  = $item['ref'] ?? '';
+						$conteudo    = $item['conteudo'] ?? '';
+						$tipoLower   = strtolower($tipo);
+						$id_item     = $item['liturgia_item_id'] ?? $index;
+					?>
+						<div class="item-liturgia mb-2">
+							<div class="liturgia-flex">
+								<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle badge-tipo">
+									<?= strtoupper($tipo) ?>
+								</span>
+								<div class="fw-semibold small text-dark flex-grow-1" style="font-size: 0.85rem;">
+									<?= htmlspecialchars($descricao) ?>
+								</div>
+							</div>
 
-            <?php if(!empty($referencia)): ?>
-                <div class="text-primary fw-bold mt-1" style="margin-left: 73px; font-size: 0.75rem;">
-                    <?= htmlspecialchars($referencia) ?>
-                </div>
-            <?php endif; ?>
+							<?php if(!empty($referencia)): ?>
+								<div class="text-primary fw-bold mt-1" style="margin-left: 73px; font-size: 0.75rem;">
+									<?= htmlspecialchars($referencia) ?>
+								</div>
+							<?php endif; ?>
 
-            <?php if(($tipoLower == 'leitura' || $tipoLower == 'mensagem') && !empty($conteudo)):
-                $id_collapse = "coll_" . $id_item;
-            ?>
-                <div style="margin-left: 73px;" class="mt-1">
-                    <div class="text-muted small" style="font-size: 0.75rem; font-style: italic;">
-                        <?= mb_strimwidth(strip_tags($conteudo), 0, 85, "...") ?>
-                        <button class="btn btn-link p-0 text-primary fw-bold no-print" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $id_collapse ?>" style="font-size: 0.7rem; text-decoration: none;">
-                            [Ler texto]
-                        </button>
-                    </div>
-                    <div class="collapse mt-2" id="<?= $id_collapse ?>">
-                        <div class="card card-body p-3 bg-light border-0 shadow-sm" style="font-size: 0.85rem; white-space: pre-line; font-family: 'Georgia', serif; line-height: 1.5; color: #444;">
-                            <?= $conteudo ?>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
+							<?php if(($tipoLower == 'leitura' || $tipoLower == 'mensagem') && !empty($conteudo)):
+								$id_collapse = "coll_" . $id_item;
+							?>
+								<div style="margin-left: 73px;" class="mt-1">
+									<div class="text-muted small" style="font-size: 0.75rem; font-style: italic;">
+										<?= mb_strimwidth(strip_tags($conteudo), 0, 85, "...") ?>
+										<button class="btn btn-link p-0 text-primary fw-bold no-print" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $id_collapse ?>" style="font-size: 0.7rem; text-decoration: none;">
+											[Ler texto]
+										</button>
+									</div>
+									<div class="collapse mt-2" id="<?= $id_collapse ?>">
+										<div class="card card-body p-3 bg-light border-0 shadow-sm" style="font-size: 0.85rem; white-space: pre-line; font-family: 'Georgia', serif; line-height: 1.5; color: #444;">
+											<?= $conteudo ?>
+										</div>
+									</div>
+								</div>
+							<?php endif; ?>
 
-            <?php if($tipoLower == 'hino' && !empty($item['hino_letra'])):
-                $id_hino = "hino_" . $id_item;
-            ?>
-                <div style="margin-left: 73px;" class="mt-1">
-                    <div class="text-muted small" style="font-size: 0.75rem; font-style: italic;">
-                        <strong><?= htmlspecialchars($item['hino_titulo'] ?? 'Hino') ?></strong>
-                        <button class="btn btn-link p-0 text-success fw-bold no-print" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $id_hino ?>" style="font-size: 0.7rem; text-decoration: none;">
-                            [Ver letra do hino]
-                        </button>
-                    </div>
-                    <div class="collapse mt-2" id="<?= $id_hino ?>">
-                        <div class="card card-body p-3 bg-white border shadow-sm" style="font-size: 0.85rem; white-space: pre-line; font-family: 'Verdana', sans-serif; line-height: 1.6; color: #333; border-left: 4px solid #198754 !important;">
-                            <div class="mb-2 text-uppercase fw-bold text-success small border-bottom pb-1">
-                                <?= htmlspecialchars($item['hino_titulo'] ?? 'Hino') ?>
-                            </div>
-                            <?= nl2br(htmlspecialchars($item['hino_letra'])) ?>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
-        </div>
-    <?php endforeach; else: ?>
-        <p class="text-muted small text-center p-3">Não cadastrada.</p>
-    <?php endif; ?>
-</div>
+							<?php if($tipoLower == 'hino' && !empty($item['hino_letra'])):
+								$id_hino = "hino_" . $id_item;
+							?>
+								<div style="margin-left: 73px;" class="mt-1">
+									<div class="text-muted small" style="font-size: 0.75rem; font-style: italic;">
+										<strong><?= htmlspecialchars($item['hino_titulo'] ?? 'Hino') ?></strong>
+										<button class="btn btn-link p-0 text-success fw-bold no-print" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $id_hino ?>" style="font-size: 0.7rem; text-decoration: none;">
+											[Ver letra do hino]
+										</button>
+									</div>
+									<div class="collapse mt-2" id="<?= $id_hino ?>">
+										<div class="card card-body p-3 bg-white border shadow-sm" style="font-size: 0.85rem; white-space: pre-wrap; font-family: 'Verdana', sans-serif; line-height: 1.5; color: #333; border-left: 4px solid #198754 !important;">
+											<div class="mb-2 text-uppercase fw-bold text-success small border-bottom pb-1">
+												<?= htmlspecialchars($item['hino_titulo'] ?? 'Hino') ?>
+											</div>
+											<div style="display: block;"><?= htmlspecialchars($item['hino_letra']) ?></div>
+										</div>
+									</div>
+								</div>
+							<?php endif; ?>
+						</div>
+					<?php endforeach; else: ?>
+						<p class="text-muted small text-center p-3">Não cadastrada.</p>
+					<?php endif; ?>
+				</div>
 
 				<div class="mt-4 pt-3 border-top no-print-break">
 					<div class="bg-light rounded p-3 shadow-sm border text-center">
@@ -314,34 +314,51 @@ $semana = getNumeroSemanaAtual();
                 <?php endif; ?>
             </div>
 
-            <div class="pt-4 border-top">
-                <h5 class="col-titulo"><i class="bi bi-stars me-2"></i>Celebrações de <?= $nomeMes ?></h5>
-                <div class="row">
-                    <div class="col-6 border-end px-3">
-                        <h6 class="small fw-bold text-secondary text-uppercase mb-3" style="font-size: 0.7rem;"><i class="bi bi-cake2 me-1"></i> Aniversariantes</h6>
-                        <?php foreach($nascidos as $n): ?>
-                            <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-light">
-                                <img src="<?= $n['foto'] ? url($n['foto']) : 'https://ui-avatars.com/api/?name='.urlencode($n['nome']).'&size=32' ?>" class="rounded-circle me-2 border" style="width: 28px; height: 28px; object-fit: cover;">
-                                <span class="small fw-semibold flex-grow-1 text-truncate"><?= $n['nome'] ?></span>
-                                <span class="badge bg-light text-primary border small-x">Dia <?= $n['dia'] ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <div class="col-6 px-3">
-                        <h6 class="small fw-bold text-secondary text-uppercase mb-3" style="font-size: 0.7rem;"><i class="bi bi-water me-1"></i> Batismos</h6>
-                        <?php foreach($batizados as $b): ?>
-                            <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-light">
-                                <img src="<?= $b['foto'] ? url($b['foto']) : 'https://ui-avatars.com/api/?name='.urlencode($b['nome']).'&size=32' ?>" class="rounded-circle me-2 border" style="width: 28px; height: 28px; object-fit: cover;">
-                                <div class="flex-grow-1 overflow-hidden">
-                                    <div class="small fw-semibold text-truncate"><?= $b['nome'] ?></div>
-                                    <div class="text-muted" style="font-size: 0.6rem;"><?= $b['anos'] ?>º ano</div>
-                                </div>
-                                <span class="badge bg-light text-info border small-x">Dia <?= $b['dia'] ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
+			<div class="pt-4 border-top">
+				<h5 class="col-titulo"><i class="bi bi-stars me-2"></i>Celebrações de <?= $nomeMes ?></h5>
+				<div class="row g-2">
+					<div class="col-4 border-end px-2">
+						<h6 class="small fw-bold text-secondary text-uppercase mb-3" style="font-size: 0.65rem;"><i class="bi bi-cake2 me-1"></i> Nascimento</h6>
+						<?php foreach($nascidos as $n): ?>
+							<div class="d-flex align-items-center mb-2 pb-1 border-bottom border-light">
+								<img src="<?= $n['foto'] ? url($n['foto']) : 'https://ui-avatars.com/api/?name='.urlencode($n['nome']).'&size=32' ?>" class="rounded-circle me-2 border" style="width: 24px; height: 24px; object-fit: cover;">
+								<div class="flex-grow-1 overflow-hidden">
+									<div class="small fw-semibold text-truncate" style="font-size: 0.75rem;"><?= $n['nome'] ?></div>
+								</div>
+								<span class="badge bg-light text-primary border" style="font-size: 0.6rem;">D<?= $n['dia'] ?></span>
+							</div>
+						<?php endforeach; ?>
+					</div>
+
+					<div class="col-4 border-end px-2">
+						<h6 class="small fw-bold text-secondary text-uppercase mb-3" style="font-size: 0.65rem;"><i class="bi bi-water me-1"></i> Batismo</h6>
+						<?php foreach($batizados as $b): ?>
+							<div class="d-flex align-items-center mb-2 pb-1 border-bottom border-light">
+								<img src="<?= $b['foto'] ? url($b['foto']) : 'https://ui-avatars.com/api/?name='.urlencode($b['nome']).'&size=32' ?>" class="rounded-circle me-2 border" style="width: 24px; height: 24px; object-fit: cover;">
+								<div class="flex-grow-1 overflow-hidden">
+									<div class="small fw-semibold text-truncate" style="font-size: 0.75rem;"><?= $b['nome'] ?></div>
+									<div class="text-muted" style="font-size: 0.55rem;"><?= $b['anos'] ?>º ano</div>
+								</div>
+								<span class="badge bg-light text-info border" style="font-size: 0.6rem;">D<?= $b['dia'] ?></span>
+							</div>
+						<?php endforeach; ?>
+					</div>
+
+					<div class="col-4 px-2">
+						<h6 class="small fw-bold text-secondary text-uppercase mb-3" style="font-size: 0.65rem;"><i class="bi bi-heart-fill me-1"></i> Casamento</h6>
+						<?php foreach($casados as $c): ?>
+							<div class="d-flex align-items-center mb-2 pb-1 border-bottom border-light">
+								<img src="<?= $c['foto'] ? url($c['foto']) : 'https://ui-avatars.com/api/?name='.urlencode($c['nome']).'&size=32' ?>" class="rounded-circle me-2 border" style="width: 24px; height: 24px; object-fit: cover;">
+								<div class="flex-grow-1 overflow-hidden">
+									<div class="small fw-semibold text-truncate" style="font-size: 0.75rem;"><?= $c['nome'] ?></div>
+									<div class="text-muted" style="font-size: 0.55rem;"><?= $c['anos'] ?>º ano</div>
+								</div>
+								<span class="badge bg-light text-danger border" style="font-size: 0.6rem;">D<?= $c['dia'] ?></span>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				</div>
+			</div>
         </div>
 
         <div class="col-lg-3 border-start bg-light bg-opacity-10">

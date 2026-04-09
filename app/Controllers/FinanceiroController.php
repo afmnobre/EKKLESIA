@@ -2,13 +2,16 @@
 namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\Financeiro;
+use App\Models\Igreja;
 use App\Core\Utils;
 
 class FinanceiroController extends Controller {
     private $model;
+    private $igrejaModel;
 
     public function __construct() {
         $this->model = new Financeiro();
+        $this->igrejaModel = new Igreja();
     }
 
 	public function index() {
@@ -380,16 +383,18 @@ class FinanceiroController extends Controller {
 
 	public function uploadAnexo() {
 		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-			$idIgreja = $_SESSION['usuario_igreja_id'];
+			// Se o upload vem do mobile, a igreja_id deve vir via POST para garantir
+			// o caminho da pasta, caso a sessão não esteja ativa no celular.
+			$idIgreja = $_SESSION['usuario_igreja_id'] ?? $_POST['igreja_id'];
 			$contaId = $_POST['conta_id'];
-			$tipo = $_POST['tipo_arquivo']; // 'comprovante' ou 'notafiscal'
+			$tipo = $_POST['tipo_arquivo'];
 			$ano = $_POST['ano_referencia'];
 			$mes = str_pad($_POST['mes_referencia'], 2, "0", STR_PAD_LEFT);
+			$isMobile = isset($_POST['is_mobile']); // Detecta se vem do QR Code
 
 			if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] === 0) {
 
 				// --- 1. BUSCAR ARQUIVO ANTIGO PARA DELETAR ---
-				// Precisamos saber se já existe um arquivo registrado para esta conta
 				$contaAtual = $this->model->getContaById($contaId, $idIgreja);
 				$colunaBanco = ($tipo === 'comprovante') ? 'financeiro_conta_comprovante' : 'financeiro_conta_nota_fiscal';
 				$arquivoAntigo = $contaAtual[$colunaBanco] ?? null;
@@ -411,7 +416,8 @@ class FinanceiroController extends Controller {
 
 				if (move_uploaded_file($_FILES['arquivo']['tmp_name'], $caminhoCompleto)) {
 					if ($isImagem) {
-						\App\Core\Utils::otimizarImagem($caminhoCompleto, $caminhoCompleto, 1000, 80);
+						// Utiliza sua classe Utils para não estourar o servidor com fotos de 12MB do celular
+						Utils::otimizarImagem($caminhoCompleto, $caminhoCompleto, 1000, 80);
 					}
 
 					$caminhoRelativo = "{$idIgreja}/financeiro/{$subPastaPath}/{$ano}/{$mes}/{$novoNome}";
@@ -424,6 +430,13 @@ class FinanceiroController extends Controller {
 							if (file_exists($caminhoFisicoAntigo)) {
 								unlink($caminhoFisicoAntigo);
 							}
+						}
+
+						// --- AJUSTE DE REDIRECIONAMENTO ---
+						if ($isMobile) {
+                            // Redireciona de volta para a view de upload com o parâmetro de sucesso
+                            header("Location: " . full_url("financeiro/uploadExterno/{$contaId}?i={$idIgreja}&sucesso=1"));
+                            exit;
 						}
 
 						header("Location: " . url("financeiro/lancamentos?mes={$mes}&ano={$ano}&sucesso=arquivo_atualizado"));
@@ -788,7 +801,31 @@ class FinanceiroController extends Controller {
 		}
 		echo "</table>";
 		exit;
-	}
+    }
 
+	// Método para exibir a página no celular via QRCode
+    public function uploadExterno($id) {
+        $idIgreja = $_SESSION['usuario_igreja_id'] ?? $_GET['i'] ?? null;
+
+        if (!$idIgreja) {
+            die("Erro: Identificação da igreja ausente.");
+        }
+
+        $conta = $this->model->getContaById($id, $idIgreja);
+
+        // Use a instância que você criou no construtor
+        $igreja = $this->igrejaModel->getById($idIgreja);
+
+        if (!$conta || $conta['financeiro_conta_igreja_id'] != $idIgreja) {
+            die("Lançamento não encontrado ou acesso negado.");
+        }
+
+        $this->rawview('financeiro/upload_mobile', [
+            'conta' => $conta,
+            'igreja' => $igreja,
+            'tipo' => $_GET['tipo'] ?? 'comprovante',
+            'idIgreja' => $idIgreja
+        ]);
+    }
 
 }

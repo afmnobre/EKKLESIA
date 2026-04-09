@@ -240,6 +240,16 @@ class Liturgia
 		return $itens;
 	}
 
+    /**
+    * Busca o nome de um membro para salvar no cabeçalho da liturgia
+     */
+    public function getMembroNome($id)
+    {
+        $sql = "SELECT membro_nome FROM membros WHERE membro_id = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$id]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
 
 
 }

@@ -81,132 +81,194 @@
         </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white py-3 border-0">
-                    <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-cake2 me-2"></i>Aniversariantes do Mês</h6>
-                </div>
-                <div class="table-responsive" style="max-height: 300px;">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light small">
-                            <tr><th>Nome</th><th class="text-center">Dia</th></tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach($aniversariantes as $aniv): ?>
-                                <tr>
-                                    <td><?= $aniv['membro_nome'] ?></td>
-                                    <td class="text-center"><span class="badge bg-light text-primary border"><?= $aniv['dia'] ?></span></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+	<div class="row g-4">
+		<div class="col-md-4">
+			<div class="card border-0 shadow-sm h-100">
+				<div class="card-header bg-white py-3 border-0">
+					<h6 class="mb-0 fw-bold text-primary"><i class="bi bi-cake2 me-2"></i>Aniversariantes do Mês</h6>
+				</div>
+				<div class="table-responsive" style="max-height: 300px;">
+					<table class="table table-hover align-middle mb-0">
+						<thead class="bg-light small">
+							<tr>
+								<th>Nome</th>
+								<th class="text-center">Idade</th>
+								<th class="text-center">Dia</th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php foreach($aniversariantes as $aniv): ?>
+								<tr>
+									<td class="small fw-bold"><?= $aniv['membro_nome'] ?></td>
+									<td class="text-center small"><?= $aniv['idade'] ?> anos</td>
+									<td class="text-center"><span class="badge bg-light text-primary border"><?= $aniv['dia'] ?></span></td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
 
-        <div class="col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white py-3 border-0">
-                    <h6 class="mb-0 fw-bold text-info"><i class="bi bi-droplet-fill me-2"></i>Aniversário de Batismo</h6>
-                </div>
-                <div class="table-responsive" style="max-height: 300px;">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light small">
-                            <tr><th>Nome</th><th>Anos</th><th class="text-center">Dia</th></tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach($aniv_batismo as $bat): ?>
-                                <tr>
-                                    <td><?= $bat['membro_nome'] ?></td>
-                                    <td><?= $bat['anos'] ?> anos</td>
-                                    <td class="text-center"><span class="badge bg-info"><?= $bat['dia'] ?></span></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+		<div class="col-md-4">
+			<div class="card border-0 shadow-sm h-100">
+				<div class="card-header bg-white py-3 border-0">
+					<h6 class="mb-0 fw-bold text-info"><i class="bi bi-droplet-fill me-2"></i>Aniversário de Batismo</h6>
+				</div>
+				<div class="table-responsive" style="max-height: 300px;">
+					<table class="table table-hover align-middle mb-0">
+						<thead class="bg-light small">
+							<tr>
+								<th>Nome</th>
+								<th class="text-center">Tempo</th>
+								<th class="text-center">Dia</th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php foreach($aniv_batismo as $bat): ?>
+								<tr>
+									<td class="small fw-bold"><?= $bat['membro_nome'] ?></td>
+									<td class="text-center small"><?= $bat['anos'] ?> anos</td>
+									<td class="text-center"><span class="badge bg-info"><?= $bat['dia'] ?></span></td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<div class="col-md-4">
+			<div class="card border-0 shadow-sm h-100">
+				<div class="card-header bg-white py-3 border-0">
+					<h6 class="mb-0 fw-bold text-danger"><i class="bi bi-heart-fill me-2"></i>Bodas / Casamento</h6>
+				</div>
+				<div class="table-responsive" style="max-height: 300px;">
+					<table class="table table-hover align-middle mb-0">
+						<thead class="bg-light small">
+							<tr>
+								<th>Nome</th>
+								<th class="text-center">Anos</th>
+								<th class="text-center">Dia</th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if(empty($aniv_casamento)): ?>
+								<tr><td colspan="3" class="text-center text-muted small py-3">Nenhum este mês</td></tr>
+							<?php endif; ?>
+							<?php foreach($aniv_casamento as $cas): ?>
+								<tr>
+									<td class="small fw-bold"><?= $cas['membro_nome'] ?></td>
+									<td class="text-center small"><?= $cas['anos'] ?> anos</td>
+									<td class="text-center"><span class="badge bg-danger"><?= $cas['dia'] ?></span></td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 // 1. Gráfico de Gênero
-new Chart(document.getElementById('chartGenero'), {
-    type: 'doughnut',
-    data: {
-        labels: [<?= "'" . implode("','", array_column($generos, 'genero')) . "'" ?>],
-        datasets: [{
-            data: [<?= implode(",", array_column($generos, 'total')) ?>],
-            backgroundColor: ['#0d6efd', '#fd3550', '#6c757d']
-        }]
-    },
-    options: {
-        plugins: { legend: { position: 'bottom' } },
-        cutout: '65%'
-    }
-});
+const ctxGenero = document.getElementById('chartGenero');
+if (ctxGenero) {
+    new Chart(ctxGenero, {
+        type: 'doughnut',
+        data: {
+            labels: [<?= "'" . implode("','", array_column($generos, 'genero')) . "'" ?>],
+            datasets: [{
+                data: [<?= implode(",", array_column($generos, 'total')) ?>],
+                backgroundColor: ['#0d6efd', '#fd3550', '#6c757d']
+            }]
+        },
+        options: {
+            plugins: { legend: { position: 'bottom' } },
+            cutout: '65%',
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
 
-// 2. Gráfico de Estado Civil com Filtro Dinâmico
-const dadosGeral = <?= json_encode($estado_civil_geral) ?>;
-const dadosMaiores = <?= json_encode($estado_civil_maiores) ?>;
-
+// 2. Gráfico de Estado Civil com Filtro Dinâmico (+18)
+const dadosGeral = <?= json_encode($estado_civil_geral ?? ['labels' => [], 'valores' => []]) ?>;
+const dadosMaiores = <?= json_encode($estado_civil_maiores ?? ['labels' => [], 'valores' => []]) ?>;
 const ctxEstadoCivil = document.getElementById('chartEstadoCivil');
-const chartEstadoCivil = new Chart(ctxEstadoCivil, {
-    type: 'doughnut',
-    data: {
-        labels: dadosGeral.labels,
-        datasets: [{
-            data: dadosGeral.valores,
-            backgroundColor: ['#0d6efd', '#198754', '#6f42c1', '#ffc107', '#dc3545', '#adb5bd']
-        }]
-    },
-    options: {
-        plugins: { legend: { position: 'bottom' } },
-        cutout: '65%',
-        responsive: true,
-        maintainAspectRatio: false
+
+if (ctxEstadoCivil) {
+    const chartEstadoCivil = new Chart(ctxEstadoCivil, {
+        type: 'doughnut',
+        data: {
+            labels: dadosGeral.labels,
+            datasets: [{
+                data: dadosGeral.valores,
+                backgroundColor: ['#0d6efd', '#198754', '#6f42c1', '#ffc107', '#dc3545', '#adb5bd']
+            }]
+        },
+        options: {
+            plugins: { legend: { position: 'bottom' } },
+            cutout: '65%',
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Lógica do Filtro (Checkbox +18)
+    const filtroMaiores = document.getElementById('filtroMaioresIdade');
+    if (filtroMaiores) {
+        filtroMaiores.addEventListener('change', function() {
+            const novosDados = this.checked ? dadosMaiores : dadosGeral;
+            chartEstadoCivil.data.labels = novosDados.labels;
+            chartEstadoCivil.data.datasets[0].data = novosDados.valores;
+            chartEstadoCivil.update();
+        });
     }
-});
+}
 
-// Lógica do Filtro (Checkbox +18)
-document.getElementById('filtroMaioresIdade').addEventListener('change', function() {
-    const novosDados = this.checked ? dadosMaiores : dadosGeral;
+// 3. Faixa Etária (Demografia)
+const ctxEtaria = document.getElementById('chartEtaria');
+if (ctxEtaria) {
+    new Chart(ctxEtaria, {
+        type: 'bar',
+        data: {
+            labels: ['Crianças', 'Jovens', 'Adultos', 'Idosos'],
+            datasets: [{
+                label: 'Membros',
+                // Usando as chaves retornadas pelo seu Model (getDashboardStats)
+                data: [
+                    <?= $faixa_etaria['criancas'] ?? 0 ?>,
+                    <?= $faixa_etaria['jovens'] ?? 0 ?>,
+                    <?= $faixa_etaria['adultos'] ?? 0 ?>,
+                    <?= $faixa_etaria['idosos'] ?? 0 ?>
+                ],
+                backgroundColor: '#198754',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, precision: 0 }
+                }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
 
-    // Atualiza os dados do gráfico
-    chartEstadoCivil.data.labels = novosDados.labels;
-    chartEstadoCivil.data.datasets[0].data = novosDados.valores;
-
-    // Anima a atualização das fatias
-    chartEstadoCivil.update();
-});
-
-// 3. Faixa Etária
-new Chart(document.getElementById('chartEtaria'), {
-    type: 'bar',
-    data: {
-        labels: ['Crianças', 'Jovens', 'Adultos', 'Idosos'],
-        datasets: [{
-            label: 'Membros',
-            data: [<?= $faixa_etaria['criancas'] ?>, <?= $faixa_etaria['jovens'] ?>, <?= $faixa_etaria['adultos'] ?>, <?= $faixa_etaria['idosos'] ?>],
-            backgroundColor: '#198754',
-            borderRadius: 4
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-        plugins: { legend: { display: false } }
-    }
-});
-
-// 4. Gráfico de Bairros
+// 4. Gráfico de Bairros (Ranking)
 const dadosBairros = <?= json_encode($bairros ?? []) ?>;
-if (dadosBairros.length > 0) {
-    new Chart(document.getElementById('chartBairros'), {
+const ctxBairros = document.getElementById('chartBairros');
+
+if (ctxBairros && dadosBairros.length > 0) {
+    new Chart(ctxBairros, {
         type: 'bar',
         data: {
             labels: dadosBairros.map(item => item.bairro),
@@ -223,7 +285,7 @@ if (dadosBairros.length > 0) {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: { beginAtZero: true, ticks: { stepSize: 1 } },
+                x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
                 y: { grid: { display: false } }
             }
         }

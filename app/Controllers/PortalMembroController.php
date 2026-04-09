@@ -25,6 +25,7 @@ class PortalMembroController extends Controller {
         $idIgreja = $_POST['igreja_id'];
 
         $dataBatismo = !empty($_POST['data_batismo']) ? $_POST['data_batismo'] : null;
+        $dataCasamento = !empty($_POST['data_casamento']) ? $_POST['data_casamento'] : null;
 
         $dados = [
             'igreja_id'    => $idIgreja,
@@ -35,13 +36,20 @@ class PortalMembroController extends Controller {
             'sexo'         => $_POST['sexo'],
             'estado_civil' => $_POST['estado_civil'],
             'data_batismo' => $dataBatismo,
+            'data_casamento' => $dataCasamento,
             'telefone'     => $_POST['telefone'],
             'rua'          => $_POST['rua'],
             'numero'       => $_POST['numero'],
+            'complemento'  => $_POST['complemento'],
             'bairro'       => $_POST['bairro'],
             'cidade'       => $_POST['cidade'],
             'estado'       => $_POST['estado'] ?? 'SP',
-            'cep'          => $_POST['cep']
+            'cep'          => $_POST['cep'],
+            'aceite_lgpd' => 1,
+            'data_aceite_lgpd' => date('Y-m-d H:i:s'),
+            'ip_aceite_lgpd'   => $_SERVER['REMOTE_ADDR'],
+            'rg'          => $_POST['rg'] ?? null,
+            'cpf'         => $_POST['cpf'] ?? null,
         ];
 
         $membroId = $model->registrarPendente($dados);
@@ -55,6 +63,7 @@ class PortalMembroController extends Controller {
             header("Location: " . url("PortalMembro/resumo/{$idBase64}?igreja={$idIgreja}"));
             exit;
         } else {
+            var_dump($dados);
             die("Erro ao registrar membro. Verifique os logs do banco de dados.");
         }
     }

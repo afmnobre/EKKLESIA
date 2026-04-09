@@ -154,14 +154,14 @@
         </div>
         <div class="col-4 text-center">
             <div class="signature-box">
-                <small class="d-block text-muted text-uppercase mb-2" style="font-size: 9px;">1º Diácono de Dia</small>
+                <small class="d-block text-muted text-uppercase mb-2" style="font-size: 9px;">1º Diácono Conferente</small>
                 <div class="border-bottom mx-3 mb-1"></div>
                 <span style="font-size: 11px;"><?= htmlspecialchars($conferente1 ?: 'Assinatura') ?></span>
             </div>
         </div>
         <div class="col-4 text-center">
             <div class="signature-box">
-                <small class="d-block text-muted text-uppercase mb-2" style="font-size: 9px;">2º Diácono de Dia</small>
+                <small class="d-block text-muted text-uppercase mb-2" style="font-size: 9px;">2º Diácono Conferente</small>
                 <div class="border-bottom mx-3 mb-1"></div>
                 <span style="font-size: 11px;"><?= htmlspecialchars($conferente2 ?: 'Assinatura') ?></span>
             </div>

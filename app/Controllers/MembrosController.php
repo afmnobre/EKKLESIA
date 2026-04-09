@@ -332,13 +332,16 @@ class MembrosController extends Controller
 		$data = [
 			'igreja_id'        => $idIgreja,
 			'registro_interno' => $registroInterno,
-			'nome'             => $_POST['nome'],
+			'nome'             => strtoupper(trim($_POST['nome'])), // Garante UPPERCASE no PHP
+			'rg'               => $_POST['rg'] ?? null,            // Novo campo
+			'cpf'              => $_POST['cpf'] ?? null,           // Novo campo
 			'nascimento'       => $_POST['data_nascimento'] ?: null,
 			'genero'           => $_POST['genero'] ?? null,
-			'estado_civil'     => $_POST['estado_civil'] ?? null, // Novo campo do POST
+			'estado_civil'     => $_POST['estado_civil'] ?? null,
 			'email'            => $_POST['email'] ?? null,
 			'telefone'         => $_POST['telefone'] ?? null,
 			'batismo'          => $_POST['data_batismo'] ?: null,
+			'data_casamento'   => $_POST['data_casamento'] ?: null,
 			'status'           => 'Ativo'
 		];
 
@@ -360,15 +363,19 @@ class MembrosController extends Controller
 
 	public function update($id)
 	{
-		$idIgreja = $_SESSION['usuario_igreja_id'];
+		$idIgreja = $_SESSION['usuario_igreja_id'] ?? die("Sessão expirada");
+
 		$dados = [
-			'nome'            => $_POST['nome'],
+			'nome'            => strtoupper(trim($_POST['nome'])), // Força Uppercase no servidor
+			'rg'              => $_POST['rg'] ?? null,            // Adicionado
+			'cpf'             => $_POST['cpf'] ?? null,           // Adicionado
 			'genero'          => $_POST['genero'] ?? null,
-			'estado_civil'    => $_POST['estado_civil'] ?? null, // Novo campo do POST
-			'email'           => $_POST['email'],
-			'telefone'        => $_POST['telefone'],
-			'data_nascimento' => $_POST['data_nascimento'],
-			'data_batismo'    => $_POST['data_batismo']
+			'estado_civil'    => $_POST['estado_civil'] ?? null,
+			'email'           => $_POST['email'] ?? null,
+			'telefone'        => $_POST['telefone'] ?? null,
+			'data_nascimento' => $_POST['data_nascimento'] ?: null, // Operador ?: garante NULL se string vazia
+			'data_batismo'    => $_POST['data_batismo'] ?: null,    // Operador ?: garante NULL se string vazia
+			'data_casamento'  => $_POST['data_casamento'] ?: null     // Operador ?: garante NULL se string vazia
 		];
 
 		if ($this->model->update($id, $idIgreja, $dados)) {
@@ -591,5 +598,16 @@ class MembrosController extends Controller
 		exit;
 	}
 
+	public function fichaCadastroManual() {
+		$idIgreja = $_SESSION['usuario_igreja_id'];
+
+		// Chamando o método que você já tem no Model
+		$igreja = $this->model->getIgrejaDados($idIgreja);
+
+		// Passando os dados para a view
+		$this->rawview('membros/ficha_manual', [
+			'igreja' => $igreja
+		]);
+	}
 
 }
