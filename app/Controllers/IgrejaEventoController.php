@@ -157,11 +157,14 @@ class IgrejaEventoController extends Controller
 		$sociedadeModel = new \App\Models\Sociedade();
 		$sociedades = $sociedadeModel->getAll($this->igrejaId);
 
-		// 3. Buscar dados da Igreja e do Pastor (usando o MembroModel)
+		// 3. Buscar dados da Igreja e do Pastor
 		$igrejaModel = new \App\Models\Igreja();
 		$membroModel = new \App\Models\Membro();
 
 		$dadosIgreja = $igrejaModel->getById($this->igrejaId);
+
+		// --- NOVA PARTE: Buscar Redes Sociais da Igreja ---
+		$redesSociais = $igrejaModel->getRedesSociais($this->igrejaId);
 
 		// Busca os dados completos do pastor se ele estiver definido na igreja
 		$dadosPastor = null;
@@ -175,7 +178,8 @@ class IgrejaEventoController extends Controller
 			'evento'     => $evento,
 			'sociedades' => $sociedades,
 			'igreja'     => $dadosIgreja,
-			'pastor'     => $dadosPastor // Nova variável disponível na view
+			'pastor'     => $dadosPastor,
+			'redes'      => $redesSociais // Variável adicionada para alimentar o acordeon
 		]);
 	}
 
