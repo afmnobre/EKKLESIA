@@ -12,33 +12,49 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
-    <style>
-        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .canvas-wrapper {
-            background: #2c2c2c; padding: 20px; border-radius: 12px;
-            display: flex; justify-content: center; align-items: center;
-            overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); min-height: 600px;
-        }
-        canvas { border: 1px solid #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .tool-btn { margin-bottom: 8px; text-align: left; font-size: 0.85rem; }
-        .accordion-button { font-size: 0.9rem; font-weight: 600; }
-        .input-file-hidden { width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; position: absolute; z-index: -1; }
+	<style>
+		body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 
-        .sociedade-item {
-            background: #fff; border: 1px solid #dee2e6; border-radius: 8px;
-            padding: 10px; margin-bottom: 10px;
-        }
-        .sociedade-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-        .sociedade-header img { height: 30px; width: 30px; object-fit: contain; border-radius: 4px; background: #f8f9fa; }
-        .sociedade-header span { font-weight: 600; font-size: 0.85rem; color: #333; }
+		.canvas-wrapper {
+			background: #2c2c2c; padding: 20px; border-radius: 12px;
+			display: flex; justify-content: center; align-items: center;
+			overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+			min-height: 600px;
+			position: relative;
+		}
 
-        /* Estilo para a barra de ferramentas estendida */
-        #text-controls { flex-wrap: wrap; padding: 10px; }
-        .control-group { display: flex; align-items: center; gap: 5px; border-right: 1px solid #ddd; padding-right: 10px; margin-right: 5px; }
-        .control-group:last-child { border-right: none; }
-        .font-select { width: 130px; font-size: 0.8rem; }
-        .size-input { width: 60px; font-size: 0.8rem; }
-    </style>
+		/* CORREÇÃO PARA O PAINEL: O container do Fabric deve ser responsivo */
+		.canvas-container {
+			max-width: 100% !important;
+			height: auto !important;
+			aspect-ratio: 1 / 1; /* Garante que o painel seja sempre um quadrado */
+		}
+
+		canvas {
+			border: 1px solid #000;
+			box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+			max-width: 100% !important; /* Força o canvas a respeitar o wrapper */
+			height: auto !important;
+		}
+
+		.tool-btn { margin-bottom: 8px; text-align: left; font-size: 0.85rem; }
+		.accordion-button { font-size: 0.9rem; font-weight: 600; }
+		.input-file-hidden { width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; position: absolute; z-index: -1; }
+
+		.sociedade-item {
+			background: #fff; border: 1px solid #dee2e6; border-radius: 8px;
+			padding: 10px; margin-bottom: 10px;
+		}
+		.sociedade-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+		.sociedade-header img { height: 30px; width: 30px; object-fit: contain; border-radius: 4px; background: #f8f9fa; }
+		.sociedade-header span { font-weight: 600; font-size: 0.85rem; color: #333; }
+
+		#text-controls { flex-wrap: wrap; padding: 10px; }
+		.control-group { display: flex; align-items: center; gap: 5px; border-right: 1px solid #ddd; padding-right: 10px; margin-right: 5px; }
+		.control-group:last-child { border-right: none; }
+		.font-select { width: 130px; font-size: 0.8rem; }
+		.size-input { width: 60px; font-size: 0.8rem; }
+	</style>
 </head>
 <body>
 
@@ -133,6 +149,68 @@
                         </div>
                     </div>
 
+					<div class="accordion-item border-0">
+						<h2 class="accordion-header">
+							<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTextosProntos">
+								<i class="bi bi- megaphone me-2 text-info"></i> Conteúdo Dinâmico
+							</button>
+						</h2>
+						<div id="collapseTextosProntos" class="accordion-collapse collapse" data-bs-parent="#toolsAccordion">
+							<div class="accordion-body p-2">
+
+								<label class="small fw-bold text-muted mb-1">DADOS DO EVENTO</label>
+								<button class="btn btn-sm btn-outline-info w-100 mb-1 text-start" onclick="addTexto('<?= addslashes($evento['evento_titulo']) ?>', 70, true)">
+									<i class="bi bi-type-h1"></i> <?= $evento['evento_titulo'] ?>
+								</button>
+								<button class="btn btn-sm btn-outline-info w-100 mb-1 text-start" onclick="addTexto('<?= date('d/m/Y H:i', strtotime($evento['evento_data_hora_inicio'])) ?>', 40, false)">
+									<i class="bi bi-calendar-event"></i> <?= date('d/m/H:i', strtotime($evento['evento_data_hora_inicio'])) ?>
+								</button>
+								<button class="btn btn-sm btn-outline-info w-100 mb-3 text-start" onclick="addTexto('<?= addslashes($evento['evento_local']) ?>', 35, false)">
+									<i class="bi bi-geo-alt"></i> <?= $evento['evento_local'] ?>
+								</button>
+
+								<label class="small fw-bold text-muted mb-1">DADOS DA IGREJA</label>
+								<button class="btn btn-sm btn-outline-secondary w-100 mb-1 text-start" onclick="addTexto('<?= addslashes($igreja['igreja_nome']) ?>', 45, true)">
+									<i class="bi bi-building"></i> <?= $igreja['igreja_nome'] ?>
+                                </button>
+
+                                <?php if(!empty($igreja['igreja_endereco'])): ?>
+                                    <button class="btn btn-sm btn-outline-secondary w-100 mb-3 text-start" onclick="addTexto('<?= addslashes($igreja['igreja_endereco']) ?>', 25, false)">
+                                        <i class="bi bi-geo-alt-fill"></i> <?= $igreja['igreja_endereco'] ?>
+                                    </button>
+                                <?php endif; ?>
+
+								<?php if($pastor): ?>
+									<hr>
+									<label class="small fw-bold text-muted mb-1">PASTOR</label>
+									<div class="d-flex gap-1 mb-2">
+										<button class="btn btn-sm btn-dark flex-grow-1" onclick="addTexto('Rev. <?= addslashes($pastor['membro_nome']) ?>', 35, true)">Nome</button>
+										<?php if(!empty($pastor['membro_foto_arquivo'])): ?>
+											<?php
+												$urlFotoPastor = url("assets/uploads/{$igreja['igreja_id']}/membros/{$pastor['membro_registro_interno']}/{$pastor['membro_foto_arquivo']}");
+											?>
+											<button class="btn btn-sm btn-primary" onclick="addImageToCanvas('<?= $urlFotoPastor ?>', 400)">
+												<i class="bi bi-image"></i> Foto
+											</button>
+										<?php endif; ?>
+									</div>
+								<?php endif; ?>
+
+								<label class="small fw-bold text-muted mb-1">REDES SOCIAIS</label>
+								<div class="row g-1">
+									<?php if(!empty($igreja['igreja_instagram'])): ?>
+										<div class="col-6"><button class="btn btn-xs btn-light border w-100 py-1" style="font-size: 11px;" onclick="addTexto('<?= $igreja['igreja_instagram'] ?>', 25, false)">Instagram</button></div>
+									<?php endif; ?>
+									<?php if(!empty($igreja['igreja_youtube'])): ?>
+										<div class="col-6"><button class="btn btn-xs btn-light border w-100 py-1" style="font-size: 11px;" onclick="addTexto('<?= $igreja['igreja_youtube'] ?>', 25, false)">YouTube</button></div>
+									<?php endif; ?>
+								</div>
+
+							</div>
+						</div>
+					</div>
+
+
                     <div class="accordion-item border-0">
                         <h2 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
@@ -208,7 +286,7 @@
 </div>
 
 <script>
-    // Inicialização do Canvas
+    // 1. Inicialização do Canvas (Sempre 1080x1080 interno para alta qualidade)
     const canvas = new fabric.Canvas('canvasBanner', {
         width: 1080,
         height: 1080,
@@ -220,6 +298,29 @@
     fabric.Object.prototype.cornerColor = '#2196F3';
     fabric.Object.prototype.cornerSize = 12;
 
+    // 2. Ajuste de Zoom Visual (Responsividade sem alterar a resolução real)
+    function ajustarZoom() {
+        const wrapper = document.querySelector('.canvas-wrapper');
+        if (!wrapper) return;
+
+        const larguraDisponivel = wrapper.offsetWidth - 40;
+        const scale = larguraDisponivel / 1080;
+
+        if (larguraDisponivel < 1080) {
+            canvas.setZoom(scale);
+            canvas.setWidth(1080 * scale);
+            canvas.setHeight(1080 * scale);
+        } else {
+            canvas.setZoom(1);
+            canvas.setWidth(1080);
+            canvas.setHeight(1080);
+        }
+    }
+
+    window.addEventListener('resize', ajustarZoom);
+    setTimeout(ajustarZoom, 100);
+
+    // 3. Atalhos de Teclado
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Delete' || (e.key === 'Backspace' && !canvas.getActiveObject()?.isEditing)) {
             deleteSelected();
@@ -234,17 +335,7 @@
         }
     }
 
-    function ajustarZoom() {
-        const wrapper = document.querySelector('.canvas-wrapper');
-        if (!wrapper) return;
-        const scale = (wrapper.offsetWidth - 40) / 1080;
-        canvas.setZoom(scale);
-        canvas.setWidth(1080 * scale);
-        canvas.setHeight(1080 * scale);
-    }
-    window.addEventListener('resize', ajustarZoom);
-    ajustarZoom();
-
+    // 4. Funções de Inserção de Conteúdo
     function addTexto(txt, size, bold) {
         if (!txt) return;
         const t = new fabric.IText(txt.toString(), {
@@ -274,6 +365,7 @@
         }, { crossOrigin: 'anonymous' });
     }
 
+    // 5. Controles de Propriedades e Camadas
     function updateProp(p, v) {
         const obj = canvas.getActiveObject();
         if (obj) {
@@ -298,6 +390,7 @@
         canvas.renderAll();
     }
 
+    // 6. Manipulação de Eventos do Canvas
     canvas.on('selection:created', (e) => updateControlUI(e.selected[0]));
     canvas.on('selection:updated', (e) => updateControlUI(e.selected[0]));
     canvas.on('selection:cleared', () => document.getElementById('text-controls').classList.add('d-none'));
@@ -313,7 +406,7 @@
         }
     }
 
-    // --- SEÇÃO DE MEMBROS ---
+    // 7. Seção de Membros e API
     document.addEventListener('DOMContentLoaded', () => {
         const sel = new Choices('#select-membros', { searchEnabled: true, placeholderValue: 'Buscar membro...' });
         let currentMember = null;
@@ -339,37 +432,35 @@
 
         document.getElementById('btn-add-nome').onclick = () => currentMember && addTexto(currentMember.membro_nome, 60, true);
         document.getElementById('btn-add-cargo').onclick = () => currentMember && addTexto(currentMember.cargos || 'Membro', 35, false);
-        		document.getElementById('btn-add-endereco').onclick = () => {
-			if (currentMember) {
-				// Monta o endereço concatenando os campos disponíveis
-				const rua = currentMember.membro_endereco_rua || '';
-				const num = currentMember.membro_endereco_numero ? `, ${currentMember.membro_endereco_numero}` : '';
-				const bairro = currentMember.membro_endereco_bairro ? ` - ${currentMember.membro_endereco_bairro}` : '';
-				const cidade = currentMember.membro_endereco_cidade ? ` (${currentMember.membro_endereco_cidade})` : '';
 
-				const enderecoCompleto = `${rua}${num}${bairro}${cidade}`;
+        document.getElementById('btn-add-endereco').onclick = () => {
+            if (currentMember) {
+                const rua = currentMember.membro_endereco_rua || '';
+                const num = currentMember.membro_endereco_numero ? `, ${currentMember.membro_endereco_numero}` : '';
+                const bairro = currentMember.membro_endereco_bairro ? ` - ${currentMember.membro_endereco_bairro}` : '';
+                const cidade = currentMember.membro_endereco_cidade ? ` (${currentMember.membro_endereco_cidade})` : '';
+                const enderecoCompleto = `${rua}${num}${bairro}${cidade}`;
 
-				if (enderecoCompleto.trim() !== "") {
-					addTexto(enderecoCompleto, 25, false);
-				} else {
-					alert("Endereço não preenchido no cadastro deste membro.");
-				}
-			}
-		};
+                if (enderecoCompleto.trim() !== "") {
+                    addTexto(enderecoCompleto, 25, false);
+                } else {
+                    alert("Endereço não preenchido no cadastro deste membro.");
+                }
+            }
+        };
 
         document.getElementById('btn-add-foto').onclick = () => {
             if (currentMember && currentMember.membro_foto_arquivo) {
-                // FALLBACK: Se a variável PHP falhar, tentamos pegar do objeto ou da sessão
-                const igrejaId = '<?= $igrejaSelecionada->igreja_id ?? $_SESSION['usuario_igreja_id'] ?>';
+                const igrejaId = '<?= $igreja['igreja_id'] ?? $_SESSION['usuario_igreja_id'] ?>';
                 const registroId = currentMember.membro_registro_interno;
                 const arquivo = currentMember.membro_foto_arquivo;
-
                 const urlFoto = `<?= url('assets/uploads/') ?>${igrejaId}/membros/${registroId}/${arquivo}`;
                 addImageToCanvas(urlFoto, 400);
             }
         };
     });
 
+    // 8. Upload e Background (CORREÇÃO DE ESTICAR IMAGEM)
     document.getElementById('bgColor').oninput = (e) => {
         canvas.setBackgroundImage(null, canvas.renderAll.bind(canvas));
         canvas.backgroundColor = e.target.value;
@@ -381,10 +472,17 @@
         const reader = new FileReader();
         reader.onload = (f) => {
             fabric.Image.fromURL(f.target.result, img => {
-                const scale = 1080 / img.width;
+                // Força a imagem a ESTICAR para ocupar exatamente 1080x1080
+                const scaleX = 1080 / img.width;
+                const scaleY = 1080 / img.height;
+
                 canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                    scaleX: scale, scaleY: scale, originX: 'left', originY: 'top'
+                    scaleX: scaleX,
+                    scaleY: scaleY,
+                    originX: 'left',
+                    originY: 'top'
                 });
+                e.target.value = '';
             });
         };
         reader.readAsDataURL(e.target.files[0]);
@@ -397,15 +495,20 @@
         reader.readAsDataURL(e.target.files[0]);
     };
 
+    // 9. Exportação
     function exportarBanner() {
+        // Reseta zoom para garantir qualidade 1:1 na exportação
         canvas.setZoom(1);
         canvas.setWidth(1080);
         canvas.setHeight(1080);
+
         const dataURL = canvas.toDataURL({ format: 'png', quality: 1.0 });
         const link = document.createElement('a');
         link.download = `Banner_Ekklesia_${Date.now()}.png`;
         link.href = dataURL;
         link.click();
+
+        // Retorna o zoom visual após exportar
         ajustarZoom();
     }
 </script>

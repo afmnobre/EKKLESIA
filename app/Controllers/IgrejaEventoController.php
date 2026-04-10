@@ -157,16 +157,25 @@ class IgrejaEventoController extends Controller
 		$sociedadeModel = new \App\Models\Sociedade();
 		$sociedades = $sociedadeModel->getAll($this->igrejaId);
 
-		// 3. BUSCAR DADOS DA IGREJA (Para o Logo Local)
+		// 3. Buscar dados da Igreja e do Pastor (usando o MembroModel)
 		$igrejaModel = new \App\Models\Igreja();
+		$membroModel = new \App\Models\Membro();
+
 		$dadosIgreja = $igrejaModel->getById($this->igrejaId);
+
+		// Busca os dados completos do pastor se ele estiver definido na igreja
+		$dadosPastor = null;
+		if (!empty($dadosIgreja['igreja_pastor_id'])) {
+			$dadosPastor = $membroModel->getByIdCompleto($dadosIgreja['igreja_pastor_id'], $this->igrejaId);
+		}
 
 		// 4. Passar tudo para a view
 		$this->view('igrejaseventos/banner_builder', [
 			'titulo'     => 'Criar Banner do Evento',
 			'evento'     => $evento,
 			'sociedades' => $sociedades,
-			'igreja'     => $dadosIgreja // Agora a variável $igreja existirá na view!
+			'igreja'     => $dadosIgreja,
+			'pastor'     => $dadosPastor // Nova variável disponível na view
 		]);
 	}
 
