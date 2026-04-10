@@ -236,5 +236,19 @@ class BoletimSemanal
 		return null;
 	}
 
+	public function buscarEventosIgreja($igrejaId)
+	{
+		$sql = "SELECT * FROM igrejas_eventos
+				WHERE evento_igreja_id = ?
+				AND evento_status = 'Agendado'
+				AND DATE(evento_data_hora_inicio) >= CURDATE()
+				ORDER BY evento_data_hora_inicio ASC
+				LIMIT 5";
+
+		$st = $this->db->prepare($sql);
+		$st->execute([$igrejaId]);
+		return $st->fetchAll(PDO::FETCH_ASSOC);
+	}
+
 
 }

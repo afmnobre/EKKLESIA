@@ -25,8 +25,13 @@ class Membro
 	public function getAll($igrejaId)
 	{
 		$sql = "SELECT m.*,
-					   e.membro_endereco_rua, e.membro_endereco_cidade,
-					   e.membro_endereco_estado, e.membro_endereco_cep,
+					   e.membro_endereco_rua,
+					   e.membro_endereco_numero,
+					   e.membro_endereco_complemento,
+					   e.membro_endereco_bairro,
+					   e.membro_endereco_cidade,
+					   e.membro_endereco_estado,
+					   e.membro_endereco_cep,
 					   f.membro_foto_arquivo,
 					   GROUP_CONCAT(c.cargo_nome SEPARATOR ', ') as cargos_nomes
 				FROM membros m
@@ -36,7 +41,7 @@ class Membro
 				LEFT JOIN cargos c ON v.vinculo_cargo_id = c.cargo_id
 				WHERE m.membro_igreja_id = ?
 				GROUP BY m.membro_id
-				ORDER BY m.membro_id DESC";
+				ORDER BY m.membro_nome ASC"; // Dica: mudei para ordem alfabética para facilitar sua busca no Choices
 
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([$igrejaId]);
@@ -589,7 +594,53 @@ class Membro
         return $stmt->execute([$novaSenhaHash, $membroId, $igrejaId]);
     }
 
+	// No Membro.php
+	public function buscarCompletoParaBanner($igrejaId, $termo)
+	{
+		$sql = "SELECT
+					m.membro_id,
+					m.membro_nome,
+					m.membro_registro_interno,
+					f.membro_foto_arquivo,
+					e.membro_endereco_rua,
+					e.membro_endereco_numero,
+					e.membro_endereco_complemento,
+					e.membro_endereco_bairro,
+					e.membro_endereco_cidade,
+					e.membro_endereco_estado,
+					(SELECT GROUP_CONCAT(c.cargo_nome SEPARATOR ', ')
+					 FROM membros_cargos_vinculo v
+					 JOIN cargos c ON v.vinculo_cargo_id = c.cargo_id
+					 WHERE v.vinculo_membro_id = m.membro_id) as cargos
+				FROM membros m
+				LEFT JOIN membros_fotos f ON m.membro_id = f.membro_foto_membro_id
+				LEFT JOIN membros_enderecos e ON m.membro_id = e.membro_endereco_membro_id
+				WHERE m.membro_igreja_id = :igreja AND m.membro_nome LIKE :termo
+				LIMIT 20";
 
+		$st = $this->db->prepare($sql);
+		$st->execute([
+			':igreja' => $igrejaId,
+			':termo' => "%$termo%"
+		]);
+
+		$resultados = $st->fetchAll(\PDO::FETCH_ASSOC);
+
+		// Formata o endereço completo para cada membro retornado
+		foreach ($resultados as &$m) {
+			$end = [];
+			if (!empty($m['membro_endereco_rua'])) $end[] = $m['membro_endereco_rua'];
+			if (!empty($m['membro_endereco_numero'])) $end[] = "nº " . $m['membro_endereco_numero'];
+			if (!empty($m['membro_endereco_complemento'])) $end[] = "(" . $m['membro_endereco_complemento'] . ")";
+			if (!empty($m['membro_endereco_bairro'])) $end[] = $m['membro_endereco_bairro'];
+			if (!empty($m['membro_endereco_cidade'])) $end[] = $m['membro_endereco_cidade'];
+			if (!empty($m['membro_endereco_estado'])) $end[] = $m['membro_endereco_estado'];
+
+			$m['endereco_completo_formatado'] = implode(', ', $end);
+		}
+
+		return $resultados;
+	}
 
 
 }

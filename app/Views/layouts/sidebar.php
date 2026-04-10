@@ -28,7 +28,9 @@
                 <a href="<?= url('igreja/editar') ?>">Atualizar Dados</a>
                 <a href="<?= url('mensagemDominical') ?>">Mensagens Dominicais</a>
                 <a href="<?= url('liturgia') ?>">Ordem Litúrgica</a>
+                <a href="<?= url('IgrejaEvento') ?>">Eventos da Igreja</a>
                 <a href="<?= url('boletimSemanal') ?>">Boletim Semanal</a>
+                <a href="<?= url('Calendario') ?>">Calendário</a>
             </div>
 
             <a class="menu-link" data-bs-toggle="collapse" href="#membros">👥 Membros</a>
@@ -99,6 +101,7 @@
             <div class="collapse submenu" id="configuracoes">
                 <a target='_blank' href="<?= url('admin/usuarios') ?>">Gestão de Usuários</a>
                 <a target='_blank' href="<?= url('admin/perfis') ?>">Perfis e Permissões</a>
+                <a href="<?= url('Backup') ?>">Backup Database</a>
             </div>
             <hr class="text-white-50">
         <?php endif; ?>

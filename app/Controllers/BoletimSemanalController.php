@@ -87,6 +87,29 @@ class BoletimSemanalController extends Controller
             ];
         }
 
+		// --- 2.1 EVENTOS GERAIS DA IGREJA ---
+		$eventosIgrejaBrutos = $this->model->buscarEventosIgreja($igrejaId);
+		$eventosIgreja = [];
+
+		foreach ($eventosIgrejaBrutos as $ev) {
+			// Pegamos a logo da igreja que já está no array da liturgia
+			$logoNome = $liturgia['igreja_logo'] ?? '';
+
+			$caminhoLogo = !empty($logoNome)
+				? "assets/uploads/{$igrejaId}/logo/{$logoNome}"
+				: "assets/img/logo_igreja_calendario.png";
+
+			$eventosIgreja[] = [
+				'titulo' => $ev['evento_titulo'],
+				'data'   => date('d/m', strtotime($ev['evento_data_hora_inicio'])),
+				'hora'   => date('H:i', strtotime($ev['evento_data_hora_inicio'])),
+				'local'  => $ev['evento_local'],
+				'logo'   => $caminhoLogo,
+				'cor'    => $ev['evento_cor'] ?? '#0B1C2D'
+			];
+		}
+
+
 		// 3. CELEBRAÇÕES (Nascimento, Batismo e Casamento)
 		$aniversariantes = $this->model->buscarAniversariantesMes($igrejaId);
 		$mesAtual = (int)date('m');
@@ -169,7 +192,9 @@ class BoletimSemanalController extends Controller
             'dirigente_nome' => $liturgia ? ($liturgia['nome_membro_dirigente'] ?: $liturgia['igreja_liturgia_dirigente_nome']) : 'Não informado',
             'dirigente_foto' => $dirigente_foto,
             'pregador_nome'  => $liturgia ? ($liturgia['nome_membro_pregador'] ?: $liturgia['igreja_liturgia_pregador_nome']) : 'Não informado',
-            'pregador_foto'  => $pregador_foto
+            'pregador_foto'  => $pregador_foto,
+            'eventos'        => $eventos, // Eventos das Sociedades
+            'eventosIgreja'  => $eventosIgreja // Eventos Gerais (NOVO)
         ];
 
         $this->rawview('boletinssemanais/index', $dados);
