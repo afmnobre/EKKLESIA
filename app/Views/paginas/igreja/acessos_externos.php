@@ -1,4 +1,4 @@
-<!DOCTYPE html<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -12,31 +12,18 @@
         .qr-code { width: 180px; height: 180px; background: #fff; padding: 5px; }
         .header-container { border-bottom: 2px solid #dee2e6; margin-bottom: 30px; padding-bottom: 15px; }
 
-        /* Logos */
         .logo-igreja { max-height: 70px; width: auto; }
         .logo-sarca { max-height: 50px; width: auto; }
         .logo-sarca-completa { max-height: 40px; width: auto; }
 
-        /* CONFIGURAÇÃO DE IMPRESSÃO 2x2 PAISAGEM */
         @media print {
-            @page {
-                size: landscape;
-                margin: 1cm;
-            }
+            @page { size: landscape; margin: 1cm; }
             .no-print { display: none !important; }
             body { background: white !important; padding: 0 !important; }
             .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; }
-
-            /* Força 2 colunas na impressão (Grid 2x2) */
             .row { display: flex !important; flex-wrap: wrap !important; }
             .col-print-6 { width: 50% !important; flex: 0 0 50% !important; max-width: 50% !important; }
-
-            .card {
-                border: 1px solid #eee !important;
-                box-shadow: none !important;
-                margin-bottom: 10px !important;
-                break-inside: avoid;
-            }
+            .card { border: 1px solid #eee !important; box-shadow: none !important; margin-bottom: 10px !important; break-inside: avoid; }
             .qr-code { width: 160px !important; height: 160px !important; }
             .header-container { margin-bottom: 20px !important; }
         }
@@ -66,11 +53,20 @@
     <div class="row g-3">
         <?php
         $listaCanais = $canais ?? [];
+
+        // ADICIONANDO O PORTAL DE CONFERÊNCIA MANUALMENTE NA LISTA
+        $listaCanais[] = [
+            'titulo' => 'Conferência de Dízimos',
+            'url'    => full_url('dizimoOferta/login'), // A URL do seu novo MVC
+            'icon'   => 'bi-shield-check',
+            'bg'     => 'bg-dark'
+        ];
+
         foreach ($listaCanais as $item):
             $qrCodeUrl = "https://quickchart.io/qr?text=" . urlencode($item['url']) . "&size=300&margin=1";
         ?>
         <div class="col-md-6 col-lg-3 col-print-6">
-            <div class="card h-100 shadow-sm qr-card text-center">
+            <div class="card h-100 shadow-sm qr-card text-center" style="border-top-color: <?= $item['bg'] == 'bg-dark' ? '#212529' : '' ?>;">
                 <div class="card-body p-3">
                     <div class="mb-2">
                         <i class="bi <?= $item['icon'] ?> fs-4 <?= str_replace('bg-', 'text-', $item['bg']) ?>"></i>
@@ -78,10 +74,12 @@
                     </div>
 
                     <div class="mb-2">
-                        <img src="<?= $qrCodeUrl ?>" alt="QR Code" class="qr-code border rounded shadow-sm">
+                        <a href="<?= $item['url'] ?>" target="_blank">
+                            <img src="<?= $qrCodeUrl ?>" alt="QR Code" class="qr-code border rounded shadow-sm">
+                        </a>
                     </div>
 
-                    <div class="small text-muted font-monospace" style="font-size: 0.65rem;">
+                    <div class="small text-muted font-monospace" style="font-size: 0.65rem; word-break: break-all;">
                         <?= str_replace(['https://', 'http://'], '', $item['url']) ?>
                     </div>
                 </div>
