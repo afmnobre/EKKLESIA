@@ -391,30 +391,46 @@ $semana = getNumeroSemanaAtual();
 				<?php endforeach; ?>
 			</div>
 
-			<div class="mb-4">
-				<h5 class="col-titulo"><i class="bi bi-calendar2-check me-2"></i>Agenda da Igreja</h5>
-				<?php if(!empty($eventosIgreja)): ?>
-					<?php foreach($eventosIgreja as $ei): ?>
-						<div class="card card-evento border-0 shadow-sm p-2 mb-2" style="border-left: 4px solid <?= $ei['cor'] ?> !important;">
-							<div class="d-flex align-items-center mb-1">
-								<img src="<?= url($ei['logo']) ?>" class="rounded border me-2" style="width: 20px; height: 20px; object-fit: contain;">
-								<span class="text-muted fw-bold" style="font-size: 0.6rem; text-transform: uppercase;">Geral</span>
-							</div>
-							<h6 class="fw-bold mb-1" style="font-size: 0.85rem;"><?= $ei['titulo'] ?></h6>
-							<div class="text-muted" style="font-size: 0.7rem;">
-								<i class="bi bi-calendar-event me-1"></i><?= $ei['data'] ?> às <?= $ei['hora'] ?>
-								<br>
-								<i class="bi bi-geo-alt me-1"></i><?= $ei['local'] ?>
-							</div>
-						</div>
-					<?php endforeach; ?>
-				<?php else: ?>
-					<div class="text-center py-3 opacity-50">
-						<i class="bi bi-calendar-x d-block fs-4"></i>
-						<small>Nenhum evento geral para os próximos dias.</small>
-					</div>
-				<?php endif; ?>
-			</div>
+<div class="mb-4">
+    <h5 class="col-titulo"><i class="bi bi-calendar2-check me-2"></i>Agenda da Igreja</h5>
+
+    <?php if(!empty($proximaEscala)): ?>
+        <div class="card card-evento border-0 shadow-sm p-2 mb-2" style="border-left: 4px solid #fd7e14 !important; background-color: #fffaf5;">
+            <div class="d-flex align-items-center mb-1">
+                <i class="bi bi-house-heart me-2 text-orange" style="font-size: 0.8rem;"></i>
+                <span class="text-muted fw-bold" style="font-size: 0.6rem; text-transform: uppercase;">Culto no Lar / Externo</span>
+            </div>
+            <h6 class="fw-bold mb-1" style="font-size: 0.85rem; color: #d9480f;"><?= $proximaEscala['programacao_titulo'] ?></h6>
+            <div class="text-muted" style="font-size: 0.7rem;">
+                <i class="bi bi-calendar-event me-1"></i><?= $proximaEscala['data_formatada'] ?> às <?= date('H:i', strtotime($proximaEscala['programacao_hora'])) ?>
+                <br>
+                <i class="bi bi-geo-alt-fill me-1 text-danger"></i><strong><?= $proximaEscala['local_nome_endereco'] ?></strong>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <?php if(!empty($eventosIgreja)): ?>
+        <?php foreach($eventosIgreja as $ei): ?>
+            <?php
+               // Se já mostramos o destaque externo acima, podemos pular ele aqui
+               // ou apenas mostrar todos em ordem. Se quiser pular o repetido:
+               if(isset($ei['is_externo']) && $ei['is_externo']) continue;
+            ?>
+            <div class="card card-evento border-0 shadow-sm p-2 mb-2" style="border-left: 4px solid <?= $ei['cor'] ?> !important;">
+                <div class="d-flex align-items-center mb-1">
+                    <img src="<?= url($ei['logo']) ?>" class="rounded border me-2" style="width: 20px; height: 20px; object-fit: contain;">
+                    <span class="text-muted fw-bold" style="font-size: 0.6rem; text-transform: uppercase;">Geral</span>
+                </div>
+                <h6 class="fw-bold mb-1" style="font-size: 0.85rem;"><?= $ei['titulo'] ?></h6>
+                <div class="text-muted" style="font-size: 0.7rem;">
+                    <i class="bi bi-calendar-event me-1"></i><?= $ei['data'] ?> às <?= $ei['hora'] ?>
+                    <br>
+                    <i class="bi bi-geo-alt me-1"></i><?= $ei['local'] ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
 
             <div>
                 <h5 class="col-titulo"><i class="bi bi-calendar-event me-2"></i>Atividades das Sociedades</h5>

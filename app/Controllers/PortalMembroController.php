@@ -264,5 +264,28 @@ class PortalMembroController extends Controller {
             header("Location: " . url("PortalMembro/login"));
         }
         exit;
+
     }
+
+	public function calendario()
+	{
+		$igrejaId = $_SESSION['membro_igreja_id'];
+
+		// 1. Busca dados da igreja para o layout
+		$igrejaModel = new \App\Models\Igreja();
+		$igreja_dados = $igrejaModel->getById($igrejaId);
+
+		// 2. Busca os eventos usando o Model Calendario
+		$calendarioModel = new \App\Models\Calendario();
+		$eventos = $calendarioModel->getEventos($igrejaId);
+
+		// 3. Chama a view
+		$this->rawview('calendarios/index', [
+			'titulo'       => 'Agenda de Eventos',
+			'igreja_dados' => $igreja_dados,
+			'eventos'      => $eventos // Dados processados (aniversários, ceia, eventos, etc)
+		]);
+	}
+
+
 }

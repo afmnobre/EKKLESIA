@@ -31,29 +31,34 @@ class BoletimSemanalController extends Controller
             die("Acesso negado: Igreja não identificada.");
         }
 
-        // 1. LITURGIA
+        // 1. LITURGIA E LOGO GLOBAL
         $liturgia = $this->model->getUltimaLiturgia($igrejaId);
 
-		// --- LÓGICA DE HINOS NO CONTROLLER ---
-		if ($liturgia && !empty($liturgia['itens'])) {
-			foreach ($liturgia['itens'] as &$item) {
-				$tipoLower = strtolower($item['tipo'] ?? '');
+        // --- DEFINIÇÃO DO LOGO DA IGREJA (CORREÇÃO DO BUG) ---
+        // Definimos aqui para que seja usado em qualquer lugar do controller
+        $logoNome = $liturgia['igreja_logo'] ?? '';
+        $caminhoLogo = !empty($logoNome)
+            ? "assets/uploads/{$igrejaId}/logo/{$logoNome}"
+            : "assets/img/logo_igreja_calendario.png";
 
-				if ($tipoLower == 'hino') {
-					$numeroHino = preg_replace('/[^0-9]/', '', $item['desc'] ?? '');
-					if (!empty($numeroHino)) {
-						// CHAMADA PARA O NOVO MÉTODO LIMPO
-						$hinoData = $this->model->getHinoLimpo($numeroHino);
+        // --- LÓGICA DE HINOS NO CONTROLLER ---
+        if ($liturgia && !empty($liturgia['itens'])) {
+            foreach ($liturgia['itens'] as &$item) {
+                $tipoLower = strtolower($item['tipo'] ?? '');
 
-						if ($hinoData) {
-							$item['hino_titulo'] = $hinoData['titulo'];
-							$item['hino_letra']  = $hinoData['letra'];
-						}
-					}
-				}
-			}
-			unset($item);
-		}
+                if ($tipoLower == 'hino') {
+                    $numeroHino = preg_replace('/[^0-9]/', '', $item['desc'] ?? '');
+                    if (!empty($numeroHino)) {
+                        $hinoData = $this->model->getHinoLimpo($numeroHino);
+                        if ($hinoData) {
+                            $item['hino_titulo'] = $hinoData['titulo'];
+                            $item['hino_letra']  = $hinoData['letra'];
+                        }
+                    }
+                }
+            }
+            unset($item);
+        }
 
         // PROCESSAMENTO DE FOTOS DO DIRIGENTE E PREGADOR
         $dirigente_foto = null;
@@ -73,7 +78,7 @@ class BoletimSemanalController extends Controller
         $eventos = [];
 
         foreach ($eventosBrutos as $ev) {
-            $logo = !empty($ev['sociedade_logo'])
+            $logoSociedade = !empty($ev['sociedade_logo'])
                     ? "assets/uploads/" . $ev['sociedade_logo']
                     : "assets/img/logo-placeholder.png";
 
@@ -83,88 +88,97 @@ class BoletimSemanalController extends Controller
                 'data'      => date('d/m', strtotime($ev['sociedade_evento_data_hora_inicio'])),
                 'hora'      => date('H:i', strtotime($ev['sociedade_evento_data_hora_inicio'])),
                 'local'     => $ev['sociedade_evento_local'],
-                'logo'      => $logo
+                'logo'      => $logoSociedade
             ];
         }
 
-		// --- 2.1 EVENTOS GERAIS DA IGREJA ---
-		$eventosIgrejaBrutos = $this->model->buscarEventosIgreja($igrejaId);
-		$eventosIgreja = [];
+        // --- 2.1 EVENTOS GERAIS DA IGREJA ---
+        $eventosIgrejaBrutos = $this->model->buscarEventosIgreja($igrejaId);
+        $eventosIgreja = [];
 
-		foreach ($eventosIgrejaBrutos as $ev) {
-			// Pegamos a logo da igreja que já está no array da liturgia
-			$logoNome = $liturgia['igreja_logo'] ?? '';
+        // Busca a próxima escala externa gravada na tabela de locais
+        $proximaEscala = $this->model->getProximaEscalaExterna($igrejaId);
 
-			$caminhoLogo = !empty($logoNome)
-				? "assets/uploads/{$igrejaId}/logo/{$logoNome}"
-				: "assets/img/logo_igreja_calendario.png";
+        if ($proximaEscala) {
+            $eventosIgreja[] = [
+                'titulo'     => $proximaEscala['programacao_titulo'],
+                'data'       => date('d/m', strtotime($proximaEscala['data_evento'])),
+                'hora'       => date('H:i', strtotime($proximaEscala['programacao_hora'])),
+                'local'      => $proximaEscala['local_nome_endereco'],
+                'logo'       => $caminhoLogo, // Usa o logo global definido acima
+                'cor'        => '#fd7e14',
+                'is_externo' => true
+            ];
+        }
 
-			$eventosIgreja[] = [
-				'titulo' => $ev['evento_titulo'],
-				'data'   => date('d/m', strtotime($ev['evento_data_hora_inicio'])),
-				'hora'   => date('H:i', strtotime($ev['evento_data_hora_inicio'])),
-				'local'  => $ev['evento_local'],
-				'logo'   => $caminhoLogo,
-				'cor'    => $ev['evento_cor'] ?? '#0B1C2D'
-			];
-		}
+        // Preenchimento normal dos outros eventos gerais
+        foreach ($eventosIgrejaBrutos as $ev) {
+            $eventosIgreja[] = [
+                'titulo'     => $ev['evento_titulo'],
+                'data'       => date('d/m', strtotime($ev['evento_data_hora_inicio'])),
+                'hora'       => date('H:i', strtotime($ev['evento_data_hora_inicio'])),
+                'local'      => $ev['evento_local'],
+                'logo'       => $caminhoLogo, // Usa o logo global definido acima
+                'cor'        => $ev['evento_cor'] ?? '#0B1C2D',
+                'is_externo' => false
+            ];
+        }
 
+        // Ordenação cronológica dos eventos da igreja
+        usort($eventosIgreja, function($a, $b) {
+            $dataA = strtotime(str_replace('/', '-', $a['data'] . '-' . date('Y')));
+            $dataB = strtotime(str_replace('/', '-', $b['data'] . '-' . date('Y')));
+            return $dataA <=> $dataB;
+        });
 
-		// 3. CELEBRAÇÕES (Nascimento, Batismo e Casamento)
-		$aniversariantes = $this->model->buscarAniversariantesMes($igrejaId);
-		$mesAtual = (int)date('m');
-		$anoAtual = (int)date('Y');
+        // 3. CELEBRAÇÕES (Nascimento, Batismo e Casamento)
+        $aniversariantes = $this->model->buscarAniversariantesMes($igrejaId);
+        $mesAtual = (int)date('m');
+        $anoAtual = (int)date('Y');
 
-		$nascidos  = [];
-		$batizados = [];
-		$casados   = [];
+        $nascidos  = [];
+        $batizados = [];
+        $casados   = [];
 
-		foreach ($aniversariantes as $m) {
-			// Como a coluna membro_foto_arquivo não existe, definimos como null
-			$caminhoFoto = null;
+        foreach ($aniversariantes as $m) {
+            $caminhoFoto = null;
+            $nomeMembro = $m['membro_nome'] ?? 'Membro';
 
-			$nomeMembro = $m['membro_nome'] ?? 'Membro';
+            // Nascimento
+            if (!empty($m['membro_data_nascimento']) && $m['membro_data_nascimento'] != '0000-00-00') {
+                $ts = strtotime($m['membro_data_nascimento']);
+                if ((int)date('m', $ts) === $mesAtual) {
+                    $nascidos[] = ['nome' => $nomeMembro, 'foto' => $caminhoFoto, 'dia' => (int)date('d', $ts)];
+                }
+            }
 
-			// Nascimento
-			if (!empty($m['membro_data_nascimento']) && $m['membro_data_nascimento'] != '0000-00-00') {
-				$ts = strtotime($m['membro_data_nascimento']);
-				if ((int)date('m', $ts) === $mesAtual) {
-					$nascidos[] = [
-						'nome' => $nomeMembro,
-						'foto' => $caminhoFoto,
-						'dia'  => (int)date('d', $ts)
-					];
-				}
-			}
+            // Batismo
+            if (!empty($m['membro_data_batismo']) && $m['membro_data_batismo'] != '0000-00-00') {
+                $ts = strtotime($m['membro_data_batismo']);
+                if ((int)date('m', $ts) === $mesAtual) {
+                    $batizados[] = [
+                        'nome' => $nomeMembro,
+                        'foto' => $caminhoFoto,
+                        'dia' => (int)date('d', $ts),
+                        'anos' => $anoAtual - (int)date('Y', $ts)
+                    ];
+                }
+            }
 
-			// Batismo
-			if (!empty($m['membro_data_batismo']) && $m['membro_data_batismo'] != '0000-00-00') {
-				$ts = strtotime($m['membro_data_batismo']);
-				if ((int)date('m', $ts) === $mesAtual) {
-					$batizados[] = [
-						'nome' => $nomeMembro,
-						'foto' => $caminhoFoto,
-						'dia'  => (int)date('d', $ts),
-						'anos' => $anoAtual - (int)date('Y', $ts)
-					];
-				}
-			}
+            // Casamento
+            if (($m['membro_estado_civil'] == 'Casado(a)' || $m['membro_estado_civil'] == 'Casado') && !empty($m['membro_data_casamento']) && $m['membro_data_casamento'] != '0000-00-00') {
+                $ts = strtotime($m['membro_data_casamento']);
+                if ((int)date('m', $ts) === $mesAtual) {
+                    $casados[] = [
+                        'nome' => $nomeMembro,
+                        'foto' => $caminhoFoto,
+                        'dia' => (int)date('d', $ts),
+                        'anos' => $anoAtual - (int)date('Y', $ts)
+                    ];
+                }
+            }
+        }
 
-			// Casamento
-			if (($m['membro_estado_civil'] == 'Casado(a)' || $m['membro_estado_civil'] == 'Casado') && !empty($m['membro_data_casamento']) && $m['membro_data_casamento'] != '0000-00-00') {
-				$ts = strtotime($m['membro_data_casamento']);
-				if ((int)date('m', $ts) === $mesAtual) {
-					$casados[] = [
-						'nome' => $nomeMembro,
-						'foto' => $caminhoFoto,
-						'dia'  => (int)date('d', $ts),
-						'anos' => $anoAtual - (int)date('Y', $ts)
-					];
-				}
-			}
-		}
-
-        // Ordenação por dia
         usort($nascidos, fn($a, $b) => $a['dia'] <=> $b['dia']);
         usort($batizados, fn($a, $b) => $a['dia'] <=> $b['dia']);
         usort($casados, fn($a, $b) => $a['dia'] <=> $b['dia']);
@@ -178,10 +192,9 @@ class BoletimSemanalController extends Controller
         // 4. PROGRAMAÇÃO RECORRENTE
         $programacao = $this->model->getProgramacao($igrejaId);
 
-        // 5. Monta o array de dados final
+        // 5. Monta o array de dados final para a View
         $dados = [
             'nomeMes'        => $meses[$mesAtual],
-            'eventos'        => $eventos,
             'liturgia'       => $liturgia,
             'programacao'    => $programacao,
             'lideranca'      => $this->model->getLideranca($igrejaId),
@@ -193,8 +206,9 @@ class BoletimSemanalController extends Controller
             'dirigente_foto' => $dirigente_foto,
             'pregador_nome'  => $liturgia ? ($liturgia['nome_membro_pregador'] ?: $liturgia['igreja_liturgia_pregador_nome']) : 'Não informado',
             'pregador_foto'  => $pregador_foto,
-            'eventos'        => $eventos, // Eventos das Sociedades
-            'eventosIgreja'  => $eventosIgreja // Eventos Gerais (NOVO)
+            'eventos'        => $eventos,
+            'eventosIgreja'  => $eventosIgreja,
+            'proximaEscala'  => $proximaEscala
         ];
 
         $this->rawview('boletinssemanais/index', $dados);

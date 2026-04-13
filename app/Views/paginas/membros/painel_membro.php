@@ -82,6 +82,10 @@
 						<i class="bi bi-qr-code me-1"></i> MEU ACESSO
 					</button>
 
+					<a href="<?= url('PortalMembro/calendario') ?>" target="_blank" class="btn btn-header-boletim btn-sm fw-bold px-3 py-2 rounded-pill shadow-sm">
+						<i class="bi bi-calendar3 me-1 fs-6"></i> AGENDA
+					</a>
+
 					<?php if ($tem_boletim): ?>
 						<a href="<?= url('BoletimSemanal/index') ?>" target="_blank" class="btn btn-header-boletim btn-sm fw-bold px-3 py-2 rounded-pill shadow-sm">
 							<i class="bi bi-journal-text me-1 fs-6"></i> BOLETIM

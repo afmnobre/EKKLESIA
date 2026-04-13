@@ -184,17 +184,12 @@ class Financeiro {
 	public function getContaById($id, $igrejaId) {
 		$sql = "SELECT
 					c.*,
-					cat.financeiro_categoria_nome,
-					sub.subcategoria_nome,
-					-- Este alias precisa ser EXATAMENTE igual ao que o JS procura
-					m.financeiro_movimentacao_financeiro_conta_financeira_id as financeiro_conta_financeira_id
+					cat.financeiro_categoria_nome as financeiro_categoria_nome,
+					sub.subcategoria_nome as subcategoria_nome
 				FROM financeiro_contas c
 				LEFT JOIN financeiro_categorias cat ON c.financeiro_conta_financeiro_categoria_id = cat.financeiro_categoria_id
 				LEFT JOIN financeiro_subcategorias sub ON c.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
-				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_conta_id = c.financeiro_conta_id
-					AND m.financeiro_movimentacao_origem = 'pagamento'
-				WHERE c.financeiro_conta_id = ? AND c.financeiro_conta_igreja_id = ?
-				LIMIT 1";
+				WHERE c.financeiro_conta_id = ? AND c.financeiro_conta_igreja_id = ?";
 
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([$id, $igrejaId]);
@@ -205,14 +200,10 @@ class Financeiro {
 	public function getContasAgendadas($igrejaId, $mes, $ano) {
 		$sql = "SELECT
 					fc.*,
-					fc.financeiro_conta_financeiro_categoria_id AS subcategoria_id,
-					cat.financeiro_categoria_id AS categoria_pai_id,
-					cat.financeiro_categoria_nome,
-					sub.subcategoria_nome
+					sub.subcategoria_nome,
+					cat.financeiro_categoria_nome
 				FROM financeiro_contas fc
-				-- Aqui ligamos a conta à subcategoria
 				LEFT JOIN financeiro_subcategorias sub ON fc.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
-				-- Aqui subimos para a categoria pai para pegar o ID dela
 				LEFT JOIN financeiro_categorias cat ON sub.subcategoria_categoria_id = cat.financeiro_categoria_id
 				WHERE fc.financeiro_conta_igreja_id = ?
 				AND MONTH(fc.financeiro_conta_data_vencimento) = ?
@@ -241,28 +232,25 @@ class Financeiro {
 			$this->db->beginTransaction();
 
 			// --- CORREÇÃO DO HORÁRIO ---
+			// Se a data vier apenas como '2026-03-23', adicionamos a hora atual '15:30:22'
 			$data_pagamento_completa = $data['data_pagamento'];
 			if (strlen($data_pagamento_completa) <= 10) {
 				$data_pagamento_completa .= ' ' . date('H:i:s');
 			}
 
-			// 0. BUSCAR DADOS DA CONTA (Adicionado categoria_id no SELECT)
-			$stmtTipo = $this->db->prepare("SELECT financeiro_conta_tipo, financeiro_conta_descricao, financeiro_conta_financeiro_categoria_id
-											FROM financeiro_contas
-											WHERE financeiro_conta_id = ?");
+			// 0. BUSCAR O TIPO DA CONTA
+			$stmtTipo = $this->db->prepare("SELECT financeiro_conta_tipo, financeiro_conta_descricao FROM financeiro_contas WHERE financeiro_conta_id = ?");
 			$stmtTipo->execute([$data['conta_id']]);
 			$infoConta = $stmtTipo->fetch(\PDO::FETCH_ASSOC);
-
 			$tipo = $infoConta['financeiro_conta_tipo'];
 			$descricaoOriginal = $infoConta['financeiro_conta_descricao'];
-			$categoriaId = $infoConta['financeiro_conta_financeiro_categoria_id']; // <--- CAPTURADO AQUI
 
-			// 1. Atualiza o status da conta agendada
+			// 1. Atualiza o status da conta agendada (Usando a data completa)
 			$sql1 = "UPDATE financeiro_contas SET financeiro_conta_pago = 1, financeiro_conta_data_pagamento = ?
 					 WHERE financeiro_conta_id = ? AND financeiro_conta_igreja_id = ?";
 			$this->db->prepare($sql1)->execute([$data_pagamento_completa, $data['conta_id'], $data['igreja_id']]);
 
-			// 2. Registra o Pagamento Detalhado
+			// 2. Registra o Pagamento Detalhado (Usando a data completa)
 			$sql2 = "INSERT INTO financeiro_pagamentos
 					 (financeiro_pagamento_igreja_id, financeiro_pagamento_financeiro_conta_id, financeiro_pagamento_valor,
 					  financeiro_pagamento_conta_financeira_id, financeiro_pagamento_documentos, financeiro_pagamento_data)
@@ -279,155 +267,22 @@ class Financeiro {
 					 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
 			$this->db->prepare($sql3)->execute([$data['valor'], $data['conta_financeira_id'], $data['igreja_id']]);
 
-			// 4. Cria o Registro no Extrato (ADICIONADO OS CAMPOS DE LINK)
+			// 4. Cria o Registro no Extrato (Usando a data completa)
 			$desc = "Baixa de " . ($tipo == 'entrada' ? 'Receita' : 'Despesa') . ": " . $descricaoOriginal;
 			$sql4 = "INSERT INTO financeiro_movimentacoes
-					 (financeiro_movimentacao_igreja_id,
-					  financeiro_movimentacao_financeiro_conta_id,      -- <--- NOVO
-					  financeiro_movimentacao_financeiro_categoria_id,  -- <--- NOVO
-					  financeiro_movimentacao_financeiro_conta_financeira_id,
-					  financeiro_movimentacao_tipo,
-					  financeiro_movimentacao_valor,
-					  financeiro_movimentacao_data,
-					  financeiro_movimentacao_descricao,
-					  financeiro_movimentacao_origem)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pagamento')";
+					 (financeiro_movimentacao_igreja_id, financeiro_movimentacao_financeiro_conta_financeira_id,
+					  financeiro_movimentacao_tipo, financeiro_movimentacao_valor, financeiro_movimentacao_data,
+					  financeiro_movimentacao_descricao, financeiro_movimentacao_origem)
+					 VALUES (?, ?, ?, ?, ?, ?, 'pagamento')";
 
 			$this->db->prepare($sql4)->execute([
 				$data['igreja_id'],
-				$data['conta_id'],      // Link com a conta original
-				$categoriaId,           // Link com a categoria/subcategoria
 				$data['conta_financeira_id'],
 				$tipo,
 				$data['valor'],
-				$data_pagamento_completa,
+				$data_pagamento_completa, // Aqui garante que no extrato apareça a hora
 				$desc
 			]);
-
-			$this->db->commit();
-			return true;
-		} catch (\Exception $e) {
-			$this->db->rollBack();
-			return false;
-		}
-	}
-
-	public function atualizarLancamentoCompleto($data) {
-		try {
-			$this->db->beginTransaction();
-
-			// 1. BUSCAR DADOS ATUAIS (Importante para saber o que estornar)
-			$sqlBusca = "SELECT fc.*, fp.financeiro_pagamento_conta_financeira_id, fp.financeiro_pagamento_valor
-						 FROM financeiro_contas fc
-						 LEFT JOIN financeiro_pagamentos fp ON fp.financeiro_pagamento_financeiro_conta_id = fc.financeiro_conta_id
-						 WHERE fc.financeiro_conta_id = ? AND fc.financeiro_conta_igreja_id = ?";
-			$stmt = $this->db->prepare($sqlBusca);
-			$stmt->execute([$data['id'], $data['igreja_id']]);
-			$antigo = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-			if (!$antigo) throw new \Exception("Lançamento não encontrado.");
-
-			$tipo = $antigo['financeiro_conta_tipo'];
-			$foiPago = ($antigo['financeiro_conta_pago'] == 1);
-
-			// 2. ATUALIZAR A TABELA PRINCIPAL (financeiro_contas)
-			$sqlUpConta = "UPDATE financeiro_contas SET
-							financeiro_conta_financeiro_categoria_id = ?,
-							financeiro_conta_descricao = ?,
-							financeiro_conta_valor = ?,
-							financeiro_conta_data_pagamento = ?,
-							financeiro_conta_reembolso = ?
-						  WHERE financeiro_conta_id = ?";
-			$this->db->prepare($sqlUpConta)->execute([
-				$data['categoria_id'], $data['descricao'], $data['valor'],
-				$data['data_pagamento'], $data['reembolso'] ?? 0, $data['id']
-			]);
-
-			// 3. ATUALIZAÇÃO DO RATEIO DE MEMBROS (Se for Entrada/Receita)
-			if ($tipo == 'entrada') {
-					// ... dentro do if ($tipo == 'entrada')
-					$this->db->prepare("DELETE FROM financeiro_receita_membros WHERE receita_membro_conta_id = ?")
-							 ->execute([$data['id']]);
-
-					if (!empty($data['membros'])) {
-						$sqlMembro = "INSERT INTO financeiro_receita_membros
-									 (receita_membro_conta_id, receita_membro_categoria_id, receita_membro_subcategoria_id,
-									  receita_membro_usuario_id, receita_membro_valor, receita_membro_data)
-									 VALUES (?, ?, ?, ?, ?, ?)";
-						$stmtMembro = $this->db->prepare($sqlMembro);
-
-						foreach ($data['membros'] as $index => $membro_id) {
-							// Ponto Crítico: Verifica se o membro_id não está vazio e se o valor existe
-							if (empty($membro_id)) continue;
-
-							$valorRaw = $data['membros_valores'][$index] ?? 0;
-							$valorMembro = str_replace(',', '.', $valorRaw);
-
-							if ($valorMembro <= 0) continue; // Não insere se o valor for zero
-
-							$stmtMembro->execute([
-								$data['id'],
-								$data['categoria_id'],
-								$data['categoria_id'], // Subcategoria
-								$membro_id,
-								$valorMembro,
-								$data['data_pagamento']
-							]);
-						}
-					}
-			}
-
-			// 4. SE ESTIVER PAGO, SINCRONIZA SALDO, PAGAMENTO E EXTRATO (MOVIMENTAÇÕES)
-			if ($foiPago) {
-				$contaFinanceiraAntiga = $antigo['financeiro_pagamento_conta_financeira_id'];
-
-				// AJUSTE: Pegando o nome correto do campo vindo do <select>
-				$contaFinanceiraNova = $data['financeiro_conta_financeira_id'];
-
-				$valorAntigo = $antigo['financeiro_conta_valor'];
-				$valorNovo = $data['valor'];
-
-				// A) Estornar saldo na conta bancária antiga
-				$opEstorno = ($tipo == 'entrada') ? '-' : '+';
-				$this->db->prepare("UPDATE financeiro_contas_financeiras SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $opEstorno ?
-									WHERE financeiro_conta_financeira_id = ?")
-						 ->execute([$valorAntigo, $contaFinanceiraAntiga]);
-
-				// B) Aplicar novo saldo na conta bancária nova
-				$opAplicar = ($tipo == 'entrada') ? '+' : '-';
-				$this->db->prepare("UPDATE financeiro_contas_financeiras SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $opAplicar ?
-									WHERE financeiro_conta_financeira_id = ?")
-						 ->execute([$valorNovo, $contaFinanceiraNova]);
-
-				// C) Atualizar a tabela de Pagamentos
-				$this->db->prepare("UPDATE financeiro_pagamentos SET
-									 financeiro_pagamento_valor = ?,
-									 financeiro_pagamento_conta_financeira_id = ?,
-									 financeiro_pagamento_data = ?
-									 WHERE financeiro_pagamento_financeiro_conta_id = ?")
-						 ->execute([$valorNovo, $contaFinanceiraNova, $data['data_pagamento'], $data['id']]);
-
-				// D) Atualizar o Extrato (financeiro_movimentacoes)
-				$novaDesc = "Correção de " . ($tipo == 'entrada' ? 'Receita' : 'Despesa') . ": " . $data['descricao'];
-
-				$sqlUpMov = "UPDATE financeiro_movimentacoes SET
-							 financeiro_movimentacao_financeiro_conta_financeira_id = ?,
-							 financeiro_movimentacao_financeiro_categoria_id = ?,
-							 financeiro_movimentacao_valor = ?,
-							 financeiro_movimentacao_descricao = ?,
-							 financeiro_movimentacao_data = ?
-							 WHERE financeiro_movimentacao_financeiro_conta_id = ?
-							 AND financeiro_movimentacao_origem = 'pagamento'";
-
-				$this->db->prepare($sqlUpMov)->execute([
-					$contaFinanceiraNova,
-					$data['categoria_id'],
-					$valorNovo,
-					$novaDesc,
-					$data['data_pagamento'],
-					$data['id']
-				]);
-			}
 
 			$this->db->commit();
 			return true;
@@ -535,24 +390,15 @@ class Financeiro {
 	}
 
 	public function getMovimentacoesPorPeriodo($igrejaId, $dataInicio, $dataFim) {
-		$sql = "SELECT
-					m.*,
-					c.financeiro_conta_financeira_nome,
-					-- FORÇAMOS O NOME DO CAMPO PARA O JS RECONHECER:
-					m.financeiro_movimentacao_financeiro_conta_financeira_id AS financeiro_conta_financeira_id,
-					f.financeiro_conta_id,
-					f.financeiro_conta_descricao,
-					f.financeiro_conta_valor,
-					f.financeiro_conta_financeiro_categoria_id,
-					f.financeiro_conta_tipo
+		$sql = "SELECT m.*, c.financeiro_conta_financeira_nome
 				FROM financeiro_movimentacoes m
 				JOIN financeiro_contas_financeiras c ON m.financeiro_movimentacao_financeiro_conta_financeira_id = c.financeiro_conta_financeira_id
-				LEFT JOIN financeiro_contas f ON m.financeiro_movimentacao_financeiro_conta_id = f.financeiro_conta_id
 				WHERE m.financeiro_movimentacao_igreja_id = ?
 				AND m.financeiro_movimentacao_data BETWEEN ? AND ?
 				ORDER BY m.financeiro_movimentacao_data DESC";
 
 		$stmt = $this->db->prepare($sql);
+		// Adicionamos o horário para cobrir o dia inteiro (00:00:00 até 23:59:59)
 		$stmt->execute([$igrejaId, $dataInicio . ' 00:00:00', $dataFim . ' 23:59:59']);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
@@ -893,45 +739,6 @@ class Financeiro {
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-	public function getRateioLancamento($contaId) {
-		$sql = "SELECT r.*, m.membro_nome
-				FROM financeiro_receita_membros r
-				INNER JOIN membros m ON r.receita_membro_usuario_id = m.membro_id
-				WHERE r.receita_membro_conta_id = ?";
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$contaId]);
-		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-	}
 
-	public function getCategoriasParaCombo($igrejaId) {
-		$sql = "SELECT
-					c.financeiro_categoria_nome,
-					c.financeiro_categoria_tipo,
-					c.financeiro_categoria_id,
-					s.subcategoria_id,
-					s.subcategoria_nome
-				FROM financeiro_categorias c
-				LEFT JOIN financeiro_subcategorias s ON s.subcategoria_categoria_id = c.financeiro_categoria_id
-				WHERE c.financeiro_categoria_igreja_id = ?
-				ORDER BY c.financeiro_categoria_tipo ASC, c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
-
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$igrejaId]);
-		$dados = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-		foreach ($dados as &$item) {
-			// Adicione os colchetes aqui
-			$tipo = ($item['financeiro_categoria_tipo'] == 'entrada') ? '[ RECEITA ]' : '[ DESPESA ]';
-
-			$label = $tipo . " " . $item['financeiro_categoria_nome'];
-			if (!empty($item['subcategoria_nome'])) {
-				$label .= " - " . $item['subcategoria_nome'];
-			}
-
-			$item['nome_formatado'] = $label;
-		}
-
-		return $dados;
-	}
 
 }

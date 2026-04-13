@@ -95,32 +95,44 @@ class FinanceiroController extends Controller {
 	}
 
 	public function lancamentos() {
+		// 1. Identificação da Igreja
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 
+		// 2. Lógica de Filtro de Datas (Mês/Ano)
 		$anoAtual = isset($_GET['ano']) ? (int)$_GET['ano'] : date('Y');
 		$mesAtual = isset($_GET['mes']) ? (int)$_GET['mes'] : date('n');
 
+		// 3. Busca de Anos Disponíveis para o Combo de Filtro
 		$anosDisponiveis = $this->model->getAnosComMovimentacao($igrejaId);
-		if (empty($anosDisponiveis)) { $anosDisponiveis = [['ano' => date('Y')]]; }
+		if (empty($anosDisponiveis)) {
+			$anosDisponiveis = [['ano' => date('Y')]];
+		}
 
+		// 4. Carregamento de Dados para a View
+		// Contas agendadas filtradas por período
 		$contas = $this->model->getContasAgendadas($igrejaId, $mesAtual, $anoAtual);
 
-		// NOVA BUSCA UNIFICADA
-		$categorias = $this->model->getCategoriasParaCombo($igrejaId);
-
+		// Dados para Modais de Cadastro (Categorias e Bancos)
+		$categoriasAgrupadas = $this->model->getCategoriasAgrupadas($igrejaId);
 		$contasBancarias = $this->model->getContasBancarias($igrejaId);
+
+		// Lista Geral de Membros (usada em outros modais de lançamento)
 		$membros = $this->model->getMembrosAtivos($igrejaId);
+
+		// NOVA BUSCA: Apenas Presbíteros e Diáconos (IDs 5, 6 e 7)
+		// Este método deve usar o JOIN com a tabela membros_cargos_vinculo
 		$oficiais = $this->model->getOficiaisConferentes($igrejaId);
 
+		// 5. Renderização da View com todos os dados
 		$this->view('financeiro/lancamentos', [
-			'contas_agendadas'      => $contas,
-			'categorias_formatadas' => $categorias, // Usar esta nova variável
-			'contas_bancarias'      => $contasBancarias,
-			'membros'               => $membros,
-			'oficiais'              => $oficiais,
-			'anoSelecionado'        => $anoAtual,
-			'mesSelecionado'        => $mesAtual,
-			'anosDisponiveis'       => $anosDisponiveis
+			'contas_agendadas'     => $contas,
+			'categorias_agrupadas' => $categoriasAgrupadas,
+			'contas_bancarias'     => $contasBancarias,
+			'membros'              => $membros,       // Lista completa para lançamentos
+			'oficiais'             => $oficiais,      // Lista filtrada para o modal de conferência
+			'anoSelecionado'       => $anoAtual,
+			'mesSelecionado'       => $mesAtual,
+			'anosDisponiveis'      => $anosDisponiveis
 		]);
 	}
 
@@ -146,34 +158,6 @@ class FinanceiroController extends Controller {
 				die("Erro ao salvar no banco de dados.");
 			}
 			exit;
-		}
-	}
-
-	public function atualizar() {
-		$igrejaId = $_SESSION['usuario_igreja_id'];
-
-		// Monta o array exatamente como o seu método atualizarLancamentoCompleto espera
-		$data = [
-			'id'                               => $_POST['id'],
-			'igreja_id'                        => $igrejaId,
-			'categoria_id'                     => $_POST['categoria_id'] ?? $_POST['subcategoria_id'],
-			'descricao'                        => $_POST['descricao'],
-			'valor'                            => $_POST['valor'],
-			'data_pagamento'                   => $_POST['data_pagamento'],
-			'reembolso'                        => $_POST['reembolso'] ?? 0,
-			'financeiro_conta_financeira_id'   => $_POST['financeiro_conta_financeira_id'], // CAMPO CHAVE
-			'membros'                          => $_POST['membros'] ?? [],
-			'membros_valores'                  => $_POST['membros_valores'] ?? []
-		];
-
-		$sucesso = $this->model->atualizarLancamentoCompleto($data);
-
-		if ($sucesso) {
-			// Redireciona com mensagem de sucesso
-			header("Location: " . url('financeiro') . "?msg=atualizado");
-		} else {
-			// Trate o erro conforme sua estrutura
-			die("Erro ao atualizar o lançamento. Verifique os dados ou o saldo das contas.");
 		}
 	}
 
@@ -842,20 +826,6 @@ class FinanceiroController extends Controller {
             'tipo' => $_GET['tipo'] ?? 'comprovante',
             'idIgreja' => $idIgreja
         ]);
-    }
-
-    public function getRateio($id) {
-        $model = new Financeiro();
-        $rateio = $model->getRateioLancamento($id);
-        echo json_encode($rateio);
-        exit;
-    }
-
-    public function getContaJson($id) {
-        $igrejaId = $_SESSION['usuario_igreja_id'];
-        $dados = $this->model->getContaById($id, $igrejaId);
-        echo json_encode($dados);
-        exit;
     }
 
 }

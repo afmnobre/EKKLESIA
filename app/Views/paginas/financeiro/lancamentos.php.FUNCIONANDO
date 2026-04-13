@@ -1,18 +1,3 @@
-<style>
-	.choices__inner {
-		background-color: #f8f9fa; /* Cor bg-light do seu projeto */
-		border-radius: 0.375rem;
-		border: 1px solid #dee2e6;
-		min-height: 45px;
-		padding: 5px 10px;
-	}
-
-	.choices__list--single .choices__item {
-		font-weight: bold;
-	}
-
-</style>
-
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-3">
         <div class="row align-items-center">
@@ -158,14 +143,8 @@
 										onclick="abrirModalQR('<?= $c['financeiro_conta_id'] ?>', 'comprovante')"
 										title="Upload via Celular">
 										<i class="bi bi-qr-code-scan"></i>
-                                    </button>
-
-									<button type="button"
-											class="btn btn-sm btn-outline-primary"
-											onclick="editarLancamento(<?= $c['financeiro_conta_id'] ?>)"
-											title="Editar Lançamento">
-										<i class="bi bi-pencil"></i>
 									</button>
+
                                 </div>
                             <?php endif; ?>
 
@@ -221,92 +200,6 @@
 			</div>
 		</div>
 	</div>
-</div>
-
-<div class="modal fade" id="modalEditarLancamento" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Editar Lançamento</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formEditarLancamento" action="<?= url('financeiro/atualizar') ?>" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="id" id="edit_id">
-
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-8">
-                            <label class="form-label fw-bold">Descrição</label>
-                            <input type="text" name="descricao" id="edit_descricao" class="form-control" required>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Valor (R$)</label>
-                            <input type="number" step="0.01" name="valor" id="edit_valor"
-                                   class="form-control" required
-                                   oninput="recalcularRateioEdicao()">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Data Pagamento/Recebimento</label>
-                            <input type="date" name="data_pagamento" id="edit_data_pagamento" class="form-control" required>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Conta Bancária / Caixa</label>
-                            <select name="financeiro_conta_financeira_id" id="edit_conta_financeira_id" class="form-select" required>
-                                <?php foreach($contas_bancarias as $cb): ?>
-                                    <?php
-                                        // Formata o saldo para exibição (ex: 1.250,50)
-                                        $saldoFormatado = number_format($cb['financeiro_conta_financeira_saldo'], 2, ',', '.');
-                                    ?>
-                                    <option value="<?= $cb['financeiro_conta_financeira_id'] ?>">
-                                        <?= $cb['financeiro_conta_financeira_nome'] ?> (Saldo: R$ <?= $saldoFormatado ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="col-md-12">
-                            <label class="form-label fw-bold">Classificação</label>
-                            <select name="subcategoria_id" id="edit_categoria_id" class="form-select choice-select-color">
-                                <option value="">Digite para pesquisar...</option>
-                                <?php if(!empty($categorias_formatadas)): ?>
-                                    <?php foreach($categorias_formatadas as $cat): ?>
-                                        <option value="<?= $cat['subcategoria_id'] ?>"
-                                                data-tipo="<?= $cat['financeiro_categoria_tipo'] ?>">
-                                            <?= $cat['nome_formatado'] ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </select>
-                        </div>
-
-                        <div id="areaRateioEdicao" class="col-12 d-none">
-                            <hr>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-people"></i> Rateio por Membros</h6>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="adicionarMembroEdicao()">
-                                    <i class="bi bi-plus"></i> Adicionar Membro
-                                </button>
-                            </div>
-                            <div id="listaMembrosEdicao" class="border rounded p-3 bg-light">
-                                </div>
-                            <div class="text-end mt-2">
-                                <span class="small fw-bold">Restante: </span>
-                                <span id="labelRestanteEdicao" class="badge bg-success">R$ 0,00</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" id="btnSalvarEdicao" class="btn btn-primary">Salvar Alterações</button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <div class="modal fade" id="modalQRCode" tabindex="-1" aria-hidden="true">
@@ -465,16 +358,22 @@
                     </div>
 					<div class="col-md-12">
 						<label class="small fw-bold text-secondary">Classificação</label>
-						<select name="subcategoria_id" id="select_subcategoria_nova" class="form-select choice-select-color" onchange="atualizarTipoLancamento()">
-							<option value="">Digite para pesquisar...</option>
-							<?php if(!empty($categorias_formatadas)): ?>
-								<?php foreach($categorias_formatadas as $cat): ?>
-									<option value="<?= $cat['subcategoria_id'] ?>"
-											data-tipo="<?= $cat['financeiro_categoria_tipo'] ?>">
-										<?= $cat['nome_formatado'] ?>
-									</option>
-								<?php endforeach; ?>
-							<?php endif; ?>
+						<select name="subcategoria_id" id="select_subcategoria" class="form-select" required onchange="atualizarTipoLancamento()">
+							<option value="">Selecione a Classificação...</option>
+
+							<?php foreach($categorias_agrupadas as $cat):
+								$ehEntrada = ($cat['tipo'] == 'entrada');
+								$cor = $ehEntrada ? '#006437' : '#d9534f'; // Verde IPB ou Vermelho Despesa
+								$prefixo = $ehEntrada ? '[ RECEITA ] ' : '[ DESPESA ] ';
+							?>
+								<optgroup label="<?= $prefixo . strtoupper($cat['nome']) ?>" style="color: <?= $cor ?>; background: #f8f9fa;">
+									<?php foreach($cat['subs'] as $sub): ?>
+										<option value="<?= $sub['id'] ?>" data-tipo="<?= $cat['tipo'] ?>" style="color: #333;">
+											<?= $sub['nome'] ?>
+										</option>
+									<?php endforeach; ?>
+								</optgroup>
+							<?php endforeach; ?>
 						</select>
 					</div>
 
@@ -633,72 +532,23 @@ function pagarConta(id, valor) {
 }
 
 function atualizarTipoLancamento() {
-    const selectSub = document.getElementById('select_subcategoria_nova');
+    const selectSub = document.getElementById('select_subcategoria');
     const selectTipo = document.getElementById('select_tipo');
-    if (!selectSub || !selectTipo) return;
-
-    const selectedOption = selectSub.options[selectSub.selectedIndex];
-    if (selectedOption) {
-        const tipo = selectedOption.getAttribute('data-tipo');
-        if (tipo) selectTipo.value = tipo;
-    }
+    const option = selectSub.options[selectSub.selectedIndex];
+    const tipo = option.getAttribute('data-tipo');
+    if (tipo) selectTipo.value = tipo;
 }
 
-// 1. Crie um objeto global para as instâncias logo no início do script
-window.instanciasChoices = {};
-
-document.addEventListener('DOMContentLoaded', function() {
-    const colorSelects = document.querySelectorAll('.choice-select-color');
-
-    colorSelects.forEach(el => {
-        // 2. Guarde a instância no objeto global usando o ID do elemento
-        window.instanciasChoices[el.id] = new Choices(el, {
-            searchEnabled: true,
-            itemSelectText: '',
-            shouldSort: false,
-            allowHTML: true,
-            callbackOnCreateTemplates: function(strToEl) {
-				return {
-					// Cor na lista de opções (dropdown)
-					choice: (conf, data) => {
-						const isReceita = data.label.includes('[ RECEITA ]');
-						const isDespesa = data.label.includes('[ DESPESA ]');
-						const cor = isReceita ? '#006437' : (isDespesa ? '#d9534f' : 'inherit');
-
-						return strToEl(`
-							<div class="choices__item choices__item--choice"
-								 data-choice data-id="${data.id}" data-value="${data.value}"
-								 style="color: ${cor}; font-weight: bold;">
-								${data.label}
-							</div>
-						`);
-					},
-					// Cor no item selecionado (dentro do campo)
-					item: (conf, data) => {
-						const isReceita = data.label.includes('[ RECEITA ]');
-						const isDespesa = data.label.includes('[ DESPESA ]');
-						const cor = isReceita ? '#006437' : (isDespesa ? '#d9534f' : 'inherit');
-
-						return strToEl(`
-							<div class="choices__item choices__item--selectable"
-								 data-item data-id="${data.id}" data-value="${data.value}"
-								 style="color: ${cor}; font-weight: bold;">
-								${data.label}
-							</div>
-						`);
-					},
-				};
-			},
-		});
-
-        // Evento para atualizar o tipo (Entrada/Saída) no modal de nova conta
-        el.addEventListener('change', function() {
-            if (el.id === 'select_subcategoria_nova') {
-                atualizarTipoLancamento();
-            }
-        });
-    });
-});
+function editarLancamento(dados) {
+    document.getElementById('modal_titulo').innerText = 'Editar Lançamento';
+    document.getElementById('input_id').value = dados.financeiro_conta_id;
+    document.getElementById('input_descricao').value = dados.financeiro_conta_descricao;
+    document.getElementById('select_subcategoria').value = dados.financeiro_conta_financeiro_subcategoria_id;
+    document.getElementById('input_valor').value = dados.financeiro_conta_valor;
+    document.getElementById('input_vencimento').value = dados.financeiro_conta_data_vencimento;
+    document.getElementById('select_tipo').value = dados.financeiro_conta_tipo;
+    new bootstrap.Modal(document.getElementById('modalNovaConta')).show();
+}
 
 function abrirModalMembros(id, valor, subcategoriaId) {
     document.getElementById('rateio_conta_id').value = id;
@@ -910,170 +760,10 @@ function abrirModalQR(id, tipo) {
 }
 
 // Função para abrir o link em uma nova aba para teste no PC
-// 1. LISTA DE MEMBROS (Gerada de forma segura para o JS)
-const listaMembrosJS = [
-    <?php if(!empty($membros) && is_array($membros)): foreach($membros as $m): ?>
-    {
-        // Verifica as chaves prováveis: membro_id, id ou o ID do usuário da tabela de receita
-        id: '<?= $m['membro_id'] ?? $m['id'] ?? $m['receita_membro_usuario_id'] ?? '' ?>',
-        nome: "<?= addslashes($m['membro_nome'] ?? $m['nome'] ?? 'Membro não identificado') ?>"
-    },
-    <?php endforeach; endif; ?>
-];
-
-
-// 2. FUNÇÃO ADICIONAR LINHA (Versão Corrigida e Segura)
-function adicionarMembroEdicao(membroId, valor) {
-    membroId = membroId || '';
-    valor = valor || '';
-
-    var lista = document.getElementById('listaMembrosEdicao');
-    if (!lista) return;
-
-    var div = document.createElement('div');
-    div.className = 'row g-2 mb-2 align-items-center membro-item-edicao';
-
-    // Construímos as opções fora do loop para não gerar erros de sintaxe por valores nulos
-    var optionsHtml = '<option value="">Selecione o Membro...</option>';
-
-    // Usamos a lista que você já definiu no JS (listaMembrosJS) em vez de abrir PHP dentro da função
-    if (typeof listaMembrosJS !== 'undefined' && listaMembrosJS.length > 0) {
-        listaMembrosJS.forEach(function(m) {
-            var selected = (String(m.id) === String(membroId)) ? 'selected' : '';
-            optionsHtml += '<option value="' + m.id + '" ' + selected + '>' + m.nome + '</option>';
-        });
-    }
-
-    var selectHtml = '<div class="col-md-7">';
-    selectHtml += '<select name="membros[]" class="form-select select-membro-edit" required>';
-    selectHtml += optionsHtml;
-    selectHtml += '</select></div>';
-
-    var inputHtml = '<div class="col-md-4">';
-    inputHtml += '<input type="number" step="0.01" name="membros_valores[]" class="form-control valor-membro-edit" value="' + valor + '" placeholder="0,00" required oninput="recalcularRateioEdicao()">';
-    inputHtml += '</div>';
-
-    var buttonHtml = '<div class="col-md-1 text-end">';
-    buttonHtml += '<button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest(\'.row\').remove(); recalcularRateioEdicao();">';
-    buttonHtml += '<i class="bi bi-trash"></i></button></div>';
-
-    div.innerHTML = selectHtml + inputHtml + buttonHtml;
-    lista.appendChild(div);
-}
-
-async function editarLancamento(id) {
-    try {
-        const response = await fetch("<?= url('financeiro/getContaJson/') ?>" + id);
-        const dados = await response.json();
-
-        const modalEl = document.getElementById('modalEditarLancamento');
-        if (!modalEl || !dados) return;
-
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-
-        // 2. Preenchimento de campos básicos
-        document.getElementById('edit_id').value = dados.financeiro_conta_id;
-        document.getElementById('edit_descricao').value = dados.financeiro_conta_descricao;
-        document.getElementById('edit_valor').value = dados.financeiro_conta_valor;
-
-        const dataRef = dados.financeiro_conta_data_pagamento || dados.financeiro_conta_data_vencimento;
-        if (dataRef) {
-            document.getElementById('edit_data_pagamento').value = dataRef.substring(0, 10);
-        }
-
-        // 3. COMBO CONTA FINANCEIRA
-        const idBanco = dados.financeiro_conta_financeira_id;
-        const comboBanco = document.getElementById('edit_conta_financeira_id');
-
-        if (comboBanco) {
-            if (idBanco) {
-                comboBanco.value = String(idBanco);
-            } else {
-                comboBanco.selectedIndex = 0;
-            }
-
-            modalEl.addEventListener('shown.bs.modal', () => {
-                if (idBanco) comboBanco.value = String(idBanco);
-            }, { once: true });
-        }
-
-        // 4. Combo Categoria (Choices.js)
-        const idSub = dados.financeiro_conta_financeiro_categoria_id;
-        const instCat = (window.instanciasChoices && window.instanciasChoices['edit_categoria_id']) ? window.instanciasChoices['edit_categoria_id'] : null;
-        if (instCat && idSub) instCat.setChoiceByValue(String(idSub));
-
-        // 5. Lógica de Rateio
-        const areaRateio = document.getElementById('areaRateioEdicao');
-        const lista = document.getElementById('listaMembrosEdicao');
-        if (lista) lista.innerHTML = "";
-
-        if (dados.financeiro_conta_tipo === 'entrada') {
-            areaRateio.classList.remove('d-none');
-            const resRateio = await fetch("<?= url('financeiro/getRateio/') ?>" + id);
-            const membros = await resRateio.json();
-
-            // Se houver membros no banco, carrega eles.
-            // Se não houver, deixa a lista vazia (Opcional).
-            if (membros && membros.length > 0) {
-                membros.forEach(m => adicionarMembroEdicao(m.receita_membro_usuario_id, m.receita_membro_valor));
-            }
-
-            // Chama o recalcular para validar se o botão deve estar ativo ou não
-            recalcularRateioEdicao();
-        } else {
-            areaRateio.classList.add('d-none');
-            if(document.getElementById('btnSalvarEdicao')) document.getElementById('btnSalvarEdicao').disabled = false;
-        }
-
-        modal.show();
-
-    } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-        alert("Erro ao buscar dados do lançamento.");
-    }
-}
-
-// 4. Recalcular Soma
-function recalcularRateioEdicao() {
-    const valorTotal = parseFloat(document.getElementById('edit_valor').value) || 0;
-    const areaRateio = document.getElementById('areaRateioEdicao');
-    const btnSalvar = document.getElementById('btnSalvarEdicao');
-    const label = document.getElementById('labelRestanteEdicao');
-
-    // Se for Despesa (área escondida), libera sempre.
-    if (!areaRateio || areaRateio.classList.contains('d-none')) {
-        if (btnSalvar) btnSalvar.disabled = false;
-        return;
-    }
-
-    const inputsMembros = document.querySelectorAll('.valor-membro-edit');
-    const temMembros = inputsMembros.length > 0;
-
-    let somaRateio = 0;
-    inputsMembros.forEach(input => {
-        somaRateio += parseFloat(input.value) || 0;
-    });
-
-    const restante = (valorTotal - somaRateio).toFixed(2);
-
-    if (label) {
-        // Se não tem membros adicionados, o rateio é opcional
-        if (!temMembros) {
-            label.innerText = "Rateio Opcional";
-            label.className = "badge bg-secondary";
-            if (btnSalvar) btnSalvar.disabled = false;
-        } else {
-            label.innerText = 'Restante: R$ ' + parseFloat(restante).toLocaleString('pt-br', {minimumFractionDigits: 2});
-
-            // Se tem membros, o valor total DEVE ser distribuído (restante 0)
-            if (Math.abs(restante) < 0.01) {
-                label.className = "badge bg-success";
-                if (btnSalvar) btnSalvar.disabled = false;
-            } else {
-                label.className = "badge bg-danger";
-                if (btnSalvar) btnSalvar.disabled = true;
-            }
-        }
+function copiarLinkUpload() {
+    const link = document.getElementById('inputLinkUpload').value;
+    if(link) {
+        window.open(link, '_blank');
     }
 }
 </script>

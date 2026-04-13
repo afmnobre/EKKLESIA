@@ -140,19 +140,74 @@ class Igreja
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
-	public function addProgramacao($dados)
-	{
-		$sql = "INSERT INTO igrejas_programacao (programacao_igreja_id, programacao_titulo, programacao_dia_semana, programacao_hora, programacao_recorrencia_mensal, programacao_is_ceia)
-				VALUES (?, ?, ?, ?, ?, ?)";
+	public function addProgramacao($dados) {
+		$sql = "INSERT INTO igrejas_programacao (programacao_igreja_id, programacao_titulo, programacao_dia_semana, programacao_hora, programacao_recorrencia_mensal, programacao_is_ceia, programacao_is_externo)
+				VALUES (?, ?, ?, ?, ?, ?, ?)";
 		$stmt = $this->db->prepare($sql);
 		return $stmt->execute([
-			$dados['igreja_id'],
-			$dados['titulo'],
-			$dados['dia_semana'],
-			$dados['hora'],
-			$dados['recorrencia'],
-			$dados['is_ceia']
+			$dados['igreja_id'], $dados['titulo'], $dados['dia_semana'],
+			$dados['hora'], $dados['recorrencia'], $dados['is_ceia'], $dados['is_externo']
 		]);
+	}
+
+	public function updateLocal($id, $local) {
+		$sql = "UPDATE igrejas_programacao SET programacao_local_nome = ? WHERE programacao_id = ?";
+		return $this->db->prepare($sql)->execute([$local, $id]);
+	}
+
+	public function upsertEscala($dados) {
+		$sql = "INSERT INTO igrejas_programacao_locais
+					(programacao_id, membro_id, data_evento, local_nome_endereco)
+				VALUES (:prog, :membro, :data, :end)
+				ON DUPLICATE KEY UPDATE
+					membro_id = VALUES(membro_id),
+					local_nome_endereco = VALUES(local_nome_endereco)";
+
+		$st = $this->db->prepare($sql);
+
+		$st->bindValue(':prog', $dados['programacao_id'], PDO::PARAM_INT);
+
+		// Se membro_id for nulo, passamos o tipo NULL explicitamente para o banco
+		if (is_null($dados['membro_id'])) {
+			$st->bindValue(':membro', null, PDO::PARAM_NULL);
+		} else {
+			$st->bindValue(':membro', $dados['membro_id'], PDO::PARAM_INT);
+		}
+
+		$st->bindValue(':data', $dados['data_evento']);
+		$st->bindValue(':end', $dados['local_nome_endereco']);
+
+		return $st->execute();
+	}
+
+	public function getEscalas($progId) {
+		// Trocamos local_id por id, que é o nome real na sua tabela
+		$sql = "SELECT id, programacao_id, data_evento, local_nome_endereco
+				FROM igrejas_programacao_locais
+				WHERE programacao_id = ?
+				ORDER BY data_evento ASC";
+		$st = $this->db->prepare($sql);
+		$st->execute([$progId]);
+		return $st->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	public function deleteEscala($id) {
+		// Aqui também usamos 'id'
+		$sql = "DELETE FROM igrejas_programacao_locais WHERE id = ?";
+		$st = $this->db->prepare($sql);
+		return $st->execute([$id]);
+	}
+
+	public function getMembrosEnderecos($igrejaId) {
+		// Busca nome e concatena endereço da tabela auxiliar
+		$sql = "SELECT m.membro_nome, m.membro_id,
+				CONCAT(e.membro_endereco_rua, ', ', e.membro_endereco_numero, ' - ', e.membro_endereco_bairro) as endereco
+				FROM membros m
+				INNER JOIN membros_enderecos e ON m.membro_id = e.membro_endereco_membro_id
+				WHERE m.membro_igreja_id = ? AND m.membro_status = 'Ativo'";
+		$st = $this->db->prepare($sql);
+		$st->execute([$igrejaId]);
+		return $st->fetchAll(PDO::FETCH_ASSOC);
 	}
 
 	public function deleteProgramacao($id, $igrejaId)

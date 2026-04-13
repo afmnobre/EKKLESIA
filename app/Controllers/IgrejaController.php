@@ -173,8 +173,7 @@ class IgrejaController extends Controller
 
     // PROGRAMAÇÔES DA IGREJA
 
-	public function salvarProgramacao()
-	{
+	public function salvarProgramacao() {
 		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$dados = [
 				'igreja_id'   => $_SESSION['usuario_igreja_id'],
@@ -182,13 +181,25 @@ class IgrejaController extends Controller
 				'dia_semana'  => $_POST['prog_dia'],
 				'hora'        => $_POST['prog_hora'],
 				'recorrencia' => $_POST['prog_recorrencia'] ?? 0,
-				'is_ceia'     => isset($_POST['prog_is_ceia']) ? 1 : 0
+				'is_ceia'     => isset($_POST['prog_is_ceia']) ? 1 : 0,
+				'is_externo'  => isset($_POST['prog_is_externo']) ? 1 : 0 // NOVO CAMPO
 			];
-
 			$this->model->addProgramacao($dados);
 			header("Location: " . url('igreja?sucesso_prog=1'));
-			exit;
 		}
+	}
+
+	public function updateLocalProgramacao() {
+		$id = $_POST['programacao_id'];
+		$local = $_POST['membro_info'];
+		$this->model->updateLocal($id, $local);
+		header("Location: " . url('igreja?sucesso_local=1'));
+	}
+
+	// Para o AJAX do Choices.js
+	public function buscarMembrosJson() {
+		$membros = $this->model->getMembrosEnderecos($_SESSION['usuario_igreja_id']);
+		echo json_encode($membros);
 	}
 
     public function excluirProgramacao($id)
@@ -197,6 +208,65 @@ class IgrejaController extends Controller
         header("Location: " . url('igreja?excluido_prog=1'));
         exit;
     }
+
+	public function salvarEscalaLocal() {
+		$progId   = $_POST['programacao_id'] ?? null;
+		$membroId = $_POST['membro_id'] ?? null;
+		$data     = $_POST['data_evento'] ?? null;
+		$endereco = $_POST['local_nome_endereco'] ?? null;
+
+		// FORÇAR NULL: Se o ID for '0', vazio ou não numérico, tratamos como nulo (Sede)
+		// Caso contrário, garantimos que seja um Inteiro
+		if ($membroId === '0' || empty($membroId)) {
+			$membroId = null;
+		} else {
+			$membroId = (int)$membroId;
+		}
+
+		if (!$progId || !$data || !$endereco) {
+			echo json_encode(['success' => false, 'message' => 'Campos obrigatórios ausentes']);
+			return;
+		}
+
+		$dados = [
+			'programacao_id'      => $progId,
+			'membro_id'           => $membroId,
+			'data_evento'         => $data,
+			'local_nome_endereco' => $endereco
+		];
+
+		$model = new \App\Models\Igreja();
+		if ($model->upsertEscala($dados)) {
+			echo json_encode(['success' => true]);
+		} else {
+			echo json_encode(['success' => false]);
+		}
+	}
+
+	public function listarEscalas($progId) {
+		$escalas = $this->model->getEscalas($progId);
+		// Formata a data para PT-BR antes de enviar para o JS
+		foreach($escalas as &$e) {
+			$e['data_formatada'] = date('d/m/Y', strtotime($e['data_evento']));
+		}
+		echo json_encode($escalas);
+	}
+
+	public function excluirEscala($id = null) {
+		if (!$id) {
+			echo json_encode(['status' => 'error', 'message' => 'ID não fornecido']);
+			return;
+		}
+
+		$resultado = $this->model->deleteEscala($id);
+
+		if ($resultado) {
+			echo json_encode(['status' => 'ok']);
+		} else {
+			header('HTTP/1.1 500 Internal Server Error');
+			echo json_encode(['status' => 'error']);
+		}
+	}
 
 	/**
 	 * Exibe a página de acessos externos (QR Codes) em modo RawView

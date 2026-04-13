@@ -100,7 +100,7 @@
     </div>
 
     <div class="form-title">
-        <h2>Ficha de Qualificação de Membro</h2>
+        <h2>Ficha de Cadastro de Membro</h2>
     </div>
 
     <div class="section-title">01. Identificação Pessoal</div>

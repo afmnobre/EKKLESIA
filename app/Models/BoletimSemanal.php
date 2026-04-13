@@ -250,5 +250,24 @@ class BoletimSemanal
 		return $st->fetchAll(PDO::FETCH_ASSOC);
 	}
 
+	public function getProximaEscalaExterna($igrejaId) {
+		$sql = "SELECT
+					l.id,
+					l.data_evento,
+					DATE_FORMAT(l.data_evento, '%d/%m/%Y') as data_formatada,
+					l.local_nome_endereco,
+					p.programacao_titulo,
+					p.programacao_hora
+				FROM igrejas_programacao_locais l
+				INNER JOIN igrejas_programacao p ON l.programacao_id = p.programacao_id
+				WHERE p.programacao_igreja_id = ?
+				  AND l.data_evento >= CURDATE()
+				ORDER BY l.data_evento ASC, p.programacao_hora ASC
+				LIMIT 1";
+
+		$st = $this->db->prepare($sql);
+		$st->execute([$igrejaId]);
+		return $st->fetch(\PDO::FETCH_ASSOC);
+	}
 
 }

@@ -13,7 +13,8 @@
 
     <div class="row">
         <?php foreach ($pendentes as $m): ?>
-            <div class="col-12 mb-4"> <div class="card border-0 shadow-sm overflow-hidden rounded-3">
+            <div class="col-12 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden rounded-3">
                     <div class="card-body p-0">
                         <div class="row g-0 align-items-center">
 
@@ -43,7 +44,22 @@
                                 <div class="row small mt-2 g-2">
                                     <div class="col-md-6 border-end">
                                         <p class="mb-1"><strong><i class="bi bi-balloon me-1 text-primary"></i>Nasc:</strong> <?= date('d/m/Y', strtotime($m['membro_data_nascimento'])) ?></p>
-                                        <p class="mb-1"><strong><i class="bi bi-whatsapp me-1 text-success"></i>WhatsApp:</strong> <?= $m['membro_telefone'] ?></p>
+                                        <p class="mb-1">
+                                            <strong><i class="bi bi-whatsapp me-1 text-success"></i>WhatsApp:</strong>
+                                            <?= $m['membro_telefone'] ?>
+
+                                            <?php if (!empty($m['membro_telefone'])):
+                                                // Lógica de tratamento do Link (Padrão que você utiliza)
+                                                $telefoneLimpo = preg_replace('/[^0-9]/', '', $m['membro_telefone']);
+                                                if (strlen($telefoneLimpo) <= 11) { $telefoneLimpo = "55" . $telefoneLimpo; }
+                                                $mensagem = urlencode("Olá " . $m['membro_nome']);
+                                                $urlWhatsapp = "https://wa.me/{$telefoneLimpo}?text={$mensagem}";
+                                            ?>
+                                                <a href="<?= $urlWhatsapp ?>" target="_blank" class="btn btn-sm btn-outline-success p-0 px-1 ms-1" title="Enviar WhatsApp" style="border-radius: 5px; line-height: 1; vertical-align: middle;">
+                                                    <i class="bi bi-whatsapp" style="font-size: 0.75rem;"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                        </p>
                                     </div>
                                     <div class="col-md-6 p-l-md-3">
                                         <p class="mb-1 text-truncate"><strong><i class="bi bi-envelope me-1 text-danger"></i>E-mail:</strong> <?= $m['membro_email'] ?></p>
@@ -58,7 +74,7 @@
                                         data-bs-target="#modalAprovar<?= $m['membro_id'] ?>"
                                         style="background-color: #003366; color: white; border-radius: 12px; border: none; font-weight: bold; width: 100%;">
                                     <i class="bi bi-shield-lock-fill fs-5 d-block mb-1"></i>
-                                    ANALISAR E APROVAR
+                                    APROVAR OU REPROVAR
                                 </button>
                             </div>
 
@@ -110,7 +126,6 @@
 </div>
 
 <style>
-    /* Estilos Adicionais */
     .card:hover {
         transform: translateY(-3px);
         transition: all 0.2s ease-in-out;
