@@ -90,6 +90,17 @@
             </div>
         <?php endif; ?>
 
+		<?php if (temPermissao('Bibliotecário', $perfisUsuario)): ?>
+            <a class="menu-link" data-bs-toggle="collapse" href="#biblioteca">📖 Biblioteca</a>
+            <div class="collapse submenu" id="biblioteca">
+                <a href="<?= url('biblioteca') ?>">Acervo de Livros</a>
+                <a href="<?= url('biblioteca/emprestimos') ?>">Empréstimos</a>
+                <a href="<?= url('biblioteca/categorias') ?>">Categorias / Temas</a>
+                <a href="<?= url('biblioteca/dashboard') ?>">Dashboard</a>
+                <a href="<?= url('biblioteca/imprimirEtiquetas') ?>">Etiquetas</a>
+            </div>
+        <?php endif; ?>
+
         <a class="menu-link text-warning" href="<?= url('igreja/acessos') ?>" target="_blank">
             <i class="bi bi-qr-code-scan"></i> Canais de Acesso
         </a>
