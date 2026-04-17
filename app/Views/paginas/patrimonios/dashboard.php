@@ -50,6 +50,15 @@
             </div>
         </div>
 
+		<div class="col-md-8 mb-4">
+			<div class="card border-0 shadow-sm h-100">
+				<div class="card-header bg-white fw-bold">Patrimônio por Categoria (Quantidade)</div>
+				<div class="card-body">
+					<canvas id="chartCategoria" style="max-height: 300px;"></canvas>
+				</div>
+			</div>
+		</div>
+
         <div class="col-md-8 mb-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white fw-bold">Top 5 Locais (Ocupação e Valor)</div>
@@ -91,28 +100,41 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const ctx = document.getElementById('chartStatus').getContext('2d');
-
-    // Preparando os dados do PHP para o JS
-    const labels = <?= json_encode(array_column($metrics['por_status'], 'status')) ?>;
-    const data = <?= json_encode(array_column($metrics['por_status'], 'qtd')) ?>;
-
-    new Chart(ctx, {
+    // --- GRÁFICO DE STATUS ---
+    const ctxStatus = document.getElementById('chartStatus').getContext('2d');
+    new Chart(ctxStatus, {
         type: 'doughnut',
         data: {
-            labels: labels.map(l => l.toUpperCase()),
+            labels: <?= json_encode(array_column($metrics['por_status'], 'status')) ?>.map(l => l.toUpperCase()),
             datasets: [{
-                data: data,
+                data: <?= json_encode(array_column($metrics['por_status'], 'qtd')) ?>,
                 backgroundColor: ['#198754', '#ffc107', '#dc3545', '#0dcaf0'],
-                borderWidth: 0,
-                hoverOffset: 4
+                borderWidth: 0
+            }]
+        },
+        options: { plugins: { legend: { position: 'bottom' } }, cutout: '70%' }
+    });
+
+    // --- NOVO: GRÁFICO DE CATEGORIAS ---
+    const ctxCat = document.getElementById('chartCategoria').getContext('2d');
+    new Chart(ctxCat, {
+        type: 'bar',
+        data: {
+            labels: <?= json_encode(array_column($metrics['por_categoria'], 'categoria')) ?>,
+            datasets: [{
+                label: 'Quantidade de Itens',
+                data: <?= json_encode(array_column($metrics['por_categoria'], 'qtd')) ?>,
+                backgroundColor: '#0d6efd',
+                borderRadius: 5
             }]
         },
         options: {
-            plugins: {
-                legend: { position: 'bottom' }
-            },
-            cutout: '70%'
+            indexAxis: 'y', // Barras horizontais ficam melhores para nomes longos de categorias
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, beginAtZero: true },
+                y: { grid: { display: false } }
+            }
         }
     });
 });

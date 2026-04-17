@@ -141,15 +141,15 @@
 										$arqNF = json_encode($c['financeiro_conta_nota_fiscal'] ?? '');
 									?>
 									<button type="button"
-											class="btn btn-sm <?= !empty($c['financeiro_conta_comprovante']) ? 'btn-success' : 'btn-outline-secondary' ?>"
-											onclick='abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, "comprovante", <?= $arqComp ?>)'
+											class="btn btn-sm <?= (!empty($c['financeiro_conta_comprovante']) || !empty($c['membros'])) ? 'btn-success' : 'btn-outline-secondary' ?>"
+											onclick='abrirModalAnexo(<?= json_encode($c) ?>, "comprovante")'
 											title="Comprovante">
 										<i class="bi bi-receipt"></i>
 									</button>
 
 									<button type="button"
 											class="btn btn-sm <?= !empty($c['financeiro_conta_nota_fiscal']) ? 'btn-info' : 'btn-outline-secondary' ?>"
-											onclick='abrirModalAnexo(<?= $c['financeiro_conta_id'] ?>, "notafiscal", <?= $arqNF ?>)'
+											onclick='abrirModalAnexo(<?= json_encode($c) ?>, "notafiscal")'
 											title="Nota Fiscal">
 										<i class="bi bi-file-earmark-text"></i>
 									</button>
@@ -352,6 +352,14 @@
             </div>
 
             <div class="modal-body p-4">
+
+				<div id="area_rateio_anexos" class="d-none mb-3">
+					<label class="small fw-bold text-primary mb-2"><i class="bi bi-people-fill"></i> Comprovantes por Membro:</label>
+					<div id="lista_membros_upload" class="list-group shadow-sm">
+						</div>
+					<hr>
+				</div>
+
                 <div id="area_visualizacao" class="d-none mb-3">
                     <label class="small fw-bold text-primary mb-2"><i class="bi bi-eye"></i> Arquivo Atual:</label>
                     <div id="wrapper_preview" style="width: 100%; height: 350px; overflow: auto; border: 2px solid #e9ecef; border-radius: 8px; background: #f8f9fa; display: flex; justify-content: center; align-items: flex-start;">
@@ -788,46 +796,254 @@ async function salvarRateioFinal() {
     } catch (error) { alert("Erro de conexão."); btn.innerHTML = 'Gravar Rateio'; btn.classList.remove('disabled'); }
 }
 
-function abrirModalAnexo(id, tipo, arquivoAtual) {
-    // Normaliza: remove barras invertidas e qualquer barra no início da string do banco
-    const arquivoLimpo = arquivoAtual ? arquivoAtual.trim().replace(/\\/g, '/').replace(/^\//, '') : "";
+function abrirModalAnexo(dados, tipo) {
+    let id, membros, arquivoAtual;
+
+    if (typeof dados === 'object' && dados !== null) {
+        id = dados.financeiro_conta_id;
+        membros = dados.membros || [];
+        arquivoAtual = (tipo === 'comprovante') ? dados.financeiro_conta_comprovante : dados.financeiro_conta_nota_fiscal;
+    } else {
+        id = dados;
+        membros = [];
+        arquivoAtual = "";
+    }
 
     document.getElementById('anexo_conta_id').value = id;
     document.getElementById('anexo_tipo').value = tipo;
 
     const areaVisu = document.getElementById('area_visualizacao');
+    const areaRateio = document.getElementById('area_rateio_anexos');
+    const uploadSec = document.querySelector('.upload-section');
+    const titulo = document.getElementById('titulo_anexo');
+    const listaMembros = document.getElementById('lista_membros_upload');
+    const labelUpload = document.getElementById('label_upload'); // Referência ao label
+
+    // Reset padrão
+    areaVisu.classList.add('d-none');
+    areaRateio.classList.add('d-none');
+    uploadSec.classList.add('d-none'); // Começa escondido para decidir depois
+    listaMembros.innerHTML = '';
+
+    // Caso 1: Nota Fiscal ou Comprovante sem Rateio
+    if (tipo === 'notafiscal' || (tipo === 'comprovante' && membros.length === 0)) {
+        titulo.innerText = (tipo === 'notafiscal') ? "Anexar Nota Fiscal" : "Anexar Comprovante";
+
+        // Sempre mostramos a seção de upload nestes casos
+        uploadSec.classList.remove('d-none');
+
+        if (arquivoAtual) {
+            renderizarPreview(arquivoAtual);
+            areaVisu.classList.remove('d-none');
+            if (labelUpload) labelUpload.innerText = "Substituir arquivo:";
+        } else {
+            if (labelUpload) labelUpload.innerText = "Selecionar arquivo:";
+        }
+    }
+    // Caso 2: Comprovante com Rateio
+    else if (tipo === 'comprovante' && membros.length > 0) {
+        titulo.innerText = "Comprovantes do Rateio";
+        areaRateio.classList.remove('d-none');
+        // Aqui a seção de upload geral fica escondida pois o upload é individual por membro
+        uploadSec.classList.add('d-none');
+
+        const htmlMembros = membros.map(m => {
+            const temDoc = m.receita_membro_comprovante;
+            const valorFmt = parseFloat(m.receita_membro_valor || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+            return `
+                <div class="list-group-item bg-light mb-3 border rounded p-3 bloco-upload-membro">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong class="small d-block text-primary">${m.membro_nome}</strong>
+                            <span class="badge bg-white text-dark border shadow-sm">R$ ${valorFmt}</span>
+                        </div>
+                        <div class="status-anexo-membro" id="status_container_${m.receita_membro_id}">
+                            ${temDoc
+                                ? `<a href="<?= url('public/assets/uploads/') ?>${temDoc}" target="_blank" class="btn btn-sm btn-success shadow-sm">
+                                     <i class="bi bi-eye"></i> Ver Anexo
+                                   </a>`
+                                : `<span class="badge bg-warning-subtle text-warning border border-warning" style="font-size:11px">PENDENTE</span>`
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row g-1 border-top pt-2">
+                        <input type="hidden" class="membro-id-input" value="${m.receita_membro_id}">
+                        <div class="col-9">
+                            <input type="file" class="form-control form-control-sm arquivo-membro-input">
+                        </div>
+                        <div class="col-3">
+                            <button type="button" class="btn btn-sm btn-primary w-100" onclick="executarUploadManual(this)">
+                                <i class="bi bi-upload"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+
+        listaMembros.innerHTML = htmlMembros;
+    }
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAnexo')).show();
+}
+
+// Função auxiliar para o Preview (Reaproveitando seu código de visualização)
+function renderizarPreview(arquivoLimpo) {
+    const areaVisu = document.getElementById('area_visualizacao');
     const contentPreview = document.getElementById('content_preview');
     const linkExterno = document.getElementById('link_abrir_externo');
 
-    contentPreview.innerHTML = '';
+    areaVisu.classList.remove('d-none');
+    const urlArquivo = '<?= url("public/assets/uploads/") ?>' + arquivoLimpo.replace(/\\/g, '/').replace(/^\//, '');
+    linkExterno.href = urlArquivo;
 
-    if (arquivoLimpo !== "") {
-        areaVisu.classList.remove('d-none');
-
-        // Aqui usamos url() que já termina com / e o caminho sem / no começo
-        const urlArquivo = '<?= url("public/assets/uploads/") ?>' + arquivoLimpo;
-
-        linkExterno.href = urlArquivo;
-        const extensao = arquivoLimpo.split('.').pop().toLowerCase();
-
-        if (extensao === 'pdf') {
-            contentPreview.innerHTML = `
-                <div class="text-center p-5">
-                    <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 4rem;"></i>
-                    <p class="fw-bold mt-2">Documento PDF</p>
-                    <a href="${urlArquivo}" target="_blank" class="btn btn-outline-danger btn-sm">Abrir PDF</a>
-                </div>`;
-        } else {
-            contentPreview.innerHTML = `<img src="${urlArquivo}" style="max-width: 100%; height: auto; border-radius: 4px;">`;
-        }
+    const extensao = arquivoLimpo.split('.').pop().toLowerCase();
+    if (extensao === 'pdf') {
+        contentPreview.innerHTML = `<div class="text-center p-4"><i class="bi bi-file-earmark-pdf text-danger fs-1"></i><br><a href="${urlArquivo}" target="_blank" class="btn btn-link">Abrir PDF</a></div>`;
     } else {
-        areaVisu.classList.add('d-none');
+        contentPreview.innerHTML = `<img src="${urlArquivo}" class="img-fluid rounded">`;
     }
-
-    const modalEl = document.getElementById('modalAnexo');
-    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
+function executarUploadManual(botao) {
+    const bloco = botao.closest('.bloco-upload-membro');
+    const inputArquivo = bloco.querySelector('.arquivo-membro-input');
+    const membroId = bloco.querySelector('.membro-id-input').value;
+    const contaId = document.getElementById('anexo_conta_id').value;
+    const statusContainer = document.getElementById(`status_container_${membroId}`);
+
+    if (!inputArquivo.files.length) {
+        Swal.fire('Atenção', 'Selecione um arquivo.', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('arquivo', inputArquivo.files[0]);
+    formData.append('conta_id', contaId);
+    formData.append('membro_id', membroId);
+    formData.append('is_ajax', '1');
+    formData.append('tipo_arquivo', 'comprovante');
+    formData.append('ano_referencia', '<?= $anoSelecionado ?>');
+    formData.append('mes_referencia', '<?= $mesSelecionado ?>');
+
+    // Feedback visual no botão
+    const iconOriginal = botao.innerHTML;
+    botao.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    botao.disabled = true;
+
+    fetch('<?= url("financeiro/uploadAnexo") ?>', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 1. Limpa o input de arquivo
+            inputArquivo.value = '';
+
+            // 2. Atualiza o status visual no modal sem fechar nada
+            if (statusContainer && data.arquivo) {
+                const urlBase = '<?= url("public/assets/uploads/") ?>';
+                statusContainer.innerHTML = `
+                    <a href="${urlBase}${data.arquivo}" target="_blank" class="btn btn-sm btn-success shadow-sm animate__animated animate__fadeIn">
+                        <i class="bi bi-eye"></i> Ver Anexo
+                    </a>
+                `;
+            }
+
+            // 3. Exibe uma mensagem de sucesso discreta no topo do modal ou via Toast
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+
+            Toast.fire({
+                icon: 'success',
+                title: 'Upload realizado com sucesso!'
+            });
+
+        } else {
+            Swal.fire('Erro', data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error(error);
+        Swal.fire('Erro', 'Falha na comunicação com o servidor.', 'error');
+    })
+    .finally(() => {
+        // Restaura o botão
+        botao.innerHTML = iconOriginal;
+        botao.disabled = false;
+    });
+}
+
+
+	function executarUploadAsync(botao) {
+		// Busca o formulário pai deste botão específico
+		const form = botao.closest('.form-upload-membro');
+		if (!form) return;
+
+		// Busca o input de arquivo dentro DESTE formulário
+		const inputArquivo = form.querySelector('.input-arquivo-membro');
+		const membroId = form.querySelector('input[name="membro_id"]').value;
+
+		if (!inputArquivo || inputArquivo.files.length === 0) {
+			Swal.fire('Atenção', 'Selecione um arquivo para este membro.', 'warning');
+			return;
+		}
+
+		// Cria o FormData APENAS com os dados deste formulário
+		const formData = new FormData(form);
+
+		// Feedback visual no botão
+		const iconOriginal = botao.innerHTML;
+		botao.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+		botao.disabled = true;
+
+		fetch(form.action, {
+			method: 'POST',
+			body: formData,
+			headers: { 'X-Requested-With': 'XMLHttpRequest' }
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.success) {
+				Swal.fire({
+					icon: 'success',
+					title: 'Sucesso!',
+					text: 'Upload concluído para este membro.',
+					timer: 1500,
+					showConfirmButton: false
+				}).then(() => {
+					// Em vez de atualizar o HTML manualmente e arriscar erro de JS,
+					// vamos recarregar para garantir que o banco e a tela estejam iguais.
+					location.reload();
+				});
+			} else {
+				Swal.fire('Erro', data.message, 'error');
+				botao.innerHTML = iconOriginal;
+				botao.disabled = false;
+			}
+		})
+		.catch(error => {
+			console.error('Erro:', error);
+			Swal.fire('Erro', 'Falha na comunicação com o servidor.', 'error');
+			botao.innerHTML = iconOriginal;
+			botao.disabled = false;
+		});
+	}
+
+// Recarregar se houve mudanças
+document.getElementById('modalAnexo').addEventListener('hidden.bs.modal', function () {
+    if (this.getAttribute('data-refresh') === 'true') {
+        location.reload();
+    }
+});
 
 function abrirModalRelatorioConferencia() {
     new bootstrap.Modal(document.getElementById('modalRelatorioConferencia')).show();

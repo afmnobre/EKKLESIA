@@ -123,60 +123,154 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="ps-4">Data</th>
-                            <th>Descrição</th>
-                            <th>Categoria</th>
-                            <th>Valor</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-end pe-4">Identificação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if(empty($lancamentos)): ?>
-                            <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">Nenhum lançamento conferido por esta dupla neste mês.</td>
-                            </tr>
-                        <?php endif; ?>
-                        <?php foreach($lancamentos as $l): ?>
+	<div class="card border-0 shadow-sm">
+		<div class="card-body p-0">
+			<div class="table-responsive">
+				<table class="table table-hover align-middle mb-0">
+					<thead class="bg-light">
 						<tr>
-							<td class="ps-4"><?= date('d/m/Y', strtotime($l['financeiro_conta_data_pagamento'])) ?></td>
-							<td>
-								<span class="d-block fw-bold text-dark"><?= $l['financeiro_conta_descricao'] ?></span>
+							<th class="ps-4" style="width: 100px;">Data</th>
+							<th>Descrição / Categoria</th>
+							<th>Valor</th>
+							<th class="text-center">Documentação</th>
+							<th class="text-center">Status</th>
+							<th class="text-end pe-4">Ações</th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php if(empty($lancamentos)): ?>
+							<tr>
+								<td colspan="6" class="text-center py-5 text-muted">
+									<i class="bi bi-inbox fs-1 d-block mb-2"></i>
+									Nenhum lançamento conferido por esta dupla neste mês.
+								</td>
+							</tr>
+						<?php endif; ?>
+
+						<?php foreach($lancamentos as $l):
+							$temRateio = !empty($l['membros']);
+							$temComprovante = !empty($l['financeiro_conta_comprovante']);
+							$temNota = !empty($l['financeiro_conta_nota_fiscal']);
+						?>
+						<tr>
+							<td class="ps-4">
+								<span class="text-secondary small d-block" style="font-size: 0.65rem;">PAGO EM</span>
+								<span class="fw-bold"><?= date('d/m', strtotime($l['financeiro_conta_data_pagamento'])) ?></span>
+								<span class="text-muted small"><?= date('/Y', strtotime($l['financeiro_conta_data_pagamento'])) ?></span>
 							</td>
+
 							<td>
-								<span class="badge bg-light text-dark border"><?= $l['financeiro_categoria_nome'] ?></span>
+								<span class="d-block fw-bold text-dark mb-1"><?= $l['financeiro_conta_descricao'] ?></span>
+								<span class="badge rounded-pill bg-light text-secondary border" style="font-size: 0.7rem;">
+									<?= $l['financeiro_categoria_nome'] ?>
+								</span>
 							</td>
-							<td class="fw-bold text-success">
+
+							<td class="fw-bold text-primary">
 								R$ <?= number_format($l['financeiro_conta_valor'], 2, ',', '.') ?>
 							</td>
+
+							<td class="text-center">
+								<div class="d-flex justify-content-center gap-3">
+									<i class="bi bi-receipt <?= $temNota ? 'text-success' : 'text-light' ?> fs-5" title="Nota Fiscal"></i>
+									<i class="bi <?= $temRateio ? 'bi-people-fill' : 'bi-file-earmark-check' ?> <?= ($temComprovante || $temRateio) ? 'text-success' : 'text-light' ?> fs-5" title="Comprovante/Rateio"></i>
+								</div>
+							</td>
+
 							<td class="text-center">
 								<?php if(!empty($l['conferido_por_1']) && !empty($l['conferido_por_2'])): ?>
-									<span class="badge bg-success-subtle text-success px-3">
-										<i class="bi bi-check-all me-1"></i>Conferido
+									<span class="badge bg-success-subtle text-success px-3 rounded-pill" style="font-size: 0.7rem;">
+										<i class="bi bi-check-all"></i> Conferido
 									</span>
 								<?php else: ?>
-									<span class="badge bg-warning-subtle text-warning px-3">
-										<i class="bi bi-clock me-1"></i>Pendente
+									<span class="badge bg-warning-subtle text-warning px-3 rounded-pill" style="font-size: 0.7rem;">
+										<i class="bi bi-clock"></i> Pendente
 									</span>
 								<?php endif; ?>
 							</td>
-							<td class="text-end pe-4 small text-muted">
-								<i class="bi bi-fingerprint"></i> ID: <?= $l['financeiro_conta_id'] ?>
+
+							<td class="text-end pe-4">
+								<div class="d-flex align-items-center justify-content-end gap-2">
+									<button class="btn btn-sm <?= $temRateio ? 'btn-primary' : 'btn-outline-primary' ?> shadow-sm border-0 position-relative"
+											onclick='abrirGerenciadorAnexos(<?= json_encode($l) ?>)'
+											title="<?= $temRateio ? 'Gerenciar Rateio' : 'Anexar Comprovante' ?>">
+
+										<i class="bi <?= $temRateio ? 'bi-people-fill' : 'bi-file-earmark-arrow-up' ?> fs-6"></i>
+
+										<?php if($temRateio): ?>
+											<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.55rem;">
+												<?= count($l['membros']) ?>
+											</span>
+										<?php endif; ?>
+									</button>
+
+									<span class="text-muted" style="font-size: 10px;">
+										<i class="bi bi-fingerprint"></i> <?= $l['financeiro_conta_id'] ?>
+									</span>
+								</div>
 							</td>
 						</tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="modalGerenciarAnexos" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-files me-2"></i>Comprovantes de Receita</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <div id="info-receita-anexo" class="mb-4 p-3 bg-light rounded border-start border-4 border-primary">
+                    </div>
+
+                <div id="lista-uploads-anexos">
+                    </div>
+            </div>
+
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
 </div>
+
+<template id="template-upload-membro">
+    <form action="<?= url('dizimoOferta/uploadAnexo') ?>" method="POST" enctype="multipart/form-data" class="card mb-3 border shadow-sm">
+        <input type="hidden" name="conta_id" class="up-conta-id">
+        <input type="hidden" name="receita_membro_id" class="up-membro-id">
+        <input type="hidden" name="tipo_arquivo" value="comprovante">
+        <input type="hidden" name="ano_referencia" value="<?= $anoSelecionado ?>">
+        <input type="hidden" name="mes_referencia" value="<?= $mesSelecionado ?>">
+
+        <div class="card-body p-3">
+            <div class="row align-items-center">
+                <div class="col-md-5">
+                    <span class="fw-bold text-dark nome-membro-anexo"></span>
+                    <small class="d-block text-muted valor-membro-anexo"></small>
+                </div>
+                <div class="col-md-5">
+                    <input type="file" name="arquivo" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-md-2 text-end">
+					<button type="button" class="btn btn-sm btn-primary w-100 btn-upload-async" onclick="executarUploadAsync(this)">
+						<span class="spinner-border spinner-border-sm d-none" role="status"></span>
+						<span class="btn-text"><i class="bi bi-upload"></i> Salvar</span>
+					</button>
+                </div>
+            </div>
+            <div class="preview-anexo-existente mt-2 d-none">
+                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Comprovante já enviado</span>
+            </div>
+        </div>
+    </form>
+</template>
 
 <div class="modal fade" id="modalRelatorioConferencia" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -457,4 +551,178 @@ document.addEventListener('input', function(e) {
         calcularRateio();
     }
 });
+
+function abrirGerenciadorAnexos(receita) {
+    try {
+        const container = document.getElementById('lista-uploads-anexos');
+        const infoHeader = document.getElementById('info-receita-anexo');
+        const template = document.getElementById('template-upload-membro');
+
+        if (!container || !template) return;
+
+        container.innerHTML = '';
+
+        // Formatação de data
+        let dataFormatada = "";
+        if(receita.financeiro_conta_data_pagamento) {
+            const partes = receita.financeiro_conta_data_pagamento.split('-');
+            dataFormatada = partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : receita.financeiro_conta_data_pagamento;
+        }
+
+        const temMembros = (receita.membros && receita.membros.length > 0);
+        const tipoTexto = temMembros ?
+            '<span class="badge bg-primary">COM RATEIO</span>' :
+            '<span class="badge bg-secondary">AVULSO</span>';
+
+        infoHeader.innerHTML = `
+            <div class="row align-items-center">
+                <div class="col-8">
+                    <div class="mb-1">${tipoTexto}</div>
+                    <strong class="fs-6 d-block">${receita.financeiro_conta_descricao}</strong>
+                    <small class="text-muted">Data: ${dataFormatada}</small>
+                </div>
+                <div class="col-4 text-end">
+                    <small class="text-muted d-block">VALOR</small>
+                    <strong class="text-success fs-5">R$ ${parseFloat(receita.financeiro_conta_valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                </div>
+            </div>
+        `;
+
+        if (temMembros) {
+            receita.membros.forEach(m => {
+                const clone = template.content.cloneNode(true);
+                clone.querySelector('.up-conta-id').value = receita.financeiro_conta_id;
+                clone.querySelector('.up-membro-id').value = m.receita_membro_id;
+                clone.querySelector('.nome-membro-anexo').innerText = m.membro_nome;
+
+                const valorMembro = parseFloat(m.receita_membro_valor || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                clone.querySelector('.valor-membro-anexo').innerText = `Dízimo/Oferta: R$ ${valorMembro}`;
+
+                const preview = clone.querySelector('.preview-anexo-existente');
+                if(m.receita_membro_comprovante) {
+                    preview.classList.remove('d-none');
+                    preview.innerHTML = `
+                        <div class="d-flex align-items-center gap-2 mt-1 p-2 bg-success-subtle rounded border border-success-subtle">
+                            <i class="bi bi-file-earmark-check-fill text-success fs-5"></i>
+                            <div class="flex-grow-1">
+                                <small class="d-block fw-bold text-success" style="font-size: 10px;">ARQUIVO DISPONÍVEL</small>
+                                <a href="<?= url('public/assets/uploads/') ?>${m.receita_membro_comprovante}" target="_blank" class="btn btn-sm btn-success py-0 px-2 fw-bold" style="font-size: 11px;">
+                                    <i class="bi bi-eye"></i> Abrir para Conferir
+                                </a>
+                            </div>
+                        </div>`;
+                }
+                container.appendChild(clone);
+            });
+        } else {
+            const clone = template.content.cloneNode(true);
+            clone.querySelector('.up-conta-id').value = receita.financeiro_conta_id;
+            clone.querySelector('.up-membro-id').value = '';
+            clone.querySelector('.nome-membro-anexo').innerText = "Comprovante Geral";
+            clone.querySelector('.valor-membro-anexo').innerText = "Esta receita não possui rateio entre membros.";
+
+            const preview = clone.querySelector('.preview-anexo-existente');
+            if(receita.financeiro_conta_comprovante) {
+                preview.classList.remove('d-none');
+                preview.innerHTML = `
+                    <div class="d-flex align-items-center gap-2 mt-1 p-2 bg-primary-subtle rounded border border-primary-subtle">
+                        <i class="bi bi-file-earmark-arrow-up-fill text-primary fs-5"></i>
+                        <div class="flex-grow-1">
+                            <small class="d-block fw-bold text-primary" style="font-size: 10px;">COMPROVANTE GERAL SALVO</small>
+                            <a href="<?= url('public/assets/uploads/') ?>${receita.financeiro_conta_comprovante}" target="_blank" class="btn btn-sm btn-primary py-0 px-2 fw-bold" style="font-size: 11px;">
+                                <i class="bi bi-eye"></i> Visualizar Arquivo
+                            </a>
+                        </div>
+                    </div>`;
+            }
+            container.appendChild(clone);
+        }
+
+        const modalEl = document.getElementById('modalGerenciarAnexos');
+        const modalInstance = new bootstrap.Modal(modalEl);
+        modalInstance.show();
+
+    } catch (err) {
+        console.error("Erro na função abrirGerenciadorAnexos:", err);
+    }
+}
+
+/**
+ * @param contaId ID da conta principal
+ * @param tipo 'comprovante' ou 'nota_fiscal'
+ * @param membroId ID do rateio (opcional)
+ */
+function anexarDocumento(contaId, tipo, membroId = null) {
+    document.getElementById('anexo_conta_id').value = contaId;
+    document.getElementById('anexo_tipo').value = tipo;
+
+    // Campo que criamos no Modal para o ID do Membro
+    const inputMembro = document.getElementById('anexo_receita_membro_id');
+    if(inputMembro) {
+        inputMembro.value = membroId || '';
+    }
+
+    document.getElementById('titulo_anexo').innerText = membroId
+        ? "Recibo de Membro Individual"
+        : "Comprovante Geral da Oferta";
+
+    var modal = new bootstrap.Modal(document.getElementById('modalAnexo'));
+    modal.show();
+}
+
+function executarUploadAsync(botao) {
+    const form = botao.closest('form');
+    const formData = new FormData(form);
+    const btnText = botao.querySelector('.btn-text');
+    const spinner = botao.querySelector('.spinner-border');
+    const previewArea = form.querySelector('.preview-anexo-existente');
+
+    // Feedback visual de carregamento
+    botao.disabled = true;
+    btnText.classList.add('d-none');
+    spinner.classList.remove('d-none');
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // Sucesso! Atualiza o visual da linha sem fechar o modal
+            previewArea.classList.remove('d-none');
+            previewArea.innerHTML = `
+                <div class="d-flex align-items-center gap-2 mt-1 p-2 bg-success-subtle rounded border border-success-subtle animate__animated animate__fadeIn">
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                    <div class="flex-grow-1">
+                        <small class="d-block fw-bold text-success" style="font-size: 10px;">ENVIADO COM SUCESSO!</small>
+                        <span class="text-muted" style="font-size: 11px;">O arquivo foi salvo.</span>
+                    </div>
+                </div>`;
+
+            // Limpa o campo de arquivo para um novo upload se necessário
+            form.querySelector('input[type="file"]').value = '';
+
+            // Opcional: Você pode adicionar um link para ver o arquivo se o seu PHP retornar o caminho
+            // Mas para dízimos, o feedback visual de "Enviado" geralmente já basta para o fluxo.
+        } else {
+            alert("Erro ao enviar o arquivo. Verifique o tamanho ou formato.");
+        }
+    })
+    .catch(error => {
+        console.error("Erro:", error);
+        alert("Erro de conexão ao tentar subir o arquivo.");
+    })
+    .finally(() => {
+        // Restaura o botão
+        botao.disabled = false;
+        btnText.classList.remove('d-none');
+        spinner.classList.add('d-none');
+    });
+}
+
+document.getElementById('modalGerenciarAnexos').addEventListener('hidden.bs.modal', function () {
+    // Recarrega a página para que o PHP busque os dados atualizados do banco
+    location.reload();
+});
+
 </script>

@@ -16,36 +16,45 @@ class PatrimoniosController extends Controller
         $this->model = new Patrimonio();
     }
 
-	public function index()
-	{
-		$igrejaId = $_SESSION['usuario_igreja_id'];
-
-		// 1. Busca os bens e locais que você já tinha
-		$bens = $this->model->getAll($igrejaId);
-		$locais = $this->model->getLocais($igrejaId);
-
-		// 2. Busca o nome da igreja para a placa de patrimônio
-		$dadosIgreja = $this->model->getIgrejaDados($igrejaId);
-
-		// 3. Passa tudo para a view
-		$this->view('patrimonios/index', [
-			'bens' => $bens,
-			'locais' => $locais,
-			'nomeIgreja' => $dadosIgreja['igreja_nome'] ?? 'IGREJA PRESBITERIANA'
-		]);
-	}
-
-    public function novo()
+    public function index()
     {
         $igrejaId = $_SESSION['usuario_igreja_id'];
-        $locais = $this->model->getLocais($igrejaId);
 
-        $this->view('patrimonios/cadastrar', [
-            'locais' => $locais
+        // 1. Busca os bens (já com join de categoria)
+        $bens = $this->model->getAll($igrejaId);
+
+        // 2. Busca locais e categorias para filtros/formulários
+        $locais = $this->model->getLocais($igrejaId);
+        $categorias = $this->model->getCategorias($igrejaId);
+
+        // 3. Busca o nome da igreja
+        $dadosIgreja = $this->model->getIgrejaDados($igrejaId);
+
+        // 4. Passa tudo para a view
+        $this->view('patrimonios/index', [
+            'bens' => $bens,
+            'locais' => $locais,
+            'categorias' => $categorias, // Nova variável na view
+            'nomeIgreja' => $dadosIgreja['igreja_nome'] ?? 'IGREJA'
         ]);
     }
 
-	public function locais() {
+	public function novo()
+	{
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+
+		// Você provavelmente já tinha essa linha:
+		$locais = $this->model->getLocais($igrejaId);
+
+		// ADICIONE ESTA LINHA PARA CARREGAR AS CATEGORIAS:
+		$categorias = $this->model->getCategorias($igrejaId);
+
+		// Passe a variável 'categorias' para a view
+		$this->view('patrimonios/cadastrar', [
+			'locais' => $locais,
+			'categorias' => $categorias // <-- Importante passar aqui
+		]);
+	}	public function locais() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 		$locais = $this->model->getLocais($igrejaId);
 
@@ -105,7 +114,7 @@ class PatrimoniosController extends Controller
 			$proximoId = $ultimoId + 1;
 			$codigoPatrimonio = "PAT-" . date('Y') . "-" . str_pad($proximoId, 4, '0', STR_PAD_LEFT);
 
-			// 1. Prepara os dados do Bem (Agora incluindo o local_id)
+			// 1. Prepara os dados do Bem
 			$dadosBem = [
 				'igreja_id'      => $igrejaId,
 				'codigo'         => $codigoPatrimonio,
@@ -114,21 +123,22 @@ class PatrimoniosController extends Controller
 				'data_aquisicao' => $_POST['patrimonio_bem_data_aquisicao'] ?: null,
 				'valor'          => $_POST['patrimonio_bem_valor'] ?: 0,
 				'status'         => $_POST['patrimonio_bem_status'],
-				'local_id'       => $_POST['patrimonio_bem_local_id'] // ADICIONADO
+				'local_id'       => $_POST['patrimonio_bem_local_id'],
+				'categoria_id'   => $_POST['patrimonio_bem_categoria_id'] // ADICIONADO
 			];
 
-			// 2. Salva o Bem no Model e recupera o ID gerado
+			// 2. Salva o Bem
 			$bemId = $this->model->salvarBem($dadosBem);
 
 			if ($bemId) {
-				// 3. Registra a Movimentação Inicial (Mantém como você já fez)
+				// 3. Registra a Movimentação Inicial
 				$dadosMovimentacao = [
 					'bem_id'        => $bemId,
 					'igreja_id'     => $igrejaId,
 					'tipo'          => 'entrada',
 					'local_destino' => $_POST['patrimonio_bem_local_id'],
 					'data'          => date('Y-m-d H:i:s'),
-					'observacao'    => "Entrada inicial. Código gerado: {$codigoPatrimonio}"
+					'observacao'    => "Entrada inicial. Categoria definida. Código: {$codigoPatrimonio}"
 				];
 
 				$this->model->registrarMovimentacao($dadosMovimentacao);
@@ -200,25 +210,30 @@ class PatrimoniosController extends Controller
 
     }
 
-    public function detalhes($id)
+	public function detalhes($id)
 	{
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 
 		$bem = $this->model->getById($id, $igrejaId);
+
+		// Busca a categoria específica deste bem
+		$categoria = null;
+		if (!empty($bem['patrimonio_bem_categoria_id'])) {
+			$categoria = $this->model->getCategoriaById($bem['patrimonio_bem_categoria_id'], $igrejaId);
+		}
+
 		$fotos = $this->model->getFotos($id);
 		$documentos = $this->model->getDocumentos($id);
 		$movimentacoes = $this->model->getMovimentacoes($id, $igrejaId);
-
-		// 🔥 ESTA É A LINHA QUE RESOLVE O BUG DO MODAL:
-		// Você precisa carregar a lista de locais para o modal funcionar!
 		$locais = $this->model->getLocais($igrejaId);
 
 		$this->view('patrimonios/detalhes', [
-			'bem' => $bem,
-			'fotos' => $fotos,
-			'documentos' => $documentos,
+			'bem'           => $bem,
+			'categoria'     => $categoria, // Passando a categoria encontrada
+			'fotos'         => $fotos,
+			'documentos'    => $documentos,
 			'movimentacoes' => $movimentacoes,
-			'locais' => $locais // <-- Enviando para a view
+			'locais'        => $locais
 		]);
 	}
 
@@ -227,7 +242,8 @@ class PatrimoniosController extends Controller
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 
 		// Busca o bem específico
-		$bem = $this->model->getById($id, $igrejaId);
+        $bem = $this->model->getById($id, $igrejaId);
+        $categorias = $this->model->getCategorias($igrejaId);
 
 		if (!$bem) {
 			header('Location: ' . url('patrimonios'));
@@ -239,30 +255,31 @@ class PatrimoniosController extends Controller
 
 		$this->view('patrimonios/editar', [
 			'bem' => $bem,
-			'locais' => $locais
+            'locais' => $locais,
+            'categorias' => $categorias
 		]);
 	}
 
 	public function atualizar()
 	{
 		if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-			$id = $_POST['patrimonio_bem_id'];
 			$igrejaId = $_SESSION['usuario_igreja_id'];
 
 			$dados = [
-				'id'             => $id,
+				'id'             => $_POST['patrimonio_bem_id'],
 				'igreja_id'      => $igrejaId,
 				'nome'           => $_POST['patrimonio_bem_nome'],
 				'descricao'      => $_POST['patrimonio_bem_descricao'],
 				'data_aquisicao' => $_POST['patrimonio_bem_data_aquisicao'] ?: null,
 				'valor'          => $_POST['patrimonio_bem_valor'] ?: 0,
-				'status'         => $_POST['patrimonio_bem_status']
+				'status'         => $_POST['patrimonio_bem_status'],
+				'categoria_id'   => $_POST['patrimonio_bem_categoria_id'] // ADICIONADO
 			];
 
 			if ($this->model->atualizarBem($dados)) {
-				header('Location: ' . url('patrimonios/detalhes/' . $id) . '?sucesso=atualizado');
+				header('Location: ' . url('patrimonios/detalhes/'.$dados['id']) . '?sucesso=atualizado');
 			} else {
-				header('Location: ' . url('patrimonios/editar/' . $id) . '?erro=falha_atualizacao');
+				header('Location: ' . url('patrimonios/editar/'.$dados['id']) . '?erro=erro_ao_atualizar');
 			}
 			exit;
 		}
@@ -312,7 +329,8 @@ class PatrimoniosController extends Controller
 	public function dashboard()
 	{
 		$igrejaId = $_SESSION['usuario_igreja_id'];
-		$metrics = $this->model->getMetrics($igrejaId);
+        $metrics = $this->model->getMetrics($igrejaId);
+        $metrics['por_categoria'] = $this->model->getMetricsPorCategoria($igrejaId);
 
 		// Cálculo da Taxa de Manutenção (Métrica 4)
 		$total = $metrics['geral']['total_itens'] ?: 1;
@@ -411,6 +429,46 @@ class PatrimoniosController extends Controller
 
 		return empty($text) ? 'n-a' : $text;
 	}
+
+	// Exibe a listagem de categorias
+	public function categorias()
+	{
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+		$categorias = $this->model->getCategorias($igrejaId);
+
+		$this->view('patrimonios/categorias', [
+			'categorias' => $categorias
+		]);
+	}
+
+	// Salva (Insert ou Update)
+	public function salvarCategoria()
+	{
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+		$id = $_POST['id'] ?? null;
+		$nome = $_POST['patrimonio_categoria_nome'] ?? '';
+
+		if (!empty($nome)) {
+			if ($id) {
+				$this->model->atualizarCategoria($id, $igrejaId, $nome);
+			} else {
+				$this->model->inserirCategoria($igrejaId, $nome);
+			}
+		}
+
+		header('Location: ' . url('patrimonios/categorias'));
+		exit;
+	}
+
+	// Exclui
+	public function excluirCategoria($id)
+	{
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+		$this->model->excluirCategoria($id, $igrejaId);
+		header('Location: ' . url('patrimonios/categorias'));
+		exit;
+	}
+
 
 
 }

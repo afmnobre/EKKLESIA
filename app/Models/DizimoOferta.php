@@ -161,11 +161,13 @@ class DizimoOferta
 
 	public function getResumoConferencia($igrejaId, $data)
 	{
+		// Adicionamos o filtro para pegar apenas as ENTRADAS
 		$sql = "SELECT sub.subcategoria_nome as nome, SUM(fc.financeiro_conta_valor) as total
 				FROM financeiro_contas fc
 				JOIN financeiro_subcategorias sub ON fc.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
 				WHERE fc.financeiro_conta_igreja_id = ?
 				AND fc.financeiro_conta_data_pagamento = ?
+				AND fc.financeiro_conta_tipo = 'entrada'
 				GROUP BY sub.subcategoria_id, sub.subcategoria_nome";
 
 		$stmt = $this->db->prepare($sql);
@@ -339,5 +341,47 @@ class DizimoOferta
 		return $stmt->fetch(\PDO::FETCH_ASSOC);
 	}
 
+	public function getMembrosRateio($contaId) {
+		$sql = "SELECT
+					rm.receita_membro_id,
+					rm.receita_membro_valor,
+					rm.receita_membro_comprovante, -- ESTA LINHA É ESSENCIAL
+					m.membro_nome
+				FROM financeiro_receita_membros rm
+				INNER JOIN membros m ON rm.receita_membro_usuario_id = m.membro_id
+				WHERE rm.receita_membro_conta_id = ?";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$contaId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	/**
+	 * Atualiza o comprovante na tabela de contas (Geral)
+	 */
+	public function atualizarAnexoFinanceiro($contaId, $igrejaId, $tipo, $caminho) {
+		$coluna = ($tipo === 'comprovante') ? 'financeiro_conta_comprovante' : 'financeiro_conta_nota_fiscal';
+		$sql = "UPDATE financeiro_contas SET $coluna = ? WHERE financeiro_conta_id = ? AND financeiro_conta_igreja_id = ?";
+		return $this->db->prepare($sql)->execute([$caminho, $contaId, $igrejaId]);
+	}
+
+	/**
+	 * Atualiza o comprovante na tabela de membros (Rateio)
+	 */
+	public function atualizarComprovanteRateio($id, $caminho) {
+		$stmt = $this->db->prepare("UPDATE financeiro_receita_membros SET receita_membro_comprovante = ? WHERE receita_membro_id = ?");
+		return $stmt->execute([$caminho, $id]);
+	}
+
+	public function getContaById($id, $igrejaId) {
+		$stmt = $this->db->prepare("SELECT * FROM financeiro_contas WHERE financeiro_conta_id = ? AND financeiro_conta_igreja_id = ?");
+		$stmt->execute([$id, $igrejaId]);
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
+
+	public function getRateioById($id) {
+		$stmt = $this->db->prepare("SELECT * FROM financeiro_receita_membros WHERE receita_membro_id = ?");
+		$stmt->execute([$id]);
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
 
 }

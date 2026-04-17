@@ -214,14 +214,23 @@ class PesquisaMembro
 
 	// Busca os familiares (quem é dependente do membro atual e de quem ele é dependente)
 	public function getFamilia($membro_id) {
-		$sql = "SELECT r.*, m.membro_nome, m.membro_id as id_parente
+		$sql = "SELECT
+					r.parentesco_id,
+					r.parentesco_grau,
+					r.parentesco_responsavel_id,
+					r.parentesco_dependente_id,
+					m.membro_id as id_parente,
+					m.membro_nome,
+					m.membro_genero,
+					m.membro_registro_interno
 				FROM membros_responsaveis r
-				JOIN membros m ON (r.parentesco_dependente_id = m.membro_id AND r.parentesco_responsavel_id = :id1)
-				   OR (r.parentesco_responsavel_id = m.membro_id AND r.parentesco_dependente_id = :id2)";
+				JOIN membros m ON (
+					(r.parentesco_dependente_id = m.membro_id AND r.parentesco_responsavel_id = :id1)
+					OR
+					(r.parentesco_responsavel_id = m.membro_id AND r.parentesco_dependente_id = :id2)
+				)";
 		$stmt = $this->db->prepare($sql);
-		$stmt->bindValue(':id1', $membro_id);
-		$stmt->bindValue(':id2', $membro_id);
-		$stmt->execute();
+		$stmt->execute([':id1' => $membro_id, ':id2' => $membro_id]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
@@ -252,5 +261,64 @@ class PesquisaMembro
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
+	function traduzirParentesco($membroLogadoId, $parente, $grauSalvo) {
+		$genero = $parente['membro_genero']; // 'Masculino' ou 'Feminino' (conforme seu banco)
+
+		// Verifica se o membro logado é o Responsável ou o Dependente na tabela
+		$souResponsavel = ($membroLogadoId == $parente['parentesco_responsavel_id']);
+
+		switch ($grauSalvo) {
+			case 'Pai/Mãe':
+				if ($souResponsavel) {
+					return ($genero == 'Feminino') ? "Minha Filha" : "Meu Filho";
+				} else {
+					return ($genero == 'Feminino') ? "Minha Mãe" : "Meu Pai";
+				}
+
+			case 'Filho(a)':
+				if ($souResponsavel) {
+					return ($genero == 'Feminino') ? "Minha Mãe" : "Meu Pai";
+				} else {
+					return ($genero == 'Feminino') ? "Minha Filha" : "Meu Filho";
+				}
+
+			case 'Cônjuge':
+				return ($genero == 'Feminino') ? "Minha Esposa" : "Meu Marido";
+
+			case 'Irmão/Irmã':
+				return ($genero == 'Feminino') ? "Minha Irmã" : "Meu Irmão";
+
+			case 'Avô/Avó':
+				if ($souResponsavel) {
+					return ($genero == 'Feminino') ? "Minha Neta" : "Meu Neto";
+				} else {
+					return ($genero == 'Feminino') ? "Minha Avó" : "Meu Avô";
+				}
+
+			case 'Neto(a)':
+				if ($souResponsavel) {
+					return ($genero == 'Feminino') ? "Minha Avó" : "Meu Avô";
+				} else {
+					return ($genero == 'Feminino') ? "Minha Neta" : "Meu Neto";
+				}
+
+			case 'Tio(a)':
+				if ($souResponsavel) {
+					return ($genero == 'Feminino') ? "Minha Sobrinha" : "Meu Sobrinho";
+				} else {
+					return ($genero == 'Feminino') ? "Minha Tia" : "Meu Tio";
+				}
+
+			case 'Sobrinho(a)':
+				if ($souResponsavel) {
+					return ($genero == 'Feminino') ? "Minha Tia" : "Meu Tio";
+				} else {
+					return ($genero == 'Feminino') ? "Minha Sobrinha" : "Meu Sobrinho";
+				}
+
+			default:
+				return $grauSalvo;
+		}
+	}
 
 }

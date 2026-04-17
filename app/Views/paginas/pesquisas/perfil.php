@@ -204,19 +204,30 @@
 
 							<div class="row g-3">
 								<?php if(!empty($familia)): foreach($familia as $f): ?>
-									<div class="col-md-6">
-										<div class="p-3 border rounded-3 bg-light d-flex align-items-center justify-content-between">
-											<div>
-												<small class="text-muted d-block"><?= $f['parentesco_grau'] ?></small>
-												<strong class="text-dark"><?= $f['membro_nome'] ?></strong>
+									<div class="col-md-6 mb-3">
+										<div class="p-3 border rounded-3 bg-white shadow-sm d-flex align-items-center justify-content-between">
+											<div class="d-flex align-items-center text-truncate">
+												<div class="me-3">
+													<div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+														<i class="bi bi-person text-secondary fs-4"></i>
+													</div>
+												</div>
+												<div class="text-truncate">
+													<small class="text-primary d-block fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+														<?= $f['parentesco_nome'] ?> </small>
+													<strong class="text-dark d-block text-truncate"><?= $f['membro_nome'] ?></strong>
+												</div>
 											</div>
-											<a href="<?= url('PesquisaMembro/perfil/'.$f['id_parente']) ?>" class="btn btn-sm btn-light border">
-												<i class="bi bi-eye"></i>
+											<a href="<?= url('PesquisaMembro/perfil/'.$f['id_parente']) ?>" class="btn btn-sm btn-outline-secondary border-0">
+												<i class="bi bi-arrow-right-short fs-4"></i>
 											</a>
 										</div>
 									</div>
 								<?php endforeach; else: ?>
-									<div class="text-center py-4 text-muted">Nenhum familiar vinculado.</div>
+									<div class="col-12 text-center py-4 text-muted">
+										<i class="bi bi-people d-block fs-2 opacity-25"></i>
+										Nenhum familiar vinculado.
+									</div>
 								<?php endif; ?>
 							</div>
 						</div>
@@ -249,7 +260,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Grau de Parentesco</label>
+                    <label class="form-label small fw-bold">Grau de Parentesco:(Eu sou... do Parente Selecionado)</label>
                     <select name="grau" class="form-select" required>
                         <option value="Pai/Mãe">Pai/Mãe</option>
                         <option value="Filho(a)">Filho(a)</option>
@@ -275,78 +286,103 @@
 .nav-tabs .nav-link { border: none; color: #6c757d; margin-bottom: -1px; padding: 12px 20px; }
 .nav-tabs .nav-link.active { color: #0d6efd; border-bottom: 3px solid #0d6efd; background: transparent; }
 .timeline { position: relative; }
+.text-justify { text-align: justify; }
 
 @media print {
-    /* 1. Esconde a interface */
+    /* 1. Reset de Layout e Papel */
+    @page {
+        size: A4;
+        margin: 1.5cm;
+    }
+
+    body {
+        background: white !important;
+        font-size: 11pt !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .container-fluid, .container {
+        width: 100% !important;
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* 2. Esconde elementos desnecessários */
     #sidebar, .sidebar, #sidebar-wrapper, .navbar, header, footer, .btn, .nav-tabs,
-    .d-flex.align-items-center.justify-content-between.mb-4, .d-print-none {
+    .d-print-none, .modal, .badge.rounded-pill {
         display: none !important;
     }
 
-    /* 2. Configurações de Página */
-    body { background: white !important; font-size: 11pt !important; }
-    @page { margin: 1.5cm; }
-
-    /* Cabeçalho de Impressão */
+    /* 3. Força exibição de blocos de impressão */
     .d-print-block { display: block !important; }
+    .card { border: none !important; shadow: none !important; width: 100% !important; }
+    .card-body { padding: 0 !important; }
 
-    /* 3. Foto e Nome (Cabeçalho Individual) */
-    .row { display: flex !important; flex-wrap: wrap !important; }
-
-    .col-lg-3, .col-md-4 {
+    /* 4. Ajuste do Cabeçalho (Foto e Nome) */
+    .row {
+        display: flex !important;
+        flex-direction: row !important;
         width: 100% !important;
-        border-bottom: 1px solid #dee2e6 !important;
-        margin-bottom: 20px !important;
-        padding-bottom: 15px !important;
-        display: block !important;
-        flex: 0 0 100% !important;
+        margin: 0 !important;
+    }
+
+    /* Faz a coluna da foto e a coluna dos dados ocuparem a largura total juntas */
+    .col-lg-3, .col-md-4 {
+        width: 20% !important;
+        float: left !important;
+    }
+    .col-lg-9, .col-md-8 {
+        width: 80% !important;
+        float: left !important;
     }
 
     img.rounded-4 {
-        width: 100px !important;
-        height: 100px !important;
-        float: left !important;
-        margin-right: 25px !important;
+        width: 120px !important;
+        height: 120px !important;
+        margin-bottom: 10px !important;
     }
 
-    h5.fw-bold { margin-top: 15px !important; color: #000 !important; font-size: 1.6rem !important; text-align: left !important; }
+    /* 5. Justificação e Textos */
+    p, div, .tab-pane {
+        text-align: justify !important;
+        color: #000 !important;
+    }
 
-    /* 4. Grid de Dados em Duas Colunas */
+    .border-bottom { border-bottom: 1px solid #ccc !important; }
+
+    /* 6. Grid Interno de Dados (2 ou 4 colunas na folha) */
     .tab-content { display: block !important; width: 100% !important; }
-    .tab-pane { display: block !important; opacity: 1 !important; visibility: visible !important; margin-bottom: 20px; }
+    .tab-pane { display: block !important; opacity: 1 !important; visibility: visible !important; }
 
-    .tab-pane .row {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        flex-direction: row !important;
-    }
+    /* Garante que os campos de dados fiquem lado a lado */
+    .tab-pane .row { display: flex !important; flex-wrap: wrap !important; margin-top: 10px !important; }
 
-    .tab-pane .col-md-6, .tab-pane .col-md-3 {
-        width: 50% !important; /* Força os campos a dividirem a linha */
-        flex: 0 0 50% !important;
-        max-width: 50% !important;
-        margin-bottom: 12px !important;
-    }
+    .tab-pane .col-md-6 { width: 50% !important; flex: 0 0 50% !important; }
+    .tab-pane .col-md-3 { width: 25% !important; flex: 0 0 25% !important; }
+    .tab-pane .col-12 { width: 100% !important; flex: 0 0 100% !important; }
 
-    .tab-pane .col-12 {
-        width: 100% !important;
-        flex: 0 0 100% !important;
-    }
-
-    /* 5. Estilização de Títulos e Containers na Impressão */
-    h6.text-primary {
+    /* 7. Estilização dos Títulos de Seção */
+    h6.text-primary, .h6 {
         background-color: #f0f0f0 !important;
         -webkit-print-color-adjust: exact;
-        padding: 8px !important;
-        margin-top: 20px !important;
-        border-left: 5px solid #0d6efd !important;
-        color: #333 !important;
-        width: 100%;
+        print-color-adjust: exact;
+        padding: 5px 10px !important;
+        margin-top: 15px !important;
+        border-left: 4px solid #0d6efd !important;
+        width: 100% !important;
+        display: block !important;
     }
 
-    .bg-light { background: #fdfdfd !important; border: 1px solid #eee !important; }
+    /* 8. Ajuste para a Timeline e Histórico */
+    .timeline .border-start {
+        border-left: 2px solid #0d6efd !important;
+    }
 
-    .col-md-6, .col-md-3, .col-12 {
+    /* Evita quebrar um campo no meio da folha */
+    .col-md-6, .col-md-3, .col-12, .mb-4 {
         page-break-inside: avoid !important;
     }
 }

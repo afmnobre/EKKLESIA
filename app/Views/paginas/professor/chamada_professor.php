@@ -63,7 +63,32 @@
             color: var(--azul-ipb);
             text-align: center;
         }
-    </style>
+
+		.avatar-aluno {
+			width: 48px;
+			height: 48px;
+			border-radius: 50%;
+			object-fit: cover;
+			border: 2px solid #fff;
+			box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+			margin-right: 12px;
+		}
+
+		.avatar-placeholder {
+			width: 48px;
+			height: 48px;
+			border-radius: 50%;
+			background: #e0e0e0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #999;
+			font-size: 1.4rem;
+			margin-right: 12px;
+			border: 2px solid #fff;
+		}
+
+   </style>
 </head>
 <body>
 
@@ -130,33 +155,49 @@
         </div>
     </div>
 
-    <div class="list-group mt-3 border-0">
-        <?php foreach ($alunos as $aluno): ?>
-            <?php $presencaStatus = $aluno['presenca'] ?? null; ?>
-            <div class="list-group-item d-flex justify-content-between align-items-center bg-white mb-2">
-                <div class="text-truncate" style="flex: 1;">
-                    <div class="nome-aluno text-truncate"><?= $aluno['membro_nome'] ?></div>
-                    <div class="status-label">
-                        <?php
-                            if ($presencaStatus == '1') echo '<span class="status-badge text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Presente</span>';
-                            elseif ($presencaStatus == '0' && $presencaStatus !== null) echo '<span class="status-badge text-danger fw-bold"><i class="bi bi-x-circle-fill"></i> Faltou</span>';
-                            else echo '<span class="status-badge text-warning"><i class="bi bi-clock"></i> Pendente</span>';
-                        ?>
-                    </div>
-                </div>
+	<div class="list-group mt-3 border-0">
+		<?php foreach ($alunos as $aluno): ?>
+			<?php $presencaStatus = $aluno['presenca'] ?? null; ?>
+			<div class="list-group-item d-flex justify-content-between align-items-center bg-white mb-2">
 
-                <div class="d-flex">
-                    <button type="button"
-                        class="btn btn-presenca <?= ($presencaStatus == '1') ? 'btn-success shadow' : 'btn-outline-secondary opacity-50' ?>"
-                        onclick="registrarPresenca(<?= $aluno['membro_id'] ?>, 1, this)">P</button>
+				<div class="d-flex align-items-center text-truncate" style="flex: 1;">
+					<?php
+					$igrejaId = $_SESSION['usuario_igreja_id']; // ID da igreja para o caminho do arquivo
+					if (!empty($aluno['foto'])):
+					?>
+						<img src="<?= url("assets/uploads/{$igrejaId}/membros/". $aluno['membro_registro_interno'] ."/". $aluno['foto']) ?>"
+							 class="avatar-aluno"
+							 alt="Foto">
+					<?php else: ?>
+						<div class="avatar-placeholder">
+							<i class="bi bi-person-fill"></i>
+						</div>
+					<?php endif; ?>
 
-                    <button type="button"
-                        class="btn btn-presenca <?= ($presencaStatus == '0' && $presencaStatus !== null) ? 'btn-danger shadow' : 'btn-outline-secondary opacity-50' ?>"
-                        onclick="registrarPresenca(<?= $aluno['membro_id'] ?>, 0, this)">F</button>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </div>
+					<div class="text-truncate">
+						<div class="nome-aluno text-truncate"><?= $aluno['membro_nome'] ?></div>
+						<div class="status-label">
+							<?php
+								if ($presencaStatus == '1') echo '<span class="status-badge text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Presente</span>';
+								elseif ($presencaStatus == '0' && $presencaStatus !== null) echo '<span class="status-badge text-danger fw-bold"><i class="bi bi-x-circle-fill"></i> Faltou</span>';
+								else echo '<span class="status-badge text-warning"><i class="bi bi-clock"></i> Pendente</span>';
+							?>
+						</div>
+					</div>
+				</div>
+
+				<div class="d-flex">
+					<button type="button"
+						class="btn btn-presenca <?= ($presencaStatus == '1') ? 'btn-success shadow' : 'btn-outline-secondary opacity-50' ?>"
+						onclick="registrarPresenca(<?= $aluno['membro_id'] ?>, 1, this)">P</button>
+
+					<button type="button"
+						class="btn btn-presenca <?= ($presencaStatus == '0' && $presencaStatus !== null) ? 'btn-danger shadow' : 'btn-outline-secondary opacity-50' ?>"
+						onclick="registrarPresenca(<?= $aluno['membro_id'] ?>, 0, this)">F</button>
+				</div>
+			</div>
+		<?php endforeach; ?>
+	</div>
 </div>
 
 

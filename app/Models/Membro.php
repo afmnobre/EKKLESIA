@@ -66,7 +66,6 @@ class Membro
 
 	public function insert($data)
 	{
-		// Adicionado membro_rg e membro_cpf
 		$sql = "INSERT INTO membros (
 					membro_igreja_id,
 					membro_registro_interno,
@@ -80,7 +79,7 @@ class Membro
 					membro_telefone,
 					membro_data_batismo,
 					membro_data_casamento,
-					membro_status,
+					membro_status, -- Campo da tabela
 					membro_data_criacao
 				) VALUES (
 					:igreja_id,
@@ -95,13 +94,11 @@ class Membro
 					:telefone,
 					:batismo,
 					:data_casamento,
-					'Ativo',
-					NOW()
+                    :status,
+                    NOW()
 				)";
 
 		$stmt = $this->db->prepare($sql);
-
-		// O array $data vindo do Controller já possui as chaves corretas
 		return $stmt->execute($data);
 	}
 

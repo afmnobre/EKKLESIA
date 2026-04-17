@@ -110,19 +110,26 @@ class PesquisaMembroController extends Controller
 			exit;
 		}
 
-		// --- ADICIONADO: Busca os dados da igreja para pegar a logo ---
-		// Ajuste o nome do model se for diferente no seu sistema (ex: IgrejaModel)
 		$igrejaModel = new \App\Models\Igreja();
 		$igreja = $igrejaModel->getByIgreja($igrejaId);
 
+		// --- NOVO: BUSCA E TRADUÇÃO DOS PARENTESCOS ---
+		$familiaRaw = $this->model->getFamilia($id);
+
+		foreach ($familiaRaw as &$f) {
+			// Criamos a chave 'parentesco_nome' que a View está tentando ler
+			$f['parentesco_nome'] = $this->model->traduzirParentesco($id, $f, $f['parentesco_grau']);
+		}
+		// ----------------------------------------------
+
 		$data = [
-			'titulo'     => 'Perfil: ' . $membro['membro_nome'],
-			'membro'     => $membro,
-			'igreja'     => $igreja, // Enviando os dados da igreja para a view
-			'historicos' => $this->model->getHistorico($id),
-            'cargos'     => $this->model->getCargosMembro($id),
-            'familia'    => $this->model->getFamilia($id),
-			'todos_membros' => $this->model->getAllShort($_SESSION['usuario_igreja_id'], $id), // Lista simples para o select, excluindo o próprio membro
+			'titulo'        => 'Perfil: ' . $membro['membro_nome'],
+			'membro'        => $membro,
+			'igreja'        => $igreja,
+			'historicos'    => $this->model->getHistorico($id),
+			'cargos'        => $this->model->getCargosMembro($id),
+			'familia'       => $familiaRaw, // Enviamos agora o array já processado com os nomes traduzidos
+			'todos_membros' => $this->model->getAllShort($igrejaId, $id),
 		];
 
 		$this->view('pesquisas/perfil', $data);

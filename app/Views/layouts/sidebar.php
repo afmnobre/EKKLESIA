@@ -85,6 +85,7 @@
             <div class="collapse submenu" id="patrimonios">
                 <a href="<?= url('patrimonios') ?>">Listagem de Patrimonios</a>
                 <a href="<?= url('patrimonios/novo') ?>">Novo Cadastro</a>
+                <a href="<?= url('patrimonios/categorias') ?>">Categorias</a>
                 <a href="<?= url('patrimonios/locais') ?>">Locais</a>
                 <a href="<?= url('patrimonios/dashboard') ?>">Dashboard</a>
             </div>
@@ -97,7 +98,8 @@
                 <a href="<?= url('biblioteca/emprestimos') ?>">Empréstimos</a>
                 <a href="<?= url('biblioteca/categorias') ?>">Categorias / Temas</a>
                 <a href="<?= url('biblioteca/dashboard') ?>">Dashboard</a>
-                <a href="<?= url('biblioteca/imprimirEtiquetas') ?>">Etiquetas</a>
+                <a href="<?= url('biblioteca/imprimirEtiquetas') ?>">Cartão de Livros</a>
+                <a href="<?= url('biblioteca/imprimirEtiquetasQr') ?>">Etiquetas de Livros</a>
             </div>
         <?php endif; ?>
 

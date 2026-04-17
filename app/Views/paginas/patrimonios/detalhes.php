@@ -42,18 +42,30 @@
                         ?>
                         <span class="badge <?= $cor ?>"><?= ucfirst($bem['patrimonio_bem_status']) ?></span>
                     </div>
-                    <div class="mb-3">
-                        <label class="text-muted small d-block">Código / Patrimônio</label>
-                        <span class="fw-bold text-primary"><?= $bem['patrimonio_bem_codigo'] ?></span>
-                    </div>
+
+					<div class="mb-3">
+						<label class="text-muted small d-block">Código / Patrimônio</label>
+						<span class="fw-bold text-primary"><?= $bem['patrimonio_bem_codigo'] ?></span>
+					</div>
+
+					<div class="mb-3">
+						<label class="text-muted small d-block">Categoria</label>
+						<span class="badge bg-info-subtle text-info border border-info-subtle">
+							<i class="bi bi-tag me-1"></i>
+							<?= $categoria ? $categoria['patrimonio_categoria_nome'] : 'Sem Categoria' ?>
+						</span>
+					</div>
+
                     <div class="mb-3">
                         <label class="text-muted small d-block">Valor de Aquisição</label>
                         <span class="fw-bold">R$ <?= number_format($bem['patrimonio_bem_valor'], 2, ',', '.') ?></span>
                     </div>
+
                     <div class="mb-3">
                         <label class="text-muted small d-block">Data de Aquisição</label>
                         <span class="fw-bold"><?= $bem['patrimonio_bem_data_aquisicao'] ? date('d/m/Y', strtotime($bem['patrimonio_bem_data_aquisicao'])) : 'Não informada' ?></span>
                     </div>
+
                     <div class="mb-0">
                         <label class="text-muted small d-block">Descrição</label>
                         <p class="text-dark small"><?= nl2br($bem['patrimonio_bem_descricao'] ?: 'Nenhuma descrição detalhada.') ?></p>

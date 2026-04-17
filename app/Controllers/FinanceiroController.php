@@ -105,16 +105,22 @@ class FinanceiroController extends Controller {
 
 		$contas = $this->model->getContasAgendadas($igrejaId, $mesAtual, $anoAtual);
 
-		// NOVA BUSCA UNIFICADA
-		$categorias = $this->model->getCategoriasParaCombo($igrejaId);
+		// --- ADICIONE ESTE BLOCO AQUI ---
+		foreach ($contas as &$c) {
+			// Busca se existe rateio para este lançamento específico
+			$c['membros'] = $this->model->getMembrosRateio($c['financeiro_conta_id']);
+		}
+		unset($c); // Limpa a referência
+		// --------------------------------
 
+		$categorias = $this->model->getCategoriasParaCombo($igrejaId);
 		$contasBancarias = $this->model->getContasBancarias($igrejaId);
 		$membros = $this->model->getMembrosAtivos($igrejaId);
 		$oficiais = $this->model->getOficiaisConferentes($igrejaId);
 
 		$this->view('financeiro/lancamentos', [
-			'contas_agendadas'      => $contas,
-			'categorias_formatadas' => $categorias, // Usar esta nova variável
+			'contas_agendadas'      => $contas, // Agora cada conta tem a chave ['membros']
+			'categorias_formatadas' => $categorias,
 			'contas_bancarias'      => $contasBancarias,
 			'membros'               => $membros,
 			'oficiais'              => $oficiais,
@@ -399,27 +405,35 @@ class FinanceiroController extends Controller {
 
 	public function uploadAnexo() {
 		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-			// Se o upload vem do mobile, a igreja_id deve vir via POST para garantir
-			// o caminho da pasta, caso a sessão não esteja ativa no celular.
+			// Detecta se é uma requisição AJAX (JavaScript)
+			$isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') || isset($_POST['is_ajax']);
+
 			$idIgreja = $_SESSION['usuario_igreja_id'] ?? $_POST['igreja_id'];
 			$contaId = $_POST['conta_id'];
-			$tipo = $_POST['tipo_arquivo'];
-			$ano = $_POST['ano_referencia'];
-			$mes = str_pad($_POST['mes_referencia'], 2, "0", STR_PAD_LEFT);
-			$isMobile = isset($_POST['is_mobile']); // Detecta se vem do QR Code
+			$tipo = $_POST['tipo_arquivo'] ?? 'comprovante';
+			$ano = $_POST['ano_referencia'] ?? $_POST['ano'];
+			$mes = str_pad($_POST['mes_referencia'] ?? $_POST['mes'], 2, "0", STR_PAD_LEFT);
+			$isMobile = isset($_POST['is_mobile']);
+			$membroId = $_POST['membro_id'] ?? null;
 
 			if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] === 0) {
 
-				// --- 1. BUSCAR ARQUIVO ANTIGO PARA DELETAR ---
-				$contaAtual = $this->model->getContaById($contaId, $idIgreja);
-				$colunaBanco = ($tipo === 'comprovante') ? 'financeiro_conta_comprovante' : 'financeiro_conta_nota_fiscal';
-				$arquivoAntigo = $contaAtual[$colunaBanco] ?? null;
+				// Busca arquivo antigo para deletar depois
+				if ($membroId) {
+					$membroAtual = $this->model->getMembroRateioById($membroId);
+					$arquivoAntigo = $membroAtual['receita_membro_comprovante'] ?? null;
+				} else {
+					$contaAtual = $this->model->getContaById($contaId, $idIgreja);
+					$colunaBanco = ($tipo === 'comprovante') ? 'financeiro_conta_comprovante' : 'financeiro_conta_nota_fiscal';
+					$arquivoAntigo = $contaAtual[$colunaBanco] ?? null;
+				}
 
 				$extensaoOriginal = strtolower(pathinfo($_FILES['arquivo']['name'], PATHINFO_EXTENSION));
 				$isImagem = in_array($extensaoOriginal, ['jpg', 'jpeg', 'png', 'webp', 'jfif']);
-
 				$extensaoFinal = $isImagem ? 'jpg' : $extensaoOriginal;
-				$novoNome = "{$tipo}_" . time() . "_" . rand(1000, 9999) . "." . $extensaoFinal;
+
+				$prefixo = $membroId ? "membro_{$membroId}" : $tipo;
+				$novoNome = "{$prefixo}_" . time() . "_" . rand(1000, 9999) . "." . $extensaoFinal;
 
 				$raizProjeto = dirname(__DIR__, 2);
 				$subPastaPath = ($tipo === 'comprovante') ? 'comprovantes' : 'notasfiscais';
@@ -432,42 +446,62 @@ class FinanceiroController extends Controller {
 
 				if (move_uploaded_file($_FILES['arquivo']['tmp_name'], $caminhoCompleto)) {
 					if ($isImagem) {
-						// Utiliza sua classe Utils para não estourar o servidor com fotos de 12MB do celular
 						Utils::otimizarImagem($caminhoCompleto, $caminhoCompleto, 1000, 80);
 					}
 
 					$caminhoRelativo = "{$idIgreja}/financeiro/{$subPastaPath}/{$ano}/{$mes}/{$novoNome}";
 
-					if ($this->model->atualizarAnexoFinanceiro($contaId, $idIgreja, $tipo, $caminhoRelativo)) {
+					if ($membroId) {
+						$sucessoDb = $this->model->atualizarComprovanteMembro($membroId, $caminhoRelativo);
+					} else {
+						$sucessoDb = $this->model->atualizarAnexoFinanceiro($contaId, $idIgreja, $tipo, $caminhoRelativo);
+					}
 
-						// --- 2. DELETAR O ARQUIVO ANTIGO DO SERVIDOR ---
+					if ($sucessoDb) {
 						if ($arquivoAntigo) {
 							$caminhoFisicoAntigo = $raizProjeto . "/public/assets/uploads/" . $arquivoAntigo;
-							if (file_exists($caminhoFisicoAntigo)) {
-								unlink($caminhoFisicoAntigo);
-							}
+							if (file_exists($caminhoFisicoAntigo)) { @unlink($caminhoFisicoAntigo); }
 						}
 
-						// --- AJUSTE DE REDIRECIONAMENTO ---
+						if ($isAjax) {
+							header('Content-Type: application/json');
+							echo json_encode([
+								'success' => true,
+								'message' => 'Upload realizado com sucesso!',
+								'novoCaminho' => $caminhoRelativo // Retorno essencial para o JS atualizar o botão
+							]);
+							exit;
+						}
+
 						if ($isMobile) {
-                            // Redireciona de volta para a view de upload com o parâmetro de sucesso
-                            header("Location: " . full_url("financeiro/uploadExterno/{$contaId}?i={$idIgreja}&sucesso=1"));
-                            exit;
+							header("Location: " . full_url("financeiro/uploadExterno/{$contaId}?i={$idIgreja}&sucesso=1"));
+							exit;
 						}
-
 						header("Location: " . url("financeiro/lancamentos?mes={$mes}&ano={$ano}&sucesso=arquivo_atualizado"));
-					} else {
-						die("Erro ao atualizar banco.");
+						exit;
 					}
-					exit;
 				}
 			}
 		}
+
+		if ($isAjax) {
+			header('Content-Type: application/json');
+			echo json_encode([
+				'success' => false,
+				'message' => 'Falha no upload.',
+				'debug' => [
+					'post' => $_POST,
+					'files' => $_FILES,
+					'sessao_igreja' => $_SESSION['usuario_igreja_id'] ?? 'vazia'
+				]
+			]);
+			exit;
+		}
 		header("Location: " . url("financeiro/lancamentos?erro=upload_falhou"));
 		exit;
-	}
+    }
 
-	public function relatorio_membros() {
+    public function relatorio_membros() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 		$ano = $_GET['ano'] ?? date('Y');
 
@@ -857,5 +891,66 @@ class FinanceiroController extends Controller {
         echo json_encode($dados);
         exit;
     }
+
+	// Upload para MEMBRO (Rateio)
+	public function uploadAnexoMembro() {
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$idIgreja = $_SESSION['usuario_igreja_id'] ?? $_POST['igreja_id'];
+			$contaId = $_POST['conta_id'];
+			$membroId = $_POST['membro_id']; // ID da linha na tabela financeiro_receita_membros
+			$ano = $_POST['ano_referencia'] ?? date('Y');
+			$mes = str_pad($_POST['mes_referencia'] ?? date('m'), 2, "0", STR_PAD_LEFT);
+
+			if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] === 0) {
+
+				// 1. BUSCAR ARQUIVO ANTIGO PARA DELETAR (Opcional, mas boa prática)
+				$membroDados = $this->model->getMembroRateioById($membroId);
+				$arquivoAntigo = $membroDados['receita_membro_comprovante'] ?? null;
+
+				$extensaoOriginal = strtolower(pathinfo($_FILES['arquivo']['name'], PATHINFO_EXTENSION));
+				$isImagem = in_array($extensaoOriginal, ['jpg', 'jpeg', 'png', 'webp', 'jfif']);
+				$extensaoFinal = $isImagem ? 'jpg' : $extensaoOriginal;
+
+				// Nome do arquivo identifica o membro para facilitar a gestão física
+				$novoNome = "membro_{$membroId}_" . time() . "_" . rand(1000, 9999) . "." . $extensaoFinal;
+
+				$raizProjeto = dirname(__DIR__, 2);
+				$diretorioDestino = $raizProjeto . "/public/assets/uploads/{$idIgreja}/financeiro/comprovantes/{$ano}/{$mes}/";
+				$caminhoCompleto = $diretorioDestino . $novoNome;
+
+				if (!is_dir($diretorioDestino)) {
+					mkdir($diretorioDestino, 0777, true);
+				}
+
+				if (move_uploaded_file($_FILES['arquivo']['tmp_name'], $caminhoCompleto)) {
+					if ($isImagem) {
+						Utils::otimizarImagem($caminhoCompleto, $caminhoCompleto, 1000, 80);
+					}
+
+					$caminhoRelativo = "{$idIgreja}/financeiro/comprovantes/{$ano}/{$mes}/{$novoNome}";
+
+					if ($this->model->atualizarComprovanteMembro($membroId, $caminhoRelativo)) {
+						// Deletar antigo se existir
+						if ($arquivoAntigo) {
+							$caminhoFisicoAntigo = $raizProjeto . "/public/assets/uploads/" . $arquivoAntigo;
+							if (file_exists($caminhoFisicoAntigo)) unlink($caminhoFisicoAntigo);
+						}
+
+						// Resposta para o AJAX do modal
+						header('Content-Type: application/json');
+						echo json_encode(['sucesso' => true, 'caminho' => $caminhoRelativo]);
+						exit;
+					}
+				}
+			}
+		}
+		http_response_code(400);
+		echo json_encode(['sucesso' => false, 'erro' => 'Falha no upload']);
+		exit;
+	}
+
+
+
+
 
 }

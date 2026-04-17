@@ -82,34 +82,41 @@ class Biblioteca
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
-    public function cadastrarLivro($data) {
-        $sql = "INSERT INTO biblioteca_livros (
-                    livro_igreja_id,
-                    livro_titulo,
-                    livro_autor,
-                    livro_isbn,
-                    livro_categoria,
-                    livro_quantidade,
-                    livro_capa,
-                    livro_status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+	public function cadastrarLivro($data) {
+		// Agora com 10 campos e 10 interrogações
+		$sql = "INSERT INTO biblioteca_livros (
+					livro_igreja_id,
+					livro_titulo,
+					livro_autor,
+					livro_isbn,
+					livro_editora,
+					livro_categoria,
+					livro_publicacao,
+					livro_quantidade,
+					livro_capa,
+					livro_status
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try {
-            $stmt = $this->db->prepare($sql);
-            return $stmt->execute([
-                $data['livro_igreja_id'],
-                $data['livro_titulo'],
-                $data['livro_autor'],
-                $data['livro_isbn'],
-                $data['livro_categoria'],
-                $data['livro_quantidade'],
-                $data['livro_capa'],
-                'Disponível'
-            ]);
-        } catch (\PDOException $e) {
-            return false;
-        }
-    }
+		try {
+			$stmt = $this->db->prepare($sql);
+			return $stmt->execute([
+				$data['livro_igreja_id'],
+				$data['livro_titulo'],
+				$data['livro_autor'],
+				$data['livro_isbn'],
+				$data['livro_editora'],
+				$data['livro_categoria'],
+				$data['livro_publicacao'],
+				$data['livro_quantidade'],
+				$data['livro_capa'],
+				'Disponível'
+			]);
+		} catch (\PDOException $e) {
+			// Log de erro para debug (opcional, mas ajuda muito)
+			// error_log($e->getMessage());
+			return false;
+		}
+	}
 
 	public function excluirLivro($id, $igrejaId) {
 		$sql = "DELETE FROM biblioteca_livros WHERE livro_id = ? AND livro_igreja_id = ?";
@@ -171,7 +178,10 @@ class Biblioteca
         $sql = "UPDATE biblioteca_livros SET
                     livro_titulo = ?,
                     livro_autor = ?,
+                    livro_isbn = ?,
+                    livro_editora =?,
                     livro_categoria = ?,
+                    livro_publicacao = ?,
                     livro_capa = ?
                 WHERE livro_id = ? AND livro_igreja_id = ?";
 
@@ -180,7 +190,10 @@ class Biblioteca
             return $stmt->execute([
                 $data['livro_titulo'],
                 $data['livro_autor'],
+                $data['livro_isbn'],
+                $data['livro_editora'],
                 $data['livro_categoria'],
+                $data['livro_publicacao'],
                 $data['livro_capa'],
                 $data['livro_id'],
                 $data['livro_igreja_id']
@@ -259,6 +272,31 @@ class Biblioteca
 		return $stmt->execute([$emprestimoId, $igrejaId]);
 	}
 
+	public function processarDevolucaoEmLote($ids, $igrejaId) {
+		// Garante que os IDs sejam um array
+		if (!is_array($ids)) {
+			$ids = explode(',', $ids);
+		}
+
+		// Criamos os placeholders (?, ?, ?) para a query
+		$placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+		// SQL para atualizar data de devolução e status
+		// O filtro de igreja_id é uma medida de segurança
+		$sql = "UPDATE biblioteca_emprestimos
+				SET emprestimo_status = 'Devolvido',
+					emprestimo_data_devolucao = NOW()
+				WHERE emprestimo_id IN ($placeholders)
+				AND emprestimo_igreja_id = ?";
+
+		$stmt = $this->db->prepare($sql);
+
+		// Mesclamos os IDs com o ID da igreja para o execute
+		$params = array_merge($ids, [$igrejaId]);
+
+		return $stmt->execute($params);
+	}
+
 	public function getEstatisticasDashboard($igrejaId) {
 		$res = [];
 
@@ -276,11 +314,15 @@ class Biblioteca
 		// 2. Dados por Categoria (Gráfico Pizza)
 		// Ligação pelo NOME (c.categoria_nome = l.livro_categoria)
 		$sqlCat = "SELECT
-					l.livro_categoria as label,
+					c.categoria_nome as label,
 					COUNT(l.livro_id) as total
 				   FROM biblioteca_livros l
-				   WHERE l.livro_igreja_id = ? AND l.livro_categoria IS NOT NULL AND l.livro_categoria != ''
-				   GROUP BY l.livro_categoria";
+				   INNER JOIN biblioteca_categorias c ON l.livro_categoria = c.categoria_id
+				   WHERE l.livro_igreja_id = ?
+					 AND l.livro_categoria IS NOT NULL
+					 AND l.livro_categoria != ''
+				   GROUP BY c.categoria_id, c.categoria_nome";
+
 		$stmt = $this->db->prepare($sqlCat);
 		$stmt->execute([$igrejaId]);
 		$res['categorias'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -348,6 +390,20 @@ class Biblioteca
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
+	public function getTodosLivrosRelatorio($igrejaId)
+	{
+		$sql = "SELECT l.*, c.categoria_nome,
+				(SELECT COUNT(*) FROM biblioteca_emprestimos e
+				 WHERE e.emprestimo_livro_id = l.livro_id
+				 AND e.emprestimo_status = 'Ativo') as total_emprestados
+				FROM biblioteca_livros l
+				LEFT JOIN biblioteca_categorias c ON l.livro_categoria = c.categoria_id
+				WHERE l.livro_igreja_id = ?
+				ORDER BY l.livro_titulo ASC";
 
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
 }

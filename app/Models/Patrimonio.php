@@ -15,22 +15,23 @@ class Patrimonio
     }
 
     // Listar todos os bens da igreja
-	public function getAll($igrejaId)
-	{
-		$sql = "SELECT b.*, l.patrimonio_local_nome,
-				(SELECT patrimonio_imagem_arquivo
-				 FROM patrimonio_imagens
-				 WHERE patrimonio_imagem_bem_id = b.patrimonio_bem_id
-				 LIMIT 1) as foto
-				FROM patrimonio_bens b
-				LEFT JOIN patrimonio_locais l ON b.patrimonio_bem_local_id = l.patrimonio_local_id
-				WHERE b.patrimonio_bem_igreja_id = ?
-				ORDER BY b.patrimonio_bem_nome ASC";
+public function getAll($igrejaId)
+    {
+        $sql = "SELECT b.*, l.patrimonio_local_nome, c.patrimonio_categoria_nome,
+                (SELECT patrimonio_imagem_arquivo
+                 FROM patrimonio_imagens
+                 WHERE patrimonio_imagem_bem_id = b.patrimonio_bem_id
+                 LIMIT 1) as foto
+                FROM patrimonio_bens b
+                LEFT JOIN patrimonio_locais l ON b.patrimonio_bem_local_id = l.patrimonio_local_id
+                LEFT JOIN patrimonio_categorias c ON b.patrimonio_bem_categoria_id = c.patrimonio_categoria_id
+                WHERE b.patrimonio_bem_igreja_id = ?
+                ORDER BY c.patrimonio_categoria_nome ASC, b.patrimonio_bem_nome ASC";
 
-		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$igrejaId]);
-		return $stmt->fetchAll(PDO::FETCH_ASSOC);
-	}
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$igrejaId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     // Buscar locais cadastrados para a igreja
     public function getLocais($igrejaId)
@@ -72,11 +73,12 @@ class Patrimonio
 					patrimonio_bem_data_aquisicao,
 					patrimonio_bem_valor,
 					patrimonio_bem_status,
-					patrimonio_bem_local_id -- ADICIONADO
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"; // Adicionado um '?'
+					patrimonio_bem_local_id,
+					patrimonio_bem_categoria_id -- ADICIONADO
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"; // Agora são 9 interrogações
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([
+		return $stmt->execute([
 			$dados['igreja_id'],
 			$dados['codigo'],
 			$dados['nome'],
@@ -84,10 +86,9 @@ class Patrimonio
 			$dados['data_aquisicao'],
 			$dados['valor'],
 			$dados['status'],
-			$dados['local_id'] // ADICIONADO
-		]);
-
-		return $this->db->lastInsertId();
+			$dados['local_id'],
+			$dados['categoria_id'] // ADICIONADO
+		]) ? $this->db->lastInsertId() : false;
 	}
 
 	// Registra a movimentação de entrada/saída/transferência
@@ -148,7 +149,8 @@ class Patrimonio
 					patrimonio_bem_descricao = ?,
 					patrimonio_bem_data_aquisicao = ?,
 					patrimonio_bem_valor = ?,
-					patrimonio_bem_status = ?
+					patrimonio_bem_status = ?,
+					patrimonio_bem_categoria_id = ? -- ADICIONADO
 				WHERE patrimonio_bem_id = ? AND patrimonio_bem_igreja_id = ?";
 
 		$stmt = $this->db->prepare($sql);
@@ -158,6 +160,7 @@ class Patrimonio
 			$dados['data_aquisicao'],
 			$dados['valor'],
 			$dados['status'],
+			$dados['categoria_id'], // ADICIONADO
 			$dados['id'],
 			$dados['igreja_id']
 		]);
@@ -385,5 +388,56 @@ class Patrimonio
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
+	// --- MÉTODOS DE CATEGORIA ---
+
+	public function getCategorias($igrejaId) {
+		$sql = "SELECT * FROM patrimonio_categorias WHERE patrimonio_categoria_igreja_id = ? ORDER BY patrimonio_categoria_nome ASC";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	public function getCategoriaById($categoriaId, $igrejaId) {
+		$sql = "SELECT * FROM patrimonio_categorias
+				WHERE patrimonio_categoria_id = ? AND patrimonio_categoria_igreja_id = ?";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$categoriaId, $igrejaId]);
+		return $stmt->fetch(PDO::FETCH_ASSOC); // fetch para vir apenas 1 resultado
+	}
+
+	public function inserirCategoria($igrejaId, $nome) {
+		$sql = "INSERT INTO patrimonio_categorias (patrimonio_categoria_igreja_id, patrimonio_categoria_nome) VALUES (?, ?)";
+		$stmt = $this->db->prepare($sql);
+		return $stmt->execute([$igrejaId, $nome]);
+	}
+
+	public function atualizarCategoria($id, $igrejaId, $nome) {
+		$sql = "UPDATE patrimonio_categorias SET patrimonio_categoria_nome = ?
+				WHERE patrimonio_categoria_id = ? AND patrimonio_categoria_igreja_id = ?";
+		$stmt = $this->db->prepare($sql);
+		return $stmt->execute([$nome, $id, $igrejaId]);
+	}
+
+	public function excluirCategoria($id, $igrejaId) {
+		$sql = "DELETE FROM patrimonio_categorias WHERE patrimonio_categoria_id = ? AND patrimonio_categoria_igreja_id = ?";
+		$stmt = $this->db->prepare($sql);
+		return $stmt->execute([$id, $igrejaId]);
+	}
+
+	public function getMetricsPorCategoria($igrejaId)
+	{
+		$sql = "SELECT
+					c.patrimonio_categoria_nome as categoria,
+					COUNT(b.patrimonio_bem_id) as qtd,
+					SUM(b.patrimonio_bem_valor) as valor
+				FROM patrimonio_categorias c
+				LEFT JOIN patrimonio_bens b ON b.patrimonio_bem_categoria_id = c.patrimonio_categoria_id
+				WHERE c.patrimonio_categoria_igreja_id = ?
+				GROUP BY c.patrimonio_categoria_id";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
 
 }

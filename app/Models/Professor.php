@@ -14,25 +14,28 @@ class Professor {
     /**
      * Busca os alunos da classe e o status de presença (P, F ou NULL)
      */
-    public function getAlunosEPresenca($classeId, $data) {
-        $sql = "SELECT
-                    m.membro_id,
+	public function getAlunosEPresenca($classeId, $data) {
+		$sql = "SELECT
+					m.membro_id,
                     m.membro_nome,
-                    p.presenca_status AS presenca
-                FROM membros m
-                JOIN classes_membros cm ON m.membro_id = cm.classe_membro_membro_id
-                LEFT JOIN classes_presencas p ON (
-                    m.membro_id = p.presenca_membro_id
-                    AND p.presenca_data = ?
-                    AND p.presenca_classe_id = ?
-                )
-                WHERE cm.classe_membro_classe_id = ?
-                ORDER BY m.membro_nome ASC";
+                    m.membro_registro_interno,
+					mf.membro_foto_arquivo AS foto, -- Buscando da tabela de fotos
+					p.presenca_status AS presenca
+				FROM membros m
+				JOIN classes_membros cm ON m.membro_id = cm.classe_membro_membro_id
+				LEFT JOIN membros_fotos mf ON m.membro_id = mf.membro_foto_membro_id -- Join com a tabela de fotos
+				LEFT JOIN classes_presencas p ON (
+					m.membro_id = p.presenca_membro_id
+					AND p.presenca_data = ?
+					AND p.presenca_classe_id = ?
+				)
+				WHERE cm.classe_membro_classe_id = ?
+				ORDER BY m.membro_nome ASC";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$data, $classeId, $classeId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$data, $classeId, $classeId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
 
     public function getClasseById($classeId) {
         $sql = "SELECT * FROM classes_escola WHERE classe_id = ?";
@@ -46,14 +49,21 @@ class Professor {
 	 * e que ainda NÃO estão em nenhuma classe (ou na classe atual)
 	 */
 	public function getMembrosDisponiveis($igrejaId, $idadeMin, $idadeMax) {
-		$sql = "SELECT m.membro_id, m.membro_nome, m.membro_data_nascimento,
-				FLOOR(DATEDIFF(CURDATE(), m.membro_data_nascimento) / 365.25) as idade
+		$sql = "SELECT
+					m.membro_id,
+					m.membro_nome,
+					m.membro_data_nascimento,
+					m.membro_registro_interno, -- Campo necessário para a pasta da foto
+					mf.membro_foto_arquivo AS foto, -- Campo vindo da tabela auxiliar
+					FLOOR(DATEDIFF(CURDATE(), m.membro_data_nascimento) / 365.25) as idade
 				FROM membros m
 				LEFT JOIN classes_membros cm ON m.membro_id = cm.classe_membro_membro_id
+				LEFT JOIN membros_fotos mf ON m.membro_id = mf.membro_foto_membro_id -- Join com a tabela de fotos
 				WHERE m.membro_igreja_id = ?
 				AND cm.classe_membro_id IS NULL
 				HAVING idade BETWEEN ? AND ?
 				ORDER BY m.membro_nome ASC";
+
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([$igrejaId, $idadeMin, $idadeMax]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);

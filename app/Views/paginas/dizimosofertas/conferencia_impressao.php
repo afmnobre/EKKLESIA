@@ -82,18 +82,18 @@
                 <th class="text-end">Valor Total Lançado</th>
             </tr>
         </thead>
-        <tbody>
-            <?php
-                $totalGeral = 0;
-                foreach($resumo as $r):
-                $totalGeral += $r['total'];
-            ?>
-                <tr>
-                    <td><?= $r['nome'] ?></td>
-                    <td class="text-end">R$ <?= number_format($r['total'], 2, ',', '.') ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
+		<tbody>
+			<?php
+				// Remova a linha $totalGeral = 0; daqui de dentro se ela existir,
+				// pois o Controller já enviou essa variável pronta.
+				foreach($resumo as $r):
+			?>
+				<tr>
+					<td><?= htmlspecialchars($r['nome']) ?></td>
+					<td class="text-end">R$ <?= number_format($r['total'], 2, ',', '.') ?></td>
+				</tr>
+			<?php endforeach; ?>
+		</tbody>
     </table>
 
     <div class="row g-4">

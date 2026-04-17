@@ -903,6 +903,22 @@ class Financeiro {
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
+	public function getMembrosRateio($contaId) {
+		$sql = "SELECT
+					rm.receita_membro_id,
+					rm.receita_membro_valor,
+					rm.receita_membro_comprovante,
+					m.membro_nome
+				FROM financeiro_receita_membros rm
+				INNER JOIN membros m ON rm.receita_membro_usuario_id = m.membro_id
+				WHERE rm.receita_membro_conta_id = ?";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$contaId]);
+
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
 	public function getCategoriasParaCombo($igrejaId) {
 		$sql = "SELECT
 					c.financeiro_categoria_nome,
@@ -932,6 +948,20 @@ class Financeiro {
 		}
 
 		return $dados;
+	}
+
+	// Para buscar o arquivo antigo antes de sobrescrever
+	public function getMembroRateioById($membroId) {
+		$sql = "SELECT receita_membro_comprovante FROM financeiro_receita_membros WHERE receita_membro_id = ?";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$membroId]);
+		return $stmt->fetch(\PDO::FETCH_ASSOC);
+	}
+
+	// Para salvar o novo caminho
+	public function atualizarComprovanteMembro($membroId, $caminho) {
+		$sql = "UPDATE financeiro_receita_membros SET receita_membro_comprovante = ? WHERE receita_membro_id = ?";
+		return $this->db->prepare($sql)->execute([$caminho, $membroId]);
 	}
 
 }

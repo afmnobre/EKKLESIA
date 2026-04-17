@@ -55,7 +55,16 @@ class DizimoOfertaController extends Controller
 		$membros = $this->model->getMembrosAtivos($igrejaId);
 
 		// 5. Carrega contas financeiras (Banco do Brasil, Caixinha, etc)
-		$contas_bancarias = $this->model->getContasFinanceiras($igrejaId);
+        $contas_bancarias = $this->model->getContasFinanceiras($igrejaId);
+
+        // 6. Buscar os rateiros dos lançamentos(se tiver)
+        $lancamentos = $this->model->getLancamentosPorPeriodo($igrejaId, $mesSelecionado, $anoSelecionado);
+		foreach ($lancamentos as &$l) {
+			// Busca se existem membros rateados para este lançamento
+			$l['membros'] = $this->model->getMembrosRateio($l['financeiro_conta_id']);
+		}
+		unset($l);
+
 
 		return $this->rawview('dizimosofertas/index', [
 			'igreja'           => $igreja,
@@ -223,6 +232,78 @@ class DizimoOfertaController extends Controller
 			'valorAvulso'      => $valorAvulso,
 			'somaIdentificada' => $somaIdentificada
 		]);
+	}
+
+	public function uploadAnexo() {
+		// Segurança: Verifica se a conferência está ativa
+		if (!isset($_SESSION['conf_diacono_1']) || !isset($_SESSION['conf_diacono_2'])) {
+			header("Location: " . url('dizimoOferta/login'));
+			exit;
+		}
+
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$idIgreja = $_SESSION['usuario_igreja_id'];
+			$contaId = $_POST['conta_id'];
+			$receitaMembroId = $_POST['receita_membro_id'] ?? null; // Captura ID do rateio
+			$tipo = $_POST['tipo_arquivo'];
+			$ano = $_POST['ano_referencia'];
+			$mes = str_pad($_POST['mes_referencia'], 2, "0", STR_PAD_LEFT);
+
+			if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] === 0) {
+
+				// --- 1. BUSCA O ARQUIVO ANTIGO PARA DELETAR ---
+				if (!empty($receitaMembroId)) {
+					$item = $this->model->getRateioById($receitaMembroId);
+					$arquivoAntigo = $item['receita_membro_comprovante'] ?? null;
+				} else {
+					$conta = $this->model->getContaById($contaId, $idIgreja);
+					$coluna = ($tipo === 'comprovante') ? 'financeiro_conta_comprovante' : 'financeiro_conta_nota_fiscal';
+					$arquivoAntigo = $conta[$coluna] ?? null;
+				}
+
+				$ext = strtolower(pathinfo($_FILES['arquivo']['name'], PATHINFO_EXTENSION));
+				$isImagem = in_array($ext, ['jpg', 'jpeg', 'png', 'webp']);
+
+				// Nomeclatura: Se for rateio, identificamos no nome do arquivo
+				$prefixo = !empty($receitaMembroId) ? "membro_{$receitaMembroId}_" : "{$tipo}_";
+				$novoNome = $prefixo . time() . "_" . rand(1000, 9999) . "." . ($isImagem ? 'jpg' : $ext);
+
+				$raiz = dirname(__DIR__, 2);
+				$subPasta = ($tipo === 'comprovante') ? 'comprovantes' : 'notasfiscais';
+				$diretorio = $raiz . "/public/assets/uploads/{$idIgreja}/financeiro/{$subPasta}/{$ano}/{$mes}/";
+
+				if (!is_dir($diretorio)) mkdir($diretorio, 0777, true);
+
+				if (move_uploaded_file($_FILES['arquivo']['tmp_name'], $diretorio . $novoNome)) {
+					if ($isImagem) {
+						\App\Core\Utils::otimizarImagem($diretorio . $novoNome, $diretorio . $novoNome, 1000, 80);
+					}
+
+					$caminhoRelativo = "{$idIgreja}/financeiro/{$subPasta}/{$ano}/{$mes}/{$novoNome}";
+
+					// --- 2. ATUALIZAÇÃO DO BANCO ---
+					if (!empty($receitaMembroId)) {
+						$sucesso = $this->model->atualizarComprovanteRateio($receitaMembroId, $caminhoRelativo);
+					} else {
+						$sucesso = $this->model->atualizarAnexoFinanceiro($contaId, $idIgreja, $tipo, $caminhoRelativo);
+					}
+
+					if ($sucesso) {
+						// Remove arquivo antigo se existir
+						if ($arquivoAntigo) {
+							$fisicoAntigo = $raiz . "/public/assets/uploads/" . $arquivoAntigo;
+							if (file_exists($fisicoAntigo)) unlink($fisicoAntigo);
+						}
+						header("Location: " . url("dizimoOferta/index?mes={$mes}&ano={$ano}&sucesso=1"));
+					} else {
+						die("Erro ao salvar no banco.");
+					}
+					exit;
+				}
+			}
+		}
+		header("Location: " . url("dizimoOferta/index?erro=1"));
+		exit;
 	}
 
 }
