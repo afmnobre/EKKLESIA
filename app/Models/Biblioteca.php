@@ -211,7 +211,7 @@ class Biblioteca
 
 	// Busca membros da igreja para o select do modal
 	public function getMembros($igrejaId) {
-		$sql = "SELECT membro_id, membro_nome, membro_telefone FROM membros WHERE membro_igreja_id = ? ORDER BY membro_nome ASC";
+		$sql = "SELECT membro_id, membro_nome, membro_telefone, membro_registro_interno FROM membros WHERE membro_igreja_id = ? ORDER BY membro_nome ASC";
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([$igrejaId]);
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -250,11 +250,19 @@ class Biblioteca
 
 	// Busca empréstimos ativos com dados dos membros e livros
 	public function getEmprestimosAtivos($igrejaId) {
-		// Adicionado m.membro_telefone ao SELECT
-		$sql = "SELECT e.*, l.livro_titulo, m.membro_nome, m.membro_telefone
+		$sql = "SELECT
+					e.*,
+					l.livro_titulo,
+					c.categoria_nome,
+					m.membro_nome,
+					m.membro_telefone,
+					m.membro_registro_interno,
+					mf.membro_foto_arquivo -- Buscando a foto
 				FROM biblioteca_emprestimos e
 				JOIN biblioteca_livros l ON e.emprestimo_livro_id = l.livro_id
 				JOIN membros m ON e.emprestimo_membro_id = m.membro_id
+				LEFT JOIN membros_fotos mf ON m.membro_id = mf.membro_foto_membro_id -- Join necessário
+				LEFT JOIN biblioteca_categorias c ON l.livro_categoria = c.categoria_id
 				WHERE e.emprestimo_igreja_id = ? AND e.emprestimo_status != 'Devolvido'
 				ORDER BY e.emprestimo_data_saida DESC";
 
@@ -312,7 +320,6 @@ class Biblioteca
 		$res['stats'] = $stmt->fetch(PDO::FETCH_ASSOC);
 
 		// 2. Dados por Categoria (Gráfico Pizza)
-		// Ligação pelo NOME (c.categoria_nome = l.livro_categoria)
 		$sqlCat = "SELECT
 					c.categoria_nome as label,
 					COUNT(l.livro_id) as total
@@ -337,7 +344,7 @@ class Biblioteca
 		$stmt->execute([$igrejaId]);
 		$res['autores'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-		// 4. Nova query para o gráfico de Editoras
+		// 4. Gráfico de Editoras
 		$sqlEditoras = "SELECT livro_editora as label, COUNT(*) as total
 						FROM biblioteca_livros
 						WHERE livro_igreja_id = ? AND livro_editora IS NOT NULL AND livro_editora != ''
@@ -347,14 +354,15 @@ class Biblioteca
 		$stmt->execute([$igrejaId]);
 		$res['editoras'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-		// 5. Top 5 Populares
+		// 5. Top 5 Populares (Ajustado para trazer o nome da categoria via JOIN)
 		$sqlPop = "SELECT
 					l.livro_titulo,
-					l.livro_categoria as categoria_nome,
+					c.categoria_nome,
 					l.livro_quantidade,
 					COUNT(e.emprestimo_id) as total_emprestimos
 				   FROM biblioteca_emprestimos e
 				   JOIN biblioteca_livros l ON e.emprestimo_livro_id = l.livro_id
+				   LEFT JOIN biblioteca_categorias c ON l.livro_categoria = c.categoria_id
 				   WHERE e.emprestimo_igreja_id = ?
 				   GROUP BY l.livro_id
 				   ORDER BY total_emprestimos DESC
@@ -363,7 +371,7 @@ class Biblioteca
 		$stmt->execute([$igrejaId]);
 		$res['populares'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-		// 6. Histórico (Garantindo que venha ordenado por mês)
+		// 6. Histórico (Empréstimos por mês)
 		$sqlHist = "SELECT DATE_FORMAT(emprestimo_data_saida, '%m/%Y') as mes_ano, COUNT(*) as total
 					FROM biblioteca_emprestimos
 					WHERE emprestimo_igreja_id = ?
@@ -372,6 +380,50 @@ class Biblioteca
 		$stmt = $this->db->prepare($sqlHist);
 		$stmt->execute([$igrejaId]);
 		$res['historico'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+		// 7. Top 5 Leitores do Ano (Versão Blindada)
+		$anoAtual = date('Y'); // Pega o ano pelo PHP (2026)
+
+		$sqlTopLeitoresAno = "SELECT
+					m.membro_nome,
+					m.membro_registro_interno,
+					COUNT(e.emprestimo_id) as total_leituras,
+					MAX(mf.membro_foto_arquivo) as membro_foto_arquivo
+				FROM biblioteca_emprestimos e
+				INNER JOIN membros m ON e.emprestimo_membro_id = m.membro_id
+				LEFT JOIN membros_fotos mf ON m.membro_id = mf.membro_foto_membro_id
+				WHERE e.emprestimo_igreja_id = ?
+				  AND YEAR(e.emprestimo_data_saida) = ?
+				GROUP BY m.membro_id, m.membro_nome, m.membro_registro_interno
+				ORDER BY total_leituras DESC
+				LIMIT 5";
+
+		$stmt = $this->db->prepare($sqlTopLeitoresAno);
+		$stmt->execute([$igrejaId, $anoAtual]); // Passamos o ano como parâmetro
+		$res['topLeitoresAno'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+		// 8. Top 5 Leitores do Mês Atual
+		$mesAtual = date('m');
+		$anoAtual = date('Y');
+
+		$sqlTopLeitoresMes = "SELECT
+					m.membro_nome,
+					m.membro_registro_interno,
+					COUNT(e.emprestimo_id) as total_leituras,
+					MAX(mf.membro_foto_arquivo) as membro_foto_arquivo
+				FROM biblioteca_emprestimos e
+				INNER JOIN membros m ON e.emprestimo_membro_id = m.membro_id
+				LEFT JOIN membros_fotos mf ON m.membro_id = mf.membro_foto_membro_id
+				WHERE e.emprestimo_igreja_id = ?
+				  AND MONTH(e.emprestimo_data_saida) = ?
+				  AND YEAR(e.emprestimo_data_saida) = ?
+				GROUP BY m.membro_id, m.membro_nome, m.membro_registro_interno
+				ORDER BY total_leituras DESC
+				LIMIT 5";
+
+		$stmt = $this->db->prepare($sqlTopLeitoresMes);
+		$stmt->execute([$igrejaId, $mesAtual, $anoAtual]);
+		$res['topLeitoresMes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 		return $res;
 	}
@@ -405,5 +457,6 @@ class Biblioteca
 		$stmt->execute([$igrejaId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
 
 }

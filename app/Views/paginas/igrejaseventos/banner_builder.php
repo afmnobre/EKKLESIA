@@ -131,24 +131,26 @@
                         </div>
                     </div>
 
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTextosProntos">
-                                <i class="bi bi-megaphone me-2 text-info"></i> Dados do Evento
-                            </button>
-                        </h2>
-                        <div id="collapseTextosProntos" class="accordion-collapse collapse" data-bs-parent="#toolsAccordion">
-                            <div class="accordion-body p-2">
-                                <label class="small fw-bold text-muted mb-1" style="font-size:0.65rem">EVENTO ATUAL</label>
-                                <button class="btn btn-sm btn-outline-info w-100 mb-1 text-start" onclick="addTexto('<?= addslashes($evento['evento_titulo']) ?>', 70, true)">
-                                    <i class="bi bi-type-h1"></i> <?= $evento['evento_titulo'] ?>
-                                </button>
-                                <button class="btn btn-sm btn-outline-info w-100 mb-1 text-start" onclick="addTexto('<?= date('d/m/Y H:i', strtotime($evento['evento_data_hora_inicio'])) ?>', 40, false)">
-                                    <i class="bi bi-calendar-event"></i> <?= date('d/m/H:i', strtotime($evento['evento_data_hora_inicio'])) ?>
-                                </button>
-                                <button class="btn btn-sm btn-outline-info w-100 mb-2 text-start" onclick="addTexto('<?= addslashes($evento['evento_local']) ?>', 35, false)">
-                                    <i class="bi bi-geo-alt"></i> <?= $evento['evento_local'] ?>
-                                </button>
+					<div class="accordion-item">
+						<h2 class="accordion-header">
+							<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTextosProntos">
+								<i class="bi bi-megaphone me-2 text-info"></i> Dados do Evento
+							</button>
+						</h2>
+						<div id="collapseTextosProntos" class="accordion-collapse collapse" data-bs-parent="#toolsAccordion">
+							<div class="accordion-body p-2">
+								<label class="small fw-bold text-muted mb-1" style="font-size:0.65rem">EVENTO ATUAL</label>
+								<button class="btn btn-sm btn-outline-info w-100 mb-1 text-start" onclick="addTexto('<?= addslashes($evento['evento_titulo']) ?>', 70, true)">
+									<i class="bi bi-type-h1"></i> <?= $evento['evento_titulo'] ?>
+								</button>
+								<button class="btn btn-sm btn-outline-info w-100 mb-1 text-start" onclick="addTexto('<?= date('d/m/Y H:i', strtotime($evento['evento_data_hora_inicio'])) ?>', 40, false)">
+									<i class="bi bi-calendar-event"></i> <?= date('d/m/H:i', strtotime($evento['evento_data_hora_inicio'])) ?>
+								</button>
+								<button class="btn btn-sm btn-outline-info w-100 mb-2 text-start" onclick="addTexto('<?= addslashes($evento['evento_local']) ?>', 35, false)">
+									<i class="bi bi-geo-alt"></i> <?= $evento['evento_local'] ?>
+								</button>
+
+								<hr class="my-2 opacity-25">
 
 								<label class="small fw-bold text-muted mb-1" style="font-size:0.65rem">DADOS DA IGREJA</label>
 								<button class="btn btn-sm btn-outline-secondary w-100 mb-1 text-start" onclick="addTexto('<?= addslashes($igreja['igreja_nome']) ?>', 45, true)">
@@ -163,27 +165,24 @@
 
 								<?php if(!empty($redes)): ?>
 									<label class="small fw-bold text-muted mb-1 mt-2 text-uppercase" style="font-size:0.65rem">Redes Sociais</label>
-									<div class="row g-1 mb-3">
+									<div class="row g-1 mb-1">
 										<?php foreach($redes as $rede):
-											// Lógica para definir o ícone e o caractere para o Canvas
 											$nomeRedeLower = strtolower($rede['rede_nome']);
-											$iconeClass = 'bi bi-share'; // Ícone padrão para o painel
-
-											// Definição do caractere real usando json_decode para converter o hexadecimal
-											$charIcone = json_decode('"\uF792"'); // Padrão (share)
+											$iconeClass = 'bi bi-share';
+											$charIcone = json_decode('"\uF792"');
 
 											if (strpos($nomeRedeLower, 'instagram') !== false) {
 												$iconeClass = 'bi bi-instagram text-danger';
-												$charIcone = json_decode('"\uF437"'); // Caractere Instagram
+												$charIcone = json_decode('"\uF437"');
 											} elseif (strpos($nomeRedeLower, 'facebook') !== false) {
 												$iconeClass = 'bi bi-facebook text-primary';
-												$charIcone = json_decode('"\uF344"'); // Caractere Facebook
+												$charIcone = json_decode('"\uF344"');
 											} elseif (strpos($nomeRedeLower, 'youtube') !== false) {
 												$iconeClass = 'bi bi-youtube text-danger';
-												$charIcone = json_decode('"\uF62B"'); // Caractere YouTube
+												$charIcone = json_decode('"\uF62B"');
 											} elseif (strpos($nomeRedeLower, 'whatsapp') !== false) {
 												$iconeClass = 'bi bi-whatsapp text-success';
-												$charIcone = json_decode('"\uF618"'); // Caractere WhatsApp
+												$charIcone = json_decode('"\uF618"');
 											}
 										?>
 											<div class="col-6">
@@ -198,27 +197,39 @@
 										<?php endforeach; ?>
 									</div>
 								<?php endif; ?>
+							</div>
+						</div>
+					</div>
 
-                                <label class="small fw-bold text-muted mb-1 mt-2" style="font-size:0.65rem">SOCIEDADES INTERNAS</label>
-                                <div class="sociedade-container">
-                                    <?php if(!empty($sociedades)): foreach($sociedades as $soc): ?>
-                                        <div class="sociedade-item">
-                                            <div class="sociedade-header">
-                                                <img src="<?= !empty($soc['sociedade_logo']) ? url('assets/uploads/'.$soc['sociedade_logo']) : url('assets/img/default_soc.png') ?>" alt="Logo">
-                                                <span class="text-truncate"><?= $soc['sociedade_nome'] ?></span>
-                                            </div>
-                                            <div class="d-flex gap-1">
-                                                <button class="btn btn-xs btn-outline-secondary flex-grow-1" style="font-size: 0.65rem;" onclick="addTexto('<?= addslashes($soc['sociedade_nome']) ?>', 45, true)">Nome</button>
-                                                <?php if(!empty($soc['sociedade_logo'])): ?>
-                                                    <button class="btn btn-xs btn-outline-secondary flex-grow-1" style="font-size: 0.65rem;" onclick="addImageToCanvas('<?= url('assets/uploads/'.$soc['sociedade_logo']) ?>', 250)">Logo</button>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+					<div class="accordion-item">
+						<h2 class="accordion-header">
+							<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSociedades">
+								<i class="bi bi-people me-2 text-primary"></i> Sociedades Internas
+							</button>
+						</h2>
+						<div id="collapseSociedades" class="accordion-collapse collapse" data-bs-parent="#toolsAccordion">
+							<div class="accordion-body p-2">
+								<div class="sociedade-container">
+									<?php if(!empty($sociedades)): foreach($sociedades as $soc): ?>
+										<div class="sociedade-item">
+											<div class="sociedade-header">
+												<img src="<?= !empty($soc['sociedade_logo']) ? url('assets/uploads/'.$soc['sociedade_logo']) : url('assets/img/default_soc.png') ?>" alt="Logo">
+												<span class="text-truncate"><?= $soc['sociedade_nome'] ?></span>
+											</div>
+											<div class="d-flex gap-1">
+												<button class="btn btn-xs btn-outline-secondary flex-grow-1" style="font-size: 0.65rem;" onclick="addTexto('<?= addslashes($soc['sociedade_nome']) ?>', 45, true)">Nome</button>
+												<?php if(!empty($soc['sociedade_logo'])): ?>
+													<button class="btn btn-xs btn-outline-secondary flex-grow-1" style="font-size: 0.65rem;" onclick="addImageToCanvas('<?= url('assets/uploads/'.$soc['sociedade_logo']) ?>', 250)">Logo</button>
+												<?php endif; ?>
+											</div>
+										</div>
+									<?php endforeach; else: ?>
+										<p class="text-muted small text-center my-2">Nenhuma sociedade cadastrada.</p>
+									<?php endif; ?>
+								</div>
+							</div>
+						</div>
+					</div>
 
                     <div class="accordion-item">
                         <h2 class="accordion-header">

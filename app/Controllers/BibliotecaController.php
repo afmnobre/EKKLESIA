@@ -304,12 +304,14 @@ class BibliotecaController extends Controller
 
 			if (!isset($agrupados[$chave])) {
 				$agrupados[$chave] = [
-					'membro_id'       => $emp['emprestimo_membro_id'],
-					'membro_nome'     => $emp['membro_nome'],
-					'membro_telefone' => $emp['membro_telefone'], // <-- ADICIONE ESTA LINHA
-					'data_saida'      => $emp['emprestimo_data_saida'],
-					'data_prevista'   => $emp['emprestimo_data_prevista'],
-					'livros'          => []
+					'membro_id'               => $emp['emprestimo_membro_id'],
+					'membro_nome'             => $emp['membro_nome'],
+                    'membro_telefone'         => $emp['membro_telefone'],
+                    'membro_registro_interno' => $emp['membro_registro_interno'],
+                    'membro_foto'             => $emp['membro_foto_arquivo'],
+					'data_saida'              => $emp['emprestimo_data_saida'],
+					'data_prevista'           => $emp['emprestimo_data_prevista'],
+					'livros'                  => []
 				];
 			}
 
@@ -317,7 +319,7 @@ class BibliotecaController extends Controller
 				'emprestimo_id' => $emp['emprestimo_id'],
 				'livro_id'      => $emp['emprestimo_livro_id'],
 				'titulo'        => $emp['livro_titulo'],
-				'categoria'     => $emp['livro_categoria'] ?? 'Geral'
+				'categoria'     => $emp['categoria_nome'] ?? 'Geral'
 			];
 		}
 
@@ -359,15 +361,19 @@ class BibliotecaController extends Controller
 
 		// Busca os dados do Model
 		$dadosDashboard = $model->getEstatisticasDashboard($igrejaId);
+        //var_dump($dadosDashboard['topLeitores']); die();
 
-		// Passa para a view. Certifique-se de que 'editoras' existe no array!
-		$this->view('biblioteca/dashboard', [
+        // Passa para a view. Certifique-se de que 'editoras' existe no array!
+        $this->view('biblioteca/dashboard', [
+            'igrejaId' => $igrejaId,
 			'stats' => $dadosDashboard['stats'],
 			'dadosCategorias' => $dadosDashboard['categorias'],
 			'dadosAutores' => $dadosDashboard['autores'],
 			'editoras' => $dadosDashboard['editoras'] ?? [], // O SEGREDO ESTÁ AQUI
 			'historico' => $dadosDashboard['historico'],
-			'maisPopulares' => $dadosDashboard['populares']
+            'maisPopulares' => $dadosDashboard['populares'],
+            'topLeitoresAno' => $dadosDashboard['topLeitoresAno'],
+            'topLeitoresMes' => $dadosDashboard['topLeitoresMes']
 		]);
 	}
 

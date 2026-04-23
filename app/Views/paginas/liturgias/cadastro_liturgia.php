@@ -335,7 +335,9 @@ document.addEventListener('DOMContentLoaded', function() {
         itemSendoEditado = null;
     };
 
-    document.getElementById('btnBuscarBiblia').onclick = async () => {
+    //API BUSCAR BIBLIA
+    /* FUNCIONANDO
+    * document.getElementById('btnBuscarBiblia').onclick = async () => {
         const ref = document.getElementById('modal_referencia').value;
         if(!ref) return alert('Insira uma referência');
         const btn = document.getElementById('btnBuscarBiblia');
@@ -349,6 +351,43 @@ document.addEventListener('DOMContentLoaded', function() {
             } else alert('Referência não encontrada');
         } catch (e) { alert('Erro na busca'); }
         finally { btn.disabled = false; }
+    };*/
+
+	document.getElementById('btnBuscarBiblia').onclick = async () => {
+		const refInput = document.getElementById('modal_referencia').value.trim();
+		if (!refInput) return alert('Insira uma referência');
+
+		const btn = document.getElementById('btnBuscarBiblia');
+		btn.disabled = true;
+
+		try {
+			// CHAMA SUA ROTA INTERNA DO MVC
+			// Ajuste a URL para o padrão do seu sistema (ex: /liturgia/buscarTexto?ref=...)
+			const url = `buscarTexto?ref=${encodeURIComponent(refInput)}`;
+
+			const res = await fetch(url);
+			if (!res.ok) throw new Error('Erro na requisição');
+
+			const data = await res.json();
+
+			if (data.success) {
+				// Formata os versículos vindos do seu banco
+				const textoFormatado = data.versiculos.map(v => {
+					return `${v.versiculo}. ${v.texto.trim()}`;
+				}).join('\n');
+
+				document.getElementById('modal_conteudo_api').value = textoFormatado;
+				document.getElementById('div_conteudo_api').classList.remove('d-none');
+			} else {
+				alert(data.error || 'Referência não encontrada.');
+			}
+
+		} catch (e) {
+			console.error(e);
+			alert('Erro ao buscar no banco interno. Verifique a referência.');
+		} finally {
+			btn.disabled = false;
+		}
     };
 
     // --- 4. CARREGAMENTO INICIAL ---

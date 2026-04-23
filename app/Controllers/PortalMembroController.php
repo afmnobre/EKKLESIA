@@ -8,6 +8,8 @@ use App\Core\Utils;
 
 class PortalMembroController extends Controller {
 
+    protected $model;
+
     public function cadastro($idIgreja) {
         $model = new PortalMembro();
         $igreja = $model->getIgreja($idIgreja);
@@ -103,50 +105,64 @@ class PortalMembroController extends Controller {
         }
     }
 
-    public function painel() {
-        if (!isset($_SESSION['membro_id'])) {
-            header("Location: " . url('PortalMembro/login'));
-            exit;
-        }
+	public function painel() {
+		if (!isset($_SESSION['membro_id'])) {
+			header("Location: " . url('PortalMembro/login'));
+			exit;
+		}
 
-        $idMembro = $_SESSION['membro_id'];
-        $igrejaId = $_SESSION['membro_igreja_id'];
+		$idMembro = $_SESSION['membro_id'];
+		$igrejaId = $_SESSION['membro_igreja_id'];
 
-        $model = new PortalMembro();
-        $modelBoletim = new BoletimSemanal();
+		$model = new PortalMembro();
+		$modelBoletim = new BoletimSemanal();
 
-        $perfil = $model->getMembroCompleto($idMembro);
-        $dados['perfil'] = $perfil;
-        $dados['dependentes'] = $model->listarDependentes($idMembro);
+		$perfil = $model->getMembroCompleto($idMembro);
+		$dados['perfil'] = $perfil;
+		$dados['dependentes'] = $model->listarDependentes($idMembro);
 
-        $igreja = $model->getIgreja($igrejaId);
-        $dados['igreja_dados'] = $igreja;
-        $dados['nomeIgreja'] = $igreja['igreja_nome'] ?? 'EKKLESIA';
-        $dados['tem_boletim'] = $modelBoletim->getUltimaLiturgia($igrejaId);
+		$igreja = $model->getIgreja($igrejaId);
+		$dados['igreja_dados'] = $igreja;
+		$dados['nomeIgreja'] = $igreja['igreja_nome'] ?? 'EKKLESIA';
+		$dados['tem_boletim'] = $modelBoletim->getUltimaLiturgia($igrejaId);
 
-        // --- PROCESSAMENTO DE PRESENÇAS ---
-        $presencasFormatadas = [];
-        if (!empty($perfil['presencas']) && is_array($perfil['presencas'])) {
-            foreach ($perfil['presencas'] as $p) {
-                // Garantimos o formato '01', '02' etc para o mês
-                $dataObj = new \DateTime($p['presenca_data']);
-                $mes = $dataObj->format('m');
+		// --- PROCESSAMENTO DE PRESENÇAS EBD ---
+		$presencasFormatadas = [];
+		if (!empty($perfil['presencas']) && is_array($perfil['presencas'])) {
+			foreach ($perfil['presencas'] as $p) {
+				$dataObj = new \DateTime($p['presenca_data']);
+				$mes = $dataObj->format('m');
 
-                $presencasFormatadas[$mes][] = [
-                    'presenca_data'   => $p['presenca_data'],
-                    'classe_nome'     => $p['classe_nome'] ?? 'Classe EBD',
-                    'presenca_status' => $p['presenca_status']
-                ];
-            }
-        }
+				$presencasFormatadas[$mes][] = [
+					'presenca_data'   => $p['presenca_data'],
+					'classe_nome'     => $p['classe_nome'] ?? 'Classe EBD',
+					'presenca_status' => $p['presenca_status']
+				];
+			}
+		}
 
-        // Enviamos como objeto para que o json_encode mantenha as chaves dos meses
-        $dados['presencas_mensais'] = (object)$presencasFormatadas;
-        $dados['anoAtual'] = date('Y');
-        $dados['mesAtual'] = date('m');
+		// --- PROCESSAMENTO DE EMPRÉSTIMOS (BIBLIOTECA) ---
+		// Buscamos os empréstimos do membro através do model
+		$historicoLivros = $model->getEmprestimosMensais($idMembro);
+		$emprestimosFormatados = [];
 
-        $this->rawview('membros/painel_membro', $dados);
-    }
+		if (!empty($historicoLivros) && is_array($historicoLivros)) {
+			foreach ($historicoLivros as $mesKey => $itens) {
+				// Como o model já retorna agrupado por mês ['01' => [...]],
+				// apenas garantimos que a estrutura seja compatível com o JS da View
+				$emprestimosFormatados[$mesKey] = $itens;
+			}
+		}
+
+		// Dados para a View
+		$dados['presencas_mensais'] = (object)$presencasFormatadas;
+		$dados['emprestimos_mensais'] = (object)$emprestimosFormatados; // Enviamos para o JS filtrar
+
+		$dados['anoAtual'] = date('Y');
+		$dados['mesAtual'] = date('m');
+
+		$this->rawview('membros/painel_membro', $dados);
+	}
 
     public function login($idIgreja = null) {
         $model = new PortalMembro();
@@ -285,6 +301,97 @@ class PortalMembroController extends Controller {
 			'igreja_dados' => $igreja_dados,
 			'eventos'      => $eventos // Dados processados (aniversários, ceia, eventos, etc)
 		]);
+	}
+
+	// Métodos de Fluxo
+	public function esqueci_senha($id_igreja) {
+		$db = \App\Core\Database::getInstance();
+		$stmt = $db->prepare("SELECT * FROM igrejas WHERE igreja_id = ?");
+		$stmt->execute([$id_igreja]);
+		$igreja = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+		$this->rawview('membros/esqueci_senha', ['igreja' => $igreja]);
+	}
+
+	// 2. Processa o formulário de pedido de recuperação via WhatsApp
+	public function processar_esqueci_senha() {
+		$telefone_bruto = $_POST['membro_telefone'] ?? '';
+		$nascimento = $_POST['membro_nascimento'] ?? '';
+		$igreja_id = $_POST['igreja_id'];
+
+		$telefone_limpo = preg_replace('/[^0-9]/', '', $telefone_bruto);
+		$model = new PortalMembro();
+
+		if (!empty($telefone_limpo) && !empty($nascimento)) {
+
+			// Validação Dupla
+			$membro = $model->validarMembroParaRecuperacao($telefone_limpo, $nascimento, $igreja_id);
+
+			if ($membro) {
+				$token = bin2hex(random_bytes(32));
+				$expira = date('Y-m-d H:i:s', strtotime('+1 hour'));
+				$model->setResetToken($membro['membro_id'], $token, $expira);
+
+				$link = full_url("PortalMembro/resetar_senha?token=" . $token);
+				$nome = explode(' ', trim($membro['membro_nome']))[0];
+
+				$mensagem = "*Portal EKKLESIA*\n\n";
+				$mensagem .= "Olá, *{$nome}*!\n";
+				$mensagem .= "Aqui está o link solicitado para redefinir sua senha:\n\n";
+				$mensagem .= $link;
+
+				$whatsapp_url = "https://api.whatsapp.com/send?phone=55{$telefone_limpo}&text=" . urlencode($mensagem);
+
+				header("Location: " . $whatsapp_url);
+				exit;
+			} else {
+				// Por segurança, você pode usar uma mensagem genérica:
+				// "Se os dados estiverem corretos, você receberá o link."
+				header("Location: " . url("PortalMembro/esqueci_senha/{$igreja_id}?erro=dados_invalidos"));
+				exit;
+			}
+		}
+		header("Location: " . url("PortalMembro/esqueci_senha/{$igreja_id}?erro=campos_vazios"));
+		exit;
+	}
+
+	// 3. Exibe a tela de digitar a nova senha
+	public function resetar_senha() {
+		$token = $_GET['token'] ?? null;
+		$model = new PortalMembro();
+		$membro = $model->getByToken($token);
+
+		if (!$membro) {
+			// Se o token for inválido, o WhatsApp não verá o logo porque cairá aqui
+			die("Link de recuperação inválido ou expirado.");
+		}
+
+		// Passe o token para a view (o link completo montamos na view ou passamos aqui)
+		$this->rawview('membros/nova_senha', ['token' => $token]);
+	}
+
+	// 4. Salva a nova senha no banco
+	public function confirmar_nova_senha() {
+		$token = $_POST['token'];
+		$senha = $_POST['membro_senha'];
+		$confirma = $_POST['confirma_senha'];
+
+		if ($senha !== $confirma) {
+			die("As senhas não conferem.");
+		}
+
+		// Instancia localmente
+		$model = new PortalMembro();
+		$membro = $model->getByToken($token);
+
+		if ($membro) {
+			$hash = password_hash($senha, PASSWORD_DEFAULT);
+			$model->updatePassword($membro['membro_id'], $hash);
+
+			header("Location: " . url("PortalMembro/login/" . $membro['membro_igreja_id'] . "?sucesso=senha_alterada"));
+		} else {
+			die("Erro ao processar alteração. Token expirou.");
+		}
 	}
 
 

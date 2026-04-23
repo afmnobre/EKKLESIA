@@ -57,12 +57,11 @@ class SociedadesEventosController extends Controller
 		$id = $_POST['evento_id'] ?? null;
 		$idIgreja = $_SESSION['usuario_igreja_id'];
 
-        // Se a sessão estiver vazia, o banco vai rejeitar a FK
-        if (!$idIgreja) {
-            die("Erro: ID da Igreja não encontrada na sessão. Faça login novamente.");
-        }
+		if (!$idIgreja) {
+			die("Erro: ID da Igreja não encontrada na sessão. Faça login novamente.");
+		}
 
-		// Monte o array EXATAMENTE com as chaves que o Model espera
+		// Monte o array com as chaves que o Model espera
 		$dados = [
 			'igreja_id' => $idIgreja,
 			'soc_id'    => $_POST['sociedade_id'],
@@ -72,12 +71,11 @@ class SociedadesEventosController extends Controller
 			'inicio'    => $_POST['data_inicio'],
 			'fim'       => (!empty($_POST['data_fim'])) ? $_POST['data_fim'] : null,
 			'valor'     => (!empty($_POST['valor'])) ? str_replace(',', '.', $_POST['valor']) : 0.00,
+			// Captura o status do POST
 			'status'    => $_POST['status'] ?? 'Agendado'
 		];
 
 		if ($id) {
-			// No update, o $id vai por fora ou dentro do array,
-			// mas as chaves de :titulo, :local, etc, devem estar em $dados
 			$this->model->update($id, $dados);
 		} else {
 			$this->model->insert($dados);

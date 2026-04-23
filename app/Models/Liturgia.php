@@ -251,5 +251,23 @@ class Liturgia
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
 
+	public function getVersiculos($livro, $capitulo, $vInicio = null, $vFim = null) {
+		$sql = "SELECT versiculo, texto FROM biblia_ara_2ed WHERE livro_nome = :livro AND capitulo = :cap";
+		$params = [':livro' => $livro, ':cap' => $capitulo];
+
+		if ($vInicio !== null) {
+			$sql .= " AND versiculo BETWEEN :v1 AND :v2";
+			$params[':v1'] = $vInicio;
+			$params[':v2'] = $vFim;
+		}
+
+		$sql .= " ORDER BY versiculo ASC";
+
+		// Use o objeto de conexão do seu Model (geralmente $this->db ou $this->pdo)
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute($params);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
 
 }

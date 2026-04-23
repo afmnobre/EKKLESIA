@@ -23,17 +23,18 @@ class SociedadeEvento
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function insert($data) {
-        $sql = "INSERT INTO sociedades_eventos (
-                    sociedade_evento_igreja_id, sociedade_evento_sociedade_id,
-                    sociedade_evento_titulo, sociedade_evento_descricao,
-                    sociedade_evento_local, sociedade_evento_data_hora_inicio,
-                    sociedade_evento_data_hora_fim, sociedade_evento_valor, sociedade_evento_status
-                ) VALUES (:igreja_id, :soc_id, :titulo, :descricao, :local, :inicio, :fim, :valor, :status)";
+	public function insert($data) {
+		$sql = "INSERT INTO sociedades_eventos (
+					sociedade_evento_igreja_id, sociedade_evento_sociedade_id,
+					sociedade_evento_titulo, sociedade_evento_descricao,
+					sociedade_evento_local, sociedade_evento_data_hora_inicio,
+					sociedade_evento_data_hora_fim, sociedade_evento_valor,
+					sociedade_evento_status
+				) VALUES (:igreja_id, :soc_id, :titulo, :descricao, :local, :inicio, :fim, :valor, :status)";
 
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute($data);
-    }
+		$stmt = $this->db->prepare($sql);
+		return $stmt->execute($data);
+	}
 
 	public function update($id, $data) {
 		$sql = "UPDATE sociedades_eventos SET
@@ -48,13 +49,8 @@ class SociedadeEvento
 				WHERE sociedade_evento_id = :id
 				AND sociedade_evento_igreja_id = :igreja_id";
 
-		// Garantimos que o ID e a IGREJA estejam no array com os nomes corretos da query
 		$data['id'] = $id;
-		// O igreja_id já deve vir no array $data vindo do Controller, mas garantimos aqui se necessário.
-
 		$stmt = $this->db->prepare($sql);
-
-		// Se o execute falhar, ele retornará falso e não o Fatal Error se estiver bem mapeado
 		return $stmt->execute($data);
 	}
 

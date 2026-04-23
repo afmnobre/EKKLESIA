@@ -9,22 +9,34 @@
             $dataDevol = date('d/m/Y', strtotime($grupo['data_prevista']));
 
             // Geramos o JSON puro e usamos base64 para garantir que NENHUM caractere quebre o HTML
-            $dadosJSON = json_encode([
-                'membro_nome' => $grupo['membro_nome'],
-                'data_emprestimo' => $dataSaida,
-                'data_devolucao' => $dataDevol,
-                'livros' => $grupo['livros']
-            ]);
+			$dadosJSON = json_encode([
+				'membro_nome' => $grupo['membro_nome'],
+				'membro_registro_interno' => $grupo['membro_registro_interno'], // <--- ADICIONAR ESTA LINHA
+				'data_emprestimo' => $dataSaida,
+				'data_devolucao' => $dataDevol,
+				'livros' => $grupo['livros']
+			]);
             $base64Recibo = base64_encode($dadosJSON);
         ?>
 
 		<div class="card shadow-sm border-0 mb-4 border-start border-4 border-primary">
-			<div class="card-header bg-white py-3">
+			<div class="card-header bg-light py-3 border-bottom">
 				<div class="row align-items-center">
-					<div class="col-md-5">
+					<div class="col-auto">
+						<?php
+							$sessionIgrejaId = $_SESSION['usuario_igreja_id'];
+							$fotoCaminho = (!empty($grupo['membro_foto']))
+								? url("assets/uploads/{$sessionIgrejaId}/membros/{$grupo['membro_registro_interno']}/{$grupo['membro_foto']}")
+								: url('assets/img/user-default.png');
+						?>
+						<img src="<?= $fotoCaminho ?>" class="rounded shadow-sm border bg-white"
+							 style="width: 70px; height: 70px; object-fit: cover;">
+					</div>
+
+					<div class="col-md-4">
 						<small class="text-muted d-block small fw-bold">LEITOR</small>
 						<div class="d-flex align-items-center gap-2">
-							<span class="h6 mb-0 text-uppercase fw-bold"><?= htmlspecialchars($grupo['membro_nome']) ?></span>
+							<span class="h6 mb-0 text-uppercase fw-bold text-dark"><?= htmlspecialchars($grupo['membro_nome']) ?></span>
 
 							<?php
 								$telefoneLimpo = preg_replace('/\D/', '', $grupo['membro_telefone'] ?? '');
@@ -48,8 +60,8 @@
 					</div>
 
 					<div class="col-md-2">
-						<small class="text-muted d-block small fw-bold">DATA SAÍDA</small>
-						<span style="font-size: 14px;"><?= date('d/m/Y', strtotime($grupo['data_saida'])) ?></span>
+						<small class="text-muted d-block small fw-bold text-uppercase">Data Saída</small>
+						<span class="text-dark" style="font-size: 14px;"><?= date('d/m/Y', strtotime($grupo['data_saida'])) ?></span>
 					</div>
 
 					<div class="col-md-2">
@@ -57,8 +69,8 @@
 						<span class="fw-bold text-danger" style="font-size: 14px;"><?= date('d/m/Y', strtotime($grupo['data_prevista'])) ?></span>
 					</div>
 
-					<div class="col-md-3 text-end">
-						<small class="text-muted d-block small fw-bold">QTD LIVROS</small>
+					<div class="col text-end ms-auto">
+						<small class="text-muted d-block small fw-bold text-uppercase">Qtd Livros</small>
 						<span class="badge bg-dark rounded-pill" style="font-size: 14px; padding: 8px 15px;">
 							<?= count($grupo['livros']) ?>
 							<i class="bi bi-bookshelf ms-1"></i>
@@ -68,26 +80,34 @@
 			</div>
 
 			<div class="table-responsive">
-				<table class="table table-hover align-middle mb-0">
-					<thead class="table-light">
-						<tr style="font-size: 0.75rem;">
-							<th class="ps-3">ID LIVRO</th>
-							<th>NOME DO LIVRO</th>
-							<th>CATEGORIA</th>
-							<th class="text-end pe-3">AÇÃO</th>
+				<table class="table table-hover align-middle mb-0" style="table-layout: fixed; width: 100%;">
+					<thead class="bg-white">
+						<tr style="font-size: 0.70rem; text-transform: uppercase; color: #6c757d;">
+							<th class="ps-3" style="width: 12%;">ID LIVRO</th>
+							<th style="width: 48%;">NOME DO LIVRO</th>
+							<th style="width: 25%;">CATEGORIA</th>
+							<th class="text-end pe-3" style="width: 15%;">AÇÃO</th>
 						</tr>
 					</thead>
 					<tbody>
 						<?php foreach ($grupo['livros'] as $livro): ?>
-						<tr>
-							<td class="ps-3 text-muted">#<?= $livro['livro_id'] ?></td>
-							<td class="fw-bold text-uppercase"><?= htmlspecialchars($livro['titulo']) ?></td>
-							<td><span class="badge bg-light text-dark border"><?= htmlspecialchars($livro['categoria'] ?? 'Geral') ?></span></td>
+						<tr class="bg-white">
+							<td class="ps-3 text-muted small">#<?= $livro['livro_id'] ?></td>
+							<td class="fw-bold text-uppercase text-truncate" title="<?= htmlspecialchars($livro['titulo']) ?>" style="font-size: 0.85rem;">
+								<?= htmlspecialchars($livro['titulo']) ?>
+							</td>
+							<td>
+								<span class="badge bg-light text-dark border fw-normal">
+									<i class="bi bi-tag me-1 text-muted"></i>
+									<?= htmlspecialchars($livro['categoria'] ?? 'Geral') ?>
+								</span>
+							</td>
 							<td class="text-end pe-3">
 								<button type="button"
-										class="btn btn-outline-success btn-sm"
+										class="btn btn-outline-success btn-sm px-3"
+										style="font-size: 11px; font-weight: 600;"
 										onclick="confirmarDevolucao('<?= $livro['emprestimo_id'] ?>', '<?= addslashes($livro['titulo']) ?>', 'parcial')">
-									<i class="bi bi-check2"></i> Parcial
+									<i class="bi bi-check2"></i> PARCIAL
 								</button>
 							</td>
 						</tr>
@@ -96,18 +116,18 @@
 				</table>
 			</div>
 
-            <div class="card-footer bg-light d-flex justify-content-end gap-2 py-3">
-                <button type="button" class="btn btn-dark btn-sm btn-gerar-recibo" data-recibo="<?= $base64Recibo ?>">
-                    <i class="bi bi-printer me-1"></i> RECIBO UNIFICADO
-                </button>
+			<div class="card-footer bg-light d-flex justify-content-end gap-2 py-3 border-top">
+				<button type="button" class="btn btn-outline-dark btn-sm fw-bold btn-gerar-recibo" data-recibo="<?= $base64Recibo ?>">
+					<i class="bi bi-printer me-1"></i> RECIBO
+				</button>
 
 				<?php $ids = implode(',', array_column($grupo['livros'], 'emprestimo_id')); ?>
-				<button type="button" class="btn btn-success btn-sm fw-bold"
+				<button type="button" class="btn btn-success btn-sm fw-bold px-3 shadow-sm"
 						onclick="confirmarDevolucao('<?= $ids ?>', '<?= addslashes($grupo['membro_nome']) ?>', 'total')">
 					<i class="bi bi-check-all me-1"></i> DEVOLUÇÃO TOTAL
 				</button>
-            </div>
-        </div>
+			</div>
+		</div>
         <?php endforeach; ?>
     <?php else: ?>
         <div class="alert alert-warning text-center py-5">Nenhum empréstimo ativo.</div>
@@ -118,9 +138,8 @@
     <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-body p-0">
-
                 <div id="papelRecibo" style="background: #fff; color: #000; width: 100%;">
-                    <div style="border: 2px dashed #000; padding: 10px; margin: 5px;">
+                    <div class="dashed-container" style="border: 2px dashed #000; padding: 10px; margin: 5px;">
 
                         <div class="text-center mb-3">
                             <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
@@ -132,29 +151,29 @@
                         </div>
 
                         <div class="mb-2" style="font-size: 11px; line-height: 1.2;">
-                            <div><strong>LEITOR:</strong> <span id="reciboMembro" class="text-uppercase"></span></div>
+                            <div><strong>LEITOR:</strong> <span id="reciboMembro" class="text-uppercase text-break"></span> (<span id="reciboRegistro"></span>)</div>
                             <div><strong>DATA RETIRADA:</strong> <span id="reciboData"></span></div>
                             <div><strong>PREVISÃO DEV.:</strong> <span id="reciboDevolucao" class="fw-bold"></span></div>
                         </div>
 
                         <div class="mb-3">
-                            <table class="table table-sm table-bordered border-dark mb-1" style="font-size: 10px; border-color: #000 !important;">
-                                <thead class="table-light">
-                                    <tr class="text-center border-dark">
-                                        <th style="border-color: #000 !important;">LIVRO (ID/TÍTULO)</th>
-                                        <th style="width: 45px; border-color: #000 !important;">DEV.</th>
-                                        <th style="width: 60px; border-color: #000 !important;">VISTO</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="reciboItensTabela">
-                                    </tbody>
-                            </table>
-                            <div style="font-size: 8px; text-align: center;">[ ] Marcar p/ Devolução Parcial</div>
+							<table class="table table-sm table-bordered border-dark mb-1" style="font-size: 10px; border-color: #000 !important;">
+								<thead class="table-light">
+									<tr class="text-center border-dark">
+										<th id="thLivro" style="border-color: #000 !important;">LIVRO (ID/TÍTULO)</th>
+
+										<th class="th-extra" style="width: 45px; border-color: #000 !important;">DEV.</th>
+										<th class="th-extra" style="width: 60px; border-color: #000 !important;">VISTO</th>
+									</tr>
+								</thead>
+								<tbody id="reciboItensTabela">
+									</tbody>
+							</table>
+                            <div id="legendaDevolucaoParcial" style="font-size: 8px; text-align: center;">[ ] Marcar p/ Devolução Parcial</div>
                         </div>
 
                         <div class="mt-4 pt-2 border-top border-dark text-center">
                             <span class="fw-bold" style="font-size: 11px;">CONTROLE DE DEVOLUÇÃO TOTAL</span>
-
                             <div class="mt-4">
                                 <div style="border-top: 1px solid #000; width: 90%; margin: 0 auto;"></div>
                                 <small style="font-size: 9px;">DATA E ASSINATURA BIBLIOTECÁRIO</small>
@@ -166,6 +185,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="p-3 bg-light d-flex gap-2">
                     <button class="btn btn-secondary w-100 fw-bold" data-bs-dismiss="modal">CANCELAR</button>
                     <button class="btn btn-primary w-100 fw-bold" onclick="imprimirPapelRecibo()">
@@ -202,27 +222,62 @@
 document.querySelectorAll('.btn-gerar-recibo').forEach(button => {
     button.addEventListener('click', function() {
         const base64 = this.getAttribute('data-recibo');
+        if (!base64) return;
+
         const dados = JSON.parse(atob(base64));
 
+        // Preenchimento de dados básicos
         document.getElementById('reciboMembro').innerText = dados.membro_nome;
+        document.getElementById('reciboRegistro').innerText = dados.membro_registro_interno || '---';
         document.getElementById('reciboData').innerText = dados.data_emprestimo;
         document.getElementById('reciboDevolucao').innerText = dados.data_devolucao;
 
         const tabela = document.getElementById('reciboItensTabela');
-        tabela.innerHTML = '';
+        const legenda = document.getElementById('legendaDevolucaoParcial');
+        const cabecalhoLivro = document.getElementById('thLivro');
+        const thExtras = document.querySelectorAll('.th-extra');
 
+        tabela.innerHTML = '';
+        const totalLivros = dados.livros.length;
+        const isMultiplo = totalLivros > 1;
+
+        // Ajuste Visual das Colunas (Verificação de segurança para não dar erro de 'null')
+        if (cabecalhoLivro) {
+            if (!isMultiplo) {
+                cabecalhoLivro.setAttribute('colspan', '3');
+                thExtras.forEach(el => el.style.display = 'none');
+                if(legenda) legenda.style.display = 'none';
+            } else {
+                cabecalhoLivro.removeAttribute('colspan');
+                thExtras.forEach(el => el.style.display = '');
+                if(legenda) legenda.style.display = 'block';
+            }
+        }
+
+        // Montagem das linhas da tabela
         dados.livros.forEach(l => {
-            tabela.innerHTML += `
-                <tr class="border-dark">
-                    <td class="text-uppercase" style="border-color: #000 !important; padding: 4px 2px;">
-                        <i class="bi bi-book"></i> #<b>${l.livro_id}</b> - ${l.titulo}
-                    </td>
-                    <td class="text-center" style="border-color: #000 !important;">[ ]</td>
-                    <td style="border-color: #000 !important;"></td>
-                </tr>`;
+            if (isMultiplo) {
+                tabela.innerHTML += `
+                    <tr class="border-dark">
+                        <td class="text-uppercase" style="border-color: #000 !important; padding: 4px 2px;">
+                            #<b>${l.livro_id}</b> - ${l.titulo}
+                        </td>
+                        <td class="text-center" style="border-color: #000 !important; font-size: 12px;">[ ]</td>
+                        <td style="border-color: #000 !important;"></td>
+                    </tr>`;
+            } else {
+                tabela.innerHTML += `
+                    <tr class="border-dark">
+                        <td colspan="3" class="text-uppercase" style="border-color: #000 !important; padding: 8px 4px;">
+                            <i class="bi bi-book"></i> #<b>${l.livro_id}</b> - ${l.titulo}
+                        </td>
+                    </tr>`;
+            }
         });
 
-        new bootstrap.Modal(document.getElementById('modalVisualizarRecibo')).show();
+        // Abre o modal
+        const meuModal = new bootstrap.Modal(document.getElementById('modalVisualizarRecibo'));
+        meuModal.show();
     });
 });
 
@@ -237,30 +292,24 @@ function imprimirPapelRecibo() {
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
                 <style>
-                    /* Configurações para Impressora Térmica */
-                    @page {
-                        margin: 0;
-                        size: 80mm auto; /* Força a largura da bobina */
-                    }
+                    @page { margin: 0; size: 80mm auto; }
                     body {
                         font-family: 'Courier New', Courier, monospace;
-                        margin: 0;
-                        padding: 0;
-                        width: 80mm; /* Largura da bobina */
+                        margin: 0; padding: 0; width: 80mm;
+                        background: #fff;
                     }
-                    #papelRecibo {
-                        width: 80mm;
-                        margin: 0;
-                        padding: 0;
-                    }
+                    #papelRecibo { width: 80mm; margin: 0; padding: 0; }
+                    .dashed-container { border: 2px dashed #000; padding: 10px; margin: 5px; }
                     table { border-collapse: collapse !important; width: 100%; }
-                    th, td { border: 1px solid #000 !important; color: #000 !important; }
-                    img { max-height: 50px; filter: grayscale(100%); } /* Tons de cinza para térmica */
-                    .text-danger { color: #000 !important; font-weight: bold; } /* Térmica não tem cor */
+                    th, td { border: 1px solid #000 !important; color: #000 !important; vertical-align: middle; }
+                    img { max-height: 50px; filter: grayscale(100%); }
+                    .text-uppercase { text-transform: uppercase; }
+                    .fw-bold { font-weight: bold; }
+                    .text-center { text-align: center; }
                 </style>
             </head>
             <body onload="setTimeout(() => { window.print(); window.close(); }, 800)">
-                ${conteudo}
+                <div id="papelRecibo">${conteudo}</div>
             </body>
         </html>
     `);

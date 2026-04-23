@@ -203,6 +203,18 @@
 					</div>
 				</div>
 
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<label class="form-label fw-bold small text-primary">Status do Evento</label>
+						<select name="status" id="ev_status" class="form-select border-primary" required>
+							<option value="Agendado" class="text-primary">📅 Agendado</option>
+							<option value="Confirmado" class="text-success">✅ Confirmado</option>
+							<option value="Cancelado" class="text-danger">❌ Cancelado</option>
+							<option value="Concluído" class="text-secondary">🏁 Concluído</option>
+						</select>
+					</div>
+				</div>
+
                 <div class="mb-3">
                     <label class="form-label fw-bold small">Descrição/Observações</label>
                     <textarea name="descricao" id="ev_desc" class="form-control" rows="3" placeholder="Detalhes do evento..."></textarea>
@@ -572,6 +584,7 @@ window.editarEvento = function(dados) {
     document.getElementById('ev_id').value = dados.sociedade_evento_id;
     document.getElementById('ev_soc_id').value = dados.sociedade_evento_sociedade_id;
     document.getElementById('ev_titulo').value = dados.sociedade_evento_titulo;
+    document.getElementById('ev_status').value = dados.sociedade_evento_status;
     document.getElementById('ev_local').value = dados.sociedade_evento_local;
     document.getElementById('ev_desc').value = dados.sociedade_evento_descricao;
 

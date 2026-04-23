@@ -101,6 +101,60 @@
             </div>
         </div>
 
+		<div class="row g-4 mb-4">
+			<div class="col-md-6">
+				<div class="card border-0 shadow-sm h-100">
+					<div class="card-header bg-white border-0 py-3">
+						<h6 class="fw-bold mb-0 text-primary">
+							<i class="bi bi-calendar-check me-2"></i>Top 5 Leitores de <?= date('M/Y') ?>
+						</h6>
+					</div>
+					<div class="card-body">
+						<div class="row text-center">
+							<?php if(!empty($topLeitoresMes)): foreach($topLeitoresMes as $leitor): ?>
+								<div class="col">
+									<?php
+										$foto = (!empty($leitor['membro_foto_arquivo'])) ? url("assets/uploads/{$igrejaId}/membros/{$leitor['membro_registro_interno']}/{$leitor['membro_foto_arquivo']}") : url('assets/img/user-default.png');
+									?>
+									<img src="<?= $foto ?>" class="rounded-circle mb-2 shadow-sm" style="width: 50px; height: 50px; object-fit: cover;">
+									<p class="small fw-bold mb-0 text-truncate"><?= mb_strtoupper(explode(' ', $leitor['membro_nome'])[0]) ?></p>
+									<span class="badge bg-primary-soft text-primary small" style="font-size: 10px;"><?= $leitor['total_leituras'] ?> livros</span>
+								</div>
+							<?php endforeach; else: ?>
+								<p class="text-muted small">Nenhuma leitura este mês.</p>
+							<?php endif; ?>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="col-md-6">
+				<div class="card border-0 shadow-sm h-100">
+					<div class="card-header bg-white border-0 py-3">
+						<h6 class="fw-bold mb-0 text-warning">
+							<i class="bi bi-trophy me-2"></i>Top 5 Melhores do Ano (<?= date('Y') ?>)
+						</h6>
+					</div>
+					<div class="card-body">
+						<div class="row text-center">
+							<?php if(!empty($topLeitoresAno)): foreach($topLeitoresAno as $leitor): ?>
+								<div class="col">
+									<?php
+										$foto = (!empty($leitor['membro_foto_arquivo'])) ? url("assets/uploads/{$igrejaId}/membros/{$leitor['membro_registro_interno']}/{$leitor['membro_foto_arquivo']}") : url('assets/img/user-default.png');
+									?>
+									<img src="<?= $foto ?>" class="rounded-circle mb-2 shadow-sm" style="width: 50px; height: 50px; object-fit: cover;">
+									<p class="small fw-bold mb-0 text-truncate"><?= mb_strtoupper(explode(' ', $leitor['membro_nome'])[0]) ?></p>
+									<span class="badge bg-warning-soft text-warning small" style="font-size: 10px;"><?= $leitor['total_leituras'] ?> livros</span>
+								</div>
+							<?php endforeach; else: ?>
+								<p class="text-muted small">Nenhuma leitura este ano.</p>
+							<?php endif; ?>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
         <div class="col-md-12">
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white border-0 py-3">
@@ -138,6 +192,7 @@
         </div>
     </div>
 </div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 

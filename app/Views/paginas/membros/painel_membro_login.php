@@ -52,17 +52,22 @@
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="form-label small fw-bold text-muted">Sua Senha</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-key"></i></span>
-                                <input type="password" name="membro_senha" class="form-control border-start-0" placeholder="******" required>
-                            </div>
-                        </div>
+						<div class="mb-4">
+							<div class="d-flex justify-content-between align-items-center">
+								<label class="form-label small fw-bold text-muted">Sua Senha</label>
+								<a href="<?= url('PortalMembro/esqueci_senha/' . $igreja['igreja_id']) ?>" class="small text-decoration-none fw-bold" style="color: #005a32; font-size: 0.75rem;">
+									Esqueceu a senha?
+								</a>
+							</div>
+							<div class="input-group">
+								<span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-key"></i></span>
+								<input type="password" name="membro_senha" class="form-control border-start-0" placeholder="******" required>
+							</div>
+						</div>
 
-                        <button type="submit" class="btn btn-primary w-100 shadow-sm">
-                            ACESSAR MEU PAINEL <i class="bi bi-arrow-right ms-2"></i>
-                        </button>
+						<button type="submit" class="btn btn-primary w-100 shadow-sm">
+							ACESSAR MEU PAINEL <i class="bi bi-arrow-right ms-2"></i>
+						</button>
                     </form>
                 </div>
             </div>

@@ -261,4 +261,76 @@ class PortalMembro {
 
         return $stmt2->execute();
     }
+
+    // Busca membro pelo e-mail e igreja
+	// Mantemos o getByEmail caso você precise dele em outra parte do sistema
+    public function getByEmail($email, $igreja_id) {
+        $sql = "SELECT * FROM membros WHERE membro_email = :email AND membro_igreja_id = :igreja_id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['email' => $email, 'igreja_id' => $igreja_id]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    // BUSCA POR TELEFONE (Limpando caracteres especiais do banco para comparar)
+	public function validarMembroParaRecuperacao($telefone, $nascimento, $igreja_id) {
+		$sql = "SELECT * FROM membros
+				WHERE REPLACE(REPLACE(REPLACE(REPLACE(membro_telefone, '(', ''), ')', ''), '-', ''), ' ', '') = :telefone
+				AND membro_data_nascimento = :nascimento
+				AND membro_igreja_id = :igreja_id";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			'telefone'  => $telefone,
+			'nascimento' => $nascimento, // Formato YYYY-MM-DD vindo do input date
+			'igreja_id'  => $igreja_id
+		]);
+		return $stmt->fetch(\PDO::FETCH_ASSOC);
+	}
+
+    // Salva o token de reset no banco
+    public function setResetToken($id, $token, $expira) {
+        $sql = "UPDATE membros SET membro_reset_token = :token, membro_reset_expira = :expira WHERE membro_id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute(['token' => $token, 'expira' => $expira, 'id' => $id]);
+    }
+
+    // Busca membro pelo token (e verifica se não expirou)
+    public function getByToken($token) {
+        $sql = "SELECT * FROM membros WHERE membro_reset_token = :token AND membro_reset_expira > NOW()";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['token' => $token]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    // Atualiza a senha definitiva e limpa o token
+    public function updatePassword($id, $novaSenhaHash) {
+        $sql = "UPDATE membros SET
+                    membro_senha = :senha,
+                    membro_reset_token = NULL,
+                    membro_reset_expira = NULL
+                WHERE membro_id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute(['senha' => $novaSenhaHash, 'id' => $id]);
+    }
+
+	public function getEmprestimosMensais($membroId) {
+		$sql = "SELECT e.*, l.livro_titulo, l.livro_autor
+				FROM biblioteca_emprestimos e
+				JOIN biblioteca_livros l ON e.emprestimo_livro_id = l.livro_id
+				WHERE e.emprestimo_membro_id = :membro_id
+				ORDER BY e.emprestimo_data_saida DESC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute(['membro_id' => $membroId]);
+		$dados = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+		$agrupados = [];
+		foreach ($dados as $item) {
+			// Extrai o mês (ex: 04) da data de saída
+			$mes = date('m', strtotime($item['emprestimo_data_saida']));
+			$agrupados[$mes][] = $item;
+		}
+		return $agrupados;
+	}
+
 }

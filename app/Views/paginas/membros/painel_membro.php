@@ -291,7 +291,7 @@
 				</div>
 
                 <div class="d-flex align-items-center justify-content-between mb-3 mt-4">
-                    <h6 class="fw-bold text-ipb mb-0 small text-uppercase">Filhos e Dependentes -18</h6>
+                    <h6 class="fw-bold text-ipb mb-0 small text-uppercase">Família/Filhos e Dependentes</h6>
                     <a href="<?= url('PortalMembro/novoDependente') ?>" class="btn btn-outline-ipb btn-sm rounded-pill px-3 fw-bold">
                         <i class="bi bi-plus-lg me-1"></i> ADICIONAR
                     </a>
@@ -333,6 +333,40 @@
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
+
+				<div class="d-flex align-items-center mb-3 mt-4">
+					<h6 class="fw-bold text-ipb mb-0 small text-uppercase">Biblioteca - Meus Empréstimos</h6>
+					<hr class="flex-grow-1 ms-3 opacity-25">
+				</div>
+
+				<div class="row g-2 mb-4">
+					<div class="col-12">
+						<div class="d-flex overflow-auto pb-2 mb-3" style="white-space: nowrap; -webkit-overflow-scrolling: touch;">
+							<?php foreach ($mesesNome as $num => $nome):
+								$active = ($num == date('m')) ? 'active bg-ipb text-white' : 'bg-white text-muted border';
+							?>
+								<button type="button" class="btn btn-sm rounded-pill me-2 fw-bold btn-mes-biblio <?= $active ?>"
+										onclick="filtrarMesBiblioteca('<?= $num ?>', this)" style="min-width: 60px;">
+									<?= substr($nome, 0, 3) ?>
+								</button>
+							<?php endforeach; ?>
+						</div>
+
+						<div class="table-responsive rounded-4 border bg-white shadow-sm">
+							<table class="table table-sm table-borderless mb-0">
+								<thead class="bg-light">
+									<tr class="text-center" style="font-size: 0.7rem;">
+										<th class="p-3 text-muted text-uppercase">Retirada</th>
+										<th class="p-3 text-muted text-uppercase text-start">Livro / Autor</th>
+										<th class="p-3 text-muted text-uppercase">Status</th>
+									</tr>
+								</thead>
+								<tbody id="corpo-tabela-biblioteca" style="font-size: 0.85rem;">
+									</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
 
             </div>
         </div>
@@ -460,4 +494,73 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+
+
+// --- LÓGICA DA BIBLIOTECA ---
+
+// 1. Captura os dados vindos do PHP (ajustado para o nome da variável no controller)
+const todosEmprestimos = <?= json_encode($emprestimos_mensais ?? []) ?>;
+
+function filtrarMesBiblioteca(mes, btn) {
+    // 2. Atualizar visual dos botões da biblioteca
+    document.querySelectorAll('.btn-mes-biblio').forEach(b => {
+        b.classList.remove('active', 'bg-ipb', 'text-white');
+        b.classList.add('bg-white', 'text-muted', 'border');
+    });
+    btn.classList.add('active', 'bg-ipb', 'text-white');
+    btn.classList.remove('bg-white', 'text-muted', 'border');
+
+    const corpo = document.getElementById('corpo-tabela-biblioteca');
+    if (!corpo) return; // Segurança caso o ID mude
+
+    corpo.innerHTML = '';
+
+    // 3. Formatar a chave do mês (ex: "4" vira "04")
+    const mesKey = mes.toString().padStart(2, '0');
+
+    // 4. Verificar se existem dados para o mês selecionado
+    if (!todosEmprestimos[mesKey] || todosEmprestimos[mesKey].length === 0) {
+        corpo.innerHTML = `<tr><td colspan="3" class="text-center py-5 text-muted">
+            <i class="bi bi-book d-block fs-2 opacity-25 mb-2"></i>
+            <small>Nenhum registro de empréstimo em ${mesesNomesCompletos[mesKey]}.</small>
+        </td></tr>`;
+        return;
+    }
+
+    // 5. Renderizar as linhas dos livros
+    todosEmprestimos[mesKey].forEach(e => {
+        // Formata a data vinda do banco (YYYY-MM-DD HH:MM:SS) para DD/MM
+        const dataOriginal = new Date(e.emprestimo_data_saida.replace(' ', 'T'));
+        const dataFormatada = dataOriginal.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+
+        // Cores para os status da biblioteca
+        let badgeClass = 'bg-warning-subtle text-warning'; // Ativo
+        if(e.emprestimo_status === 'Devolvido') badgeClass = 'bg-success-subtle text-success';
+        if(e.emprestimo_status === 'Atrasado') badgeClass = 'bg-danger-subtle text-danger';
+
+        const tr = document.createElement('tr');
+        tr.className = 'text-center border-bottom align-middle';
+        tr.innerHTML = `
+            <td class="p-3 fw-bold text-muted">${dataFormatada}</td>
+            <td class="p-3 text-start">
+                <div class="fw-bold text-dark text-uppercase" style="font-size: 0.8rem;">${e.livro_titulo}</div>
+                <div class="text-muted" style="font-size: 0.7rem;">${e.livro_autor}</div>
+            </td>
+            <td class="p-3">
+                <span class="badge ${badgeClass} rounded-pill px-3" style="font-size: 0.65rem;">${e.emprestimo_status}</span>
+            </td>
+        `;
+        corpo.appendChild(tr);
+    });
+}
+
+// 6. Inicializar a biblioteca no carregamento da página
+document.addEventListener('DOMContentLoaded', function() {
+    const mesAtual = '<?= date('m') ?>';
+    const btnBiblioAtivo = document.querySelector(`.btn-mes-biblio.active`);
+    if(btnBiblioAtivo) {
+        filtrarMesBiblioteca(mesAtual, btnBiblioAtivo);
+    }
+});
+
 </script>
