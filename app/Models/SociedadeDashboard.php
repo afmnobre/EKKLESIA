@@ -113,4 +113,23 @@ class SociedadeDashboard
         $stmt->execute([$igrejaId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+	public function getEventosPorMes($igrejaId)
+	{
+		$sql = "SELECT
+					s.sociedade_id,
+					MONTH(se.sociedade_evento_data_hora_inicio) as mes,
+					COUNT(se.sociedade_evento_id) as total_eventos
+				FROM sociedades s
+				LEFT JOIN sociedades_eventos se ON s.sociedade_id = se.sociedade_evento_sociedade_id
+					AND YEAR(se.sociedade_evento_data_hora_inicio) = YEAR(CURDATE())
+					AND se.sociedade_evento_status != 'Cancelado'
+				WHERE s.sociedade_igreja_id = :igrejaId
+				GROUP BY s.sociedade_id, mes";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([':igrejaId' => $igrejaId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
 }

@@ -469,6 +469,34 @@ class PatrimoniosController extends Controller
 		exit;
 	}
 
+	public function documento($id)
+	{
+		$igrejaId = $_SESSION['usuario_igreja_id'];
 
+		// Busca os dados consolidados do bem e da última movimentação no Model
+		$dados = $this->model->getDadosDocumento($id, $igrejaId);
+		$dadosIgreja = $this->model->getIgrejaDados($igrejaId);
+
+		// Se não encontrar o patrimônio, volta para a listagem
+		if (!$dados) {
+			header('Location: ' . url('patrimonios?erro=nao_encontrado'));
+			exit;
+		}
+
+		// Lista de status que permitem a geração do documento
+		$statusPermitidos = ['manutencao', 'baixado', 'extraviado', 'danificado'];
+
+		if (!in_array($dados['patrimonio_bem_status'], $statusPermitidos)) {
+			header('Location: ' . url('patrimonios?erro=status_invalido'));
+			exit;
+		}
+
+		// Carrega a view de impressão (layout limpo para papel A4)
+		$this->rawview('patrimonios/documento_saida', [
+			'dados'   => $dados,
+			'igreja'  => $dadosIgreja,
+			'titulo'  => 'Termo de ' . ucfirst($dados['patrimonio_bem_status'])
+		]);
+	}
 
 }

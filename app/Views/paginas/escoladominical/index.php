@@ -85,6 +85,15 @@
                                 <a href="<?= url('escolaDominical/chamada/' . $classe['classe_id']) ?>" class="btn btn-outline-primary">
                                     <i class="bi bi-check2-square me-2"></i>Fazer Chamada
                                 </a>
+
+								<button type="button" class="btn btn-warning btn-sm btn-presenca-professor"
+									data-id="<?= $classe['classe_id'] ?>"
+									data-nome="<?= $classe['classe_nome'] ?>"
+									data-professor-id="<?= $classe['classe_professor_id'] ?>"
+									data-professor-nome="<?= $classe['professor_nome'] ?>">
+									<i class="bi bi-person-check me-1"></i>Presença Prof.
+								</button>
+
                                 <button type="button"
                                     class="btn btn-light btn-gerenciar-alunos"
                                     data-id="<?= $classe['classe_id'] ?>">
@@ -103,6 +112,49 @@
         <?php endif; ?>
     </div>
 </div>
+
+
+<div class="modal fade" id="modalPresencaProfessor" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-badge me-2"></i>Presença do Professor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="<?= url('escolaDominical/salvarPresencaProfessor') ?>" method="POST">
+                <input type="hidden" name="classe_id" id="pres_classe_id">
+                <input type="hidden" name="professor_id" id="pres_professor_id">
+
+                <div class="modal-body p-4">
+                    <p class="mb-3">Classe: <strong id="pres_nome_classe"></strong></p>
+                    <p>Professor Titular: <strong id="pres_nome_professor"></strong></p>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-uppercase">O professor compareceu?</label>
+                        <select name="presenca_status" id="select_status_professor" class="form-select" required>
+                            <option value="1">Sim, presente</option>
+                            <option value="0">Não, faltou</option>
+                        </select>
+                    </div>
+
+                    <div id="div_substituto" class="mb-3 d-none">
+                        <label class="form-label fw-bold small text-uppercase text-danger">Professor Substituto</label>
+                        <select name="substituto_id" id="choices-substituto" class="form-select">
+                            <option value="">Selecione quem substituiu...</option>
+                            <?php foreach($membros as $m): ?>
+                                <option value="<?= $m['membro_id'] ?>"><?= $m['membro_nome'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm">Confirmar Presença</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 
 <!-- <div class="modal fade" id="modalNovaClasse" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -616,4 +668,46 @@ document.querySelectorAll('.btn-editar-classe').forEach(btn => {
         }
     });
 })();
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const modalPresenca = new bootstrap.Modal(document.getElementById('modalPresencaProfessor'));
+    const selectStatus = document.getElementById('select_status_professor');
+    const divSubstituto = document.getElementById('div_substituto');
+
+    // Inicializa Choices para o substituto
+    const choicesSubstituto = new Choices('#choices-substituto', {
+        searchEnabled: true,
+        placeholderValue: 'Pesquise o substituto...',
+        itemSelectText: ''
+    });
+
+    // Abrir Modal e Preencher
+    document.querySelectorAll('.btn-presenca-professor').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('pres_classe_id').value = this.dataset.id;
+            document.getElementById('pres_professor_id').value = this.dataset.professorId;
+            document.getElementById('pres_nome_classe').innerText = this.dataset.nome;
+            document.getElementById('pres_nome_professor').innerText = this.dataset.professorNome;
+
+            // Resetar campos
+            selectStatus.value = "1";
+            divSubstituto.classList.add('d-none');
+
+            modalPresenca.show();
+        });
+    });
+
+    // Mostrar/Esconder substituto baseado no status
+    selectStatus.addEventListener('change', function() {
+        if (this.value === "0") {
+            divSubstituto.classList.remove('d-none');
+        } else {
+            divSubstituto.classList.add('d-none');
+            choicesSubstituto.setChoiceByValue('');
+        }
+    });
+});
+
+
 </script>

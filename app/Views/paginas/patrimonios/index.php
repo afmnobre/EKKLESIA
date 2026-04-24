@@ -99,7 +99,15 @@
                                     <span class="badge <?= $cor ?>" style="font-size: 0.7rem;"><?= strtoupper($b['patrimonio_bem_status']) ?></span>
                                 </td>
                                 <td class="text-end pe-4">
-                                    <div class="btn-group shadow-sm">
+                                     <div class="btn-group shadow-sm">
+										<?php if (in_array($b['patrimonio_bem_status'], ['manutencao', 'baixado', 'extraviado', 'danificado'])): ?>
+											<a href="<?= url('patrimonios/documento/'.$b['patrimonio_bem_id']) ?>"
+											   target="_blank"
+											   class="btn btn-sm btn-white border"
+											   title="Gerar Documento de <?= ucfirst($b['patrimonio_bem_status']) ?>">
+												<i class="bi bi-file-earmark-text text-dark"></i>
+											</a>
+										<?php endif; ?>
                                         <button class="btn btn-sm btn-white border" title="Etiqueta"
                                                 onclick="gerarEtiqueta('<?= $b['patrimonio_bem_codigo'] ?>', '<?= $b['patrimonio_bem_nome'] ?>')">
                                             <i class="bi bi-qr-code text-dark"></i>

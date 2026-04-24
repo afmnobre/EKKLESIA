@@ -212,6 +212,73 @@
 </div>
 
 
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-bold mb-0 text-primary">
+                        <i class="bi bi-person-badge-fill me-2"></i>Assiduidade dos Professores
+                    </h5>
+                    <p class="text-muted small mb-0">Contagem de aulas presenciais vs. substituições</p>
+                </div>
+                <span class="badge bg-primary"><?= date('Y') ?></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light small text-uppercase">
+                        <tr>
+                            <th class="ps-4" style="width: 200px;">Classe</th>
+                            <?php foreach($mesesNomes as $m): ?>
+                                <th class="text-center"><?= $m ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($assiduidadeProf as $id => $dados): ?>
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark"><?= $dados['nome'] ?></div>
+                                <small class="text-muted">Professor Titular</small>
+                            </td>
+                            <?php for($i=1; $i<=12; $i++):
+                                $p = $dados['meses'][$i]['P'];
+                                $f = $dados['meses'][$i]['F'];
+                                $temDados = ($p > 0 || $f > 0);
+                            ?>
+                                <td class="text-center">
+                                    <?php if($temDados): ?>
+                                        <div class="d-inline-flex flex-column gap-1">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.7rem;">
+                                                <?= $p ?> P
+                                            </span>
+                                            <?php if($f > 0): ?>
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.7rem;">
+                                                <?= $f ?> F
+                                            </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted opacity-25">-</span>
+                                    <?php endif; ?>
+                                </td>
+                            <?php endfor; ?>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-white border-0 py-3">
+                <div class="d-flex gap-3">
+                    <small class="text-muted"><span class="badge bg-success-subtle text-success border border-success-subtle">P</span> Presença do Titular</small>
+                    <small class="text-muted"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">F</span> Professor Substituído (Falta)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <style>
     .bg-opacity-10 { --bs-bg-opacity: 0.1; }
     .bg-success-subtle { background-color: rgba(25, 135, 84, 0.1); }

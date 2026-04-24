@@ -16,37 +16,47 @@ class DashboardSociedadesController extends Controller
         $this->model = new SociedadeDashboard();
     }
 
-    public function index()
-    {
-        // Verifica se existe sessão (ajuste conforme seu sistema de login)
-        if (!isset($_SESSION['usuario_igreja_id'])) {
-            header('Location: ' . url('login'));
-            exit;
-        }
+	public function index()
+	{
+		if (!isset($_SESSION['usuario_igreja_id'])) {
+			header('Location: ' . url('login'));
+			exit;
+		}
 
-        $idIgreja = $_SESSION['usuario_igreja_id'];
+		$idIgreja = $_SESSION['usuario_igreja_id'];
+		$sociedades = $this->model->getMetricasGerais($idIgreja);
 
-        // 1. Métricas de População e Aproveitamento
-        $sociedades = $this->model->getMetricasGerais($idIgreja);
+		// --- Nova Lógica de Eventos por Mês ---
+		$mesesNomes = [1=>'Jan', 2=>'Fev', 3=>'Mar', 4=>'Abr', 5=>'Mai', 6=>'Jun', 7=>'Jul', 8=>'Ago', 9=>'Set', 10=>'Out', 11=>'Nov', 12=>'Dez'];
+		$dadosEventosBD = $this->model->getEventosPorMes($idIgreja);
 
-        // 2. Alertas de Saúde dos Dados
-        $alertasFaixaEtaria = $this->model->getMembrosForaDaFaixa($idIgreja);
+		$eventosMensais = [];
+		foreach ($sociedades as $s) {
+			$eventosMensais[$s['sociedade_id']] = [
+				'nome' => $s['sociedade_nome'],
+				'meses' => array_fill(1, 12, 0)
+			];
+		}
 
-        // 3. Calendário de Eventos (Próximos 30 dias)
-        $proximosEventos = $this->model->getProximosEventos($idIgreja, 30);
+		foreach ($dadosEventosBD as $row) {
+			if (isset($eventosMensais[$row['sociedade_id']]) && $row['mes']) {
+				$eventosMensais[$row['sociedade_id']]['meses'][(int)$row['mes']] = (int)$row['total_eventos'];
+			}
+		}
+		// ---------------------------------------
 
-        // 4. Ranking de Atividade
-        $rankingAtividade = $this->model->getFrequenciaEventos($idIgreja);
+		$alertasFaixaEtaria = $this->model->getMembrosForaDaFaixa($idIgreja);
+		$proximosEventos = $this->model->getProximosEventos($idIgreja, 30);
+		$rankingAtividade = $this->model->getFrequenciaEventos($idIgreja);
 
-        // Certifique-se de que o caminho 'dashboard/sociedades/dashboard'
-        // aponte para /app/Views/paginas/sociedades/dashboard.php
-
-        $this->view('sociedades/dashboard', [
-            'titulo' => 'Dashboard de Sociedades',
-            'sociedades' => $sociedades,
-            'alertas' => $alertasFaixaEtaria, // Verifique se na view você usa $alertas ou $alertasFaixaEtaria
-            'eventos' => $proximosEventos,
-            'ranking' => $rankingAtividade
-            ]);
-    }
+		$this->view('sociedades/dashboard', [
+			'titulo' => 'Dashboard de Sociedades',
+			'sociedades' => $sociedades,
+			'alertas' => $alertasFaixaEtaria,
+			'eventos' => $proximosEventos,
+			'ranking' => $rankingAtividade,
+			'eventosMensais' => $eventosMensais, // Enviando para a view
+			'mesesNomes' => $mesesNomes         // Enviando para a view
+		]);
+	}
 }

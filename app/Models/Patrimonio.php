@@ -440,4 +440,26 @@ public function getAll($igrejaId)
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
+	public function getDadosDocumento($id, $igrejaId)
+	{
+		$sql = "SELECT b.*, l.patrimonio_local_nome, c.patrimonio_categoria_nome,
+				m.patrimonio_movimentacao_tipo, m.patrimonio_movimentacao_data,
+				m.patrimonio_movimentacao_observacao,
+				lo.patrimonio_local_nome as local_origem,
+				ld.patrimonio_local_nome as local_destino
+				FROM patrimonio_bens b
+				LEFT JOIN patrimonio_locais l ON b.patrimonio_bem_local_id = l.patrimonio_local_id
+				LEFT JOIN patrimonio_categorias c ON b.patrimonio_bem_categoria_id = c.patrimonio_categoria_id
+				LEFT JOIN patrimonio_movimentacoes m ON b.patrimonio_bem_id = m.patrimonio_movimentacao_patrimonio_bem_id
+				LEFT JOIN patrimonio_locais lo ON m.patrimonio_movimentacao_local_origem = lo.patrimonio_local_id
+				LEFT JOIN patrimonio_locais ld ON m.patrimonio_movimentacao_local_destino = ld.patrimonio_local_id
+				WHERE b.patrimonio_bem_id = ? AND b.patrimonio_bem_igreja_id = ?
+				ORDER BY m.patrimonio_movimentacao_id DESC LIMIT 1";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$id, $igrejaId]);
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
+
+
 }

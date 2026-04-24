@@ -284,25 +284,53 @@ class EscolaDominicalController extends Controller
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 
 		// 1. Métricas existentes
-		$ocupacao    = $this->model->getTaxaOcupacao($igrejaId);
-		$comparativo = $this->model->getComparativoPresenca($igrejaId);
-		$sumidos     = $this->model->getAlunosSumidos($igrejaId);
-		$classes     = $this->model->getClassesByIgreja($igrejaId);
+		$ocupacao         = $this->model->getTaxaOcupacao($igrejaId);
+		$comparativo      = $this->model->getComparativoPresenca($igrejaId);
+		$sumidos          = $this->model->getAlunosSumidos($igrejaId);
+		$classes          = $this->model->getClassesByIgreja($igrejaId);
 
-		// 2. Novas Métricas solicitadas
+		// 2. Métricas de Engajamento e Matrículas
 		$topAssiduidade   = $this->model->getTopAssiduidade($igrejaId);
 		$resumoMatriculas = $this->model->getResumoMatriculas($igrejaId);
 		$faixasEtarias    = $this->model->getDistribuicaoEtaria($igrejaId);
-
-		// CORREÇÃO: Buscando os dados para o segundo gráfico (Membros fora da EBD)
 		$faixasEtariasFora = $this->model->getDistribuicaoEtariaNaoMatriculados($igrejaId);
 
-		// Adiciona o Top 5 individual para cada classe dentro do array $classes
+		// 3. LÓGICA DE ASSIDUIDADE DOS PROFESSORES (Mês a Mês)
+		$mesesNomes = [
+			1 => 'Jan', 2 => 'Fev', 3 => 'Mar', 4 => 'Abr', 5 => 'Mai', 6 => 'Jun',
+			7 => 'Jul', 8 => 'Ago', 9 => 'Set', 10 => 'Out', 11 => 'Nov', 12 => 'Dez'
+		];
+
+		$dadosBD = $this->model->getAssiduidadeProfessoresMensal($igrejaId);
+
+		$assiduidadeProfessores = [];
+		foreach($classes as $c) {
+			$assiduidadeProfessores[$c['classe_id']] = [
+				'nome' => $c['classe_nome'],
+				'meses' => array_fill(1, 12, ['P' => 0, 'F' => 0])
+			];
+		}
+
+		if (!empty($dadosBD)) {
+			foreach ($dadosBD as $row) {
+				$idClasse = $row['classe_id'];
+				$mes = (int)$row['mes'];
+
+				if (isset($assiduidadeProfessores[$idClasse])) {
+					$assiduidadeProfessores[$idClasse]['meses'][$mes] = [
+						'P' => (int)$row['presencas'],
+						'F' => (int)$row['faltas']
+					];
+				}
+			}
+		}
+
+		// 4. Top 5 individual para cada classe
 		foreach ($classes as $key => $classe) {
 			$classes[$key]['top_alunos'] = $this->model->getTopAssiduidadePorClasse($classe['classe_id']);
 		}
 
-		// Retorno completo para a View
+		// Retorno para a View
 		$this->view('escoladominical/dashboard', [
 			'ocupacao'          => $ocupacao,
 			'comparativo'       => $comparativo,
@@ -311,9 +339,11 @@ class EscolaDominicalController extends Controller
 			'topAssiduidade'    => $topAssiduidade,
 			'resumoMatriculas'  => $resumoMatriculas,
 			'faixasEtarias'     => $faixasEtarias,
-			'faixasEtariasFora' => $faixasEtariasFora // Variável agora disponível na View
+			'faixasEtariasFora' => $faixasEtariasFora,
+			'assiduidadeProf'   => $assiduidadeProfessores,
+			'mesesNomes'        => $mesesNomes
 		]);
-    }
+	}
 
     //SISTEMA DE PRESENÇA PRO CAMERA
 	public function registrarPresencaAjax() {
@@ -342,6 +372,25 @@ class EscolaDominicalController extends Controller
 		}
 		exit;
 	}
+
+	public function salvarPresencaProfessor() {
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$dados = [
+				'classe_id'     => $_POST['classe_id'],
+				'professor_id'  => $_POST['professor_id'],
+				'data'          => date('Y-m-d'), // Presença do dia
+				'status'        => $_POST['presenca_status'], // 1 para presente, 0 para falta
+				'substituto_id' => !empty($_POST['substituto_id']) ? $_POST['substituto_id'] : null
+			];
+
+			if ($this->model->salvarPresencaProfessor($dados)) {
+				// Sucesso
+				header("Location: " . url('escolaDominical/index'));
+			}
+		}
+	}
+
+
 
 
 }

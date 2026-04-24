@@ -434,4 +434,81 @@ class EscolaDominical
 		];
 	}
 
+	/**
+	 * Salva ou atualiza a presença do professor
+	 */
+	public function salvarPresencaProfessor($dados)
+	{
+		// Verifica se já existe registro para este professor nesta classe e data
+		$sqlBusca = "SELECT presenca_id FROM classes_presencas
+					 WHERE presenca_classe_id = ? AND presenca_data = ? AND presenca_tipo = 'professor'";
+		$stmtBusca = $this->db->prepare($sqlBusca);
+		$stmtBusca->execute([$dados['classe_id'], $dados['data']]);
+		$existente = $stmtBusca->fetch();
+
+		if ($existente) {
+			$sql = "UPDATE classes_presencas SET
+					presenca_membro_id = ?,
+					presenca_status = ?,
+					presenca_substituto_id = ?
+					WHERE presenca_id = ?";
+			return $this->db->prepare($sql)->execute([
+				$dados['professor_id'],
+				$dados['status'],
+				$dados['substituto_id'] ?? null,
+				$existente['presenca_id']
+			]);
+		} else {
+			$sql = "INSERT INTO classes_presencas
+					(presenca_classe_id, presenca_membro_id, presenca_data, presenca_status, presenca_tipo, presenca_substituto_id)
+					VALUES (?, ?, ?, ?, 'professor', ?)";
+			return $this->db->prepare($sql)->execute([
+				$dados['classe_id'],
+				$dados['professor_id'],
+				$dados['data'],
+				$dados['status'],
+				$dados['substituto_id'] ?? null
+			]);
+		}
+	}
+
+	public function getAssiduidadeProfessoresAnual($igrejaId) {
+		$sql = "SELECT
+					ce.classe_id,
+					MONTH(cp.presenca_data) AS mes,
+					SUM(CASE WHEN cp.presenca_substituto_id IS NULL AND cp.presenca_status = 1 THEN 1 ELSE 0 END) as presencas,
+					SUM(CASE WHEN cp.presenca_substituto_id IS NOT NULL THEN 1 ELSE 0 END) as faltas
+				FROM classes_escola ce
+				INNER JOIN classes_presencas cp ON ce.classe_id = cp.presenca_classe_id
+				WHERE ce.classe_igreja_id = :igrejaId
+				  AND cp.presenca_tipo = 'professor'
+				  AND YEAR(cp.presenca_data) = YEAR(CURDATE())
+				GROUP BY ce.classe_id, mes";
+
+		return $this->db->prepare($sql, ['igrejaId' => $igrejaId]); // Ajuste conforme seu método de banco
+	}
+
+	public function getAssiduidadeProfessoresMensal($igrejaId) {
+		$sql = "SELECT
+					ce.classe_id,
+					MONTH(cp.presenca_data) AS mes,
+					SUM(CASE WHEN cp.presenca_substituto_id IS NULL AND cp.presenca_status = 1 THEN 1 ELSE 0 END) as presencas,
+					SUM(CASE WHEN cp.presenca_substituto_id IS NOT NULL THEN 1 ELSE 0 END) as faltas
+				FROM classes_escola ce
+				INNER JOIN classes_presencas cp ON ce.classe_id = cp.presenca_classe_id
+				WHERE ce.classe_igreja_id = :igrejaId
+				  AND cp.presenca_tipo = 'professor'
+				  AND YEAR(cp.presenca_data) = YEAR(CURDATE())
+				GROUP BY ce.classe_id, mes";
+
+		// Se o seu model estende uma classe que tem um método query personalizado, use-o.
+		// Caso contrário, o código abaixo é o padrão para PDO nativo:
+		$stmt = $this->db->prepare($sql);
+		$stmt->bindValue(':igrejaId', $igrejaId, PDO::PARAM_INT);
+		$stmt->execute();
+
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+
 }
