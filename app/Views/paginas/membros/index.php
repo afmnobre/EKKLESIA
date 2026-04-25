@@ -364,3 +364,91 @@ document.addEventListener('keyup', function(event) {
     }
 });
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+(function() {
+    // Usamos delegacao de evento no document para garantir que funcione com AJAX
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('#btn-download-card');
+        if (!btn) return;
+
+        e.preventDefault();
+
+        const area = document.getElementById('printArea');
+        if (!area) return;
+
+        // Pegamos o nome do arquivo que o PHP escreveu no atributo do botao
+        const nomeArquivo = btn.getAttribute('data-filename') || 'carteirinha.png';
+
+        const textoOriginal = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.style.pointerEvents = 'none';
+
+        // Pequeno delay para garantir que o spinner renderizou
+        setTimeout(function() {
+            html2canvas(area, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false
+            }).then(function(canvas) {
+                const link = document.createElement('a');
+                link.download = nomeArquivo;
+                link.href = canvas.toDataURL("image/png", 1.0);
+                link.click();
+            }).catch(function(err) {
+                console.error("Erro ao gerar canvas:", err);
+                alert("Erro ao gerar imagem. Tente imprimir a página.");
+            }).finally(function() {
+                btn.innerHTML = textoOriginal;
+                btn.style.pointerEvents = 'auto';
+            });
+        }, 100);
+    });
+})();
+</script>
+
+
+<script>
+(function() {
+    // Escuta cliques no documento (Delegated Event)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('#btnBaixarCertificado');
+        if (!btn) return;
+
+        e.preventDefault();
+
+        const alvo = document.getElementById('capturaCertificado');
+        if (!alvo) return;
+
+        const nomeArquivo = btn.getAttribute('data-filename') || 'certificado.png';
+        const htmlOriginal = btn.innerHTML;
+
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> GERANDO...';
+        btn.style.pointerEvents = 'none';
+
+        setTimeout(function() {
+            html2canvas(alvo, {
+                scale: 2, // 2 é suficiente para A4, 3 pode ficar muito pesado no navegador
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: "#ffffff",
+                logging: false
+            }).then(function(canvas) {
+                const link = document.createElement('a');
+                link.download = nomeArquivo;
+                link.href = canvas.toDataURL("image/png", 1.0);
+                link.click();
+            }).catch(function(err) {
+                console.error("Erro no Certificado:", err);
+                alert("Não foi possível gerar a imagem.");
+            }).finally(function() {
+                btn.innerHTML = htmlOriginal;
+                btn.style.pointerEvents = 'auto';
+            });
+        }, 200);
+    });
+})();
+</script>
