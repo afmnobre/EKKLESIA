@@ -100,5 +100,39 @@ class Dashboard
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([$igrejaId]);
 		return $stmt->fetchColumn();
+    }
+
+	public function getMembrosAusentes($igrejaId) {
+		$sql = "SELECT
+					m.membro_id,
+					m.membro_nome,
+					m.membro_telefone,
+					m.membro_email,
+					TIMESTAMPDIFF(YEAR, m.membro_data_nascimento, CURDATE()) as idade
+				FROM membros m
+				WHERE m.membro_igreja_id = ?
+				AND m.membro_status = 'Ativo'
+				AND m.membro_id NOT IN (
+					-- Presenças na EBD nos últimos 3 meses
+					SELECT presenca_membro_id
+					FROM classes_presencas
+					WHERE presenca_data >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+					AND presenca_status = 1
+				)
+				AND m.membro_id NOT IN (
+					-- Presenças em Sociedades nos últimos 3 meses
+					SELECT sociedade_presenca_membro_id
+					FROM sociedades_eventos_presencas
+					WHERE sociedade_presenca_registrado_em >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+					AND sociedade_presenca_status = 'Presente'
+				)
+				ORDER BY m.membro_nome ASC
+				LIMIT 10";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
+
+
 }

@@ -345,25 +345,15 @@ class FinanceiroController extends Controller {
 
 	public function dashboard() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
-		$anoAtual = date('Y'); // Definimos o ano para o relatório anual
+		$anoAtual = date('Y');
+		$anoAnterior = $anoAtual - 1;
 
 		$resumo = $this->model->getResumoMes($igrejaId);
 		$contas = $this->model->getContasBancarias($igrejaId);
+
+		// 1. DASHBOARD DE LINHA (FLUXO MENSAL)
 		$dadosRaw = $this->model->getDadosGraficoLinha($igrejaId);
-
-		// 1. CHAMADA DO NOVO RELATÓRIO DE CATEGORIAS
-		// Certifique-se de que o método 'getFluxoAnualPorCategorias' está no seu Model
-		$relatorioCategorias = $this->model->getFluxoAnualPorCategorias($igrejaId, $anoAtual);
-
-        // ADICIONE ISSO PARA TESTAR:
-        //var_dump($relatorioCategorias); die();
-
-
-
-		// Criamos um esqueleto com os 12 meses zerados para o gráfico de linha
 		$dadosGrafico = array_fill(1, 12, ['entradas' => 0, 'saidas' => 0]);
-
-		// Preenchemos com o que veio do banco para o gráfico
 		foreach ($dadosRaw as $d) {
 			$dadosGrafico[(int)$d['mes']] = [
 				'entradas' => (float)$d['entradas'],
@@ -371,12 +361,23 @@ class FinanceiroController extends Controller {
 			];
 		}
 
-		// 2. ADICIONE 'relatorio' AO ARRAY DA VIEW
+		// 2. RELATÓRIO ESTRUTURADO (Para as tabelas detalhadas que estavam dando erro)
+		// Este método preenche as chaves ['entrada'] e ['saida'] que a linha 282 espera
+		$relatorioCategorias = $this->model->getFluxoAnualPorCategorias($igrejaId, $anoAtual);
+
+		// 3. NOVOS COMPARATIVOS (Para a tabela de evolução e gráficos de barras)
+		$compReceitas = $this->model->getComparativoReceitasAnual($igrejaId, $anoAtual);
+		$compDespesas = $this->model->getComparativoDespesasAnual($igrejaId, $anoAtual);
+
 		$this->view('financeiro/dashboard', [
-			'resumo'    => $resumo,
-			'contas'    => $contas,
-			'fluxoAnual' => $dadosGrafico,
-			'relatorio' => $relatorioCategorias // Esta é a variável que a View estava sentindo falta
+			'resumo'             => $resumo,
+			'contas'             => $contas,
+			'fluxoAnual'         => $dadosGrafico,
+			'anoAtual'           => $anoAtual,
+			'anoAnterior'        => $anoAnterior,
+			'relatorio'          => $relatorioCategorias, // Mantém compatibilidade com as tabelas de baixo
+			'compReceitas'       => $compReceitas,       // Novo nome para o comparativo de receitas
+			'compDespesas'       => $compDespesas        // Novo nome para o comparativo de despesas
 		]);
 	}
 

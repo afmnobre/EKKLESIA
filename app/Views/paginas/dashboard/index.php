@@ -114,7 +114,75 @@
         <?php endforeach; ?>
     </div>
 
-</div> <style>
+	<div class="row mb-5">
+		<div class="col-12">
+			<h5 class="text-dark fw-bold mb-3 border-bottom pb-2">
+				<i class="fas fa-user-clock me-2 text-danger"></i>Atenção Pastoral: Membros Ausentes (> 3 meses)
+				<small class="text-muted fw-normal d-block" style="font-size: 0.7rem;">Membros sem presença registrada na EBD ou Sociedades nos últimos 90 dias.</small>
+			</h5>
+		</div>
+
+		<div class="col-12">
+			<div class="card border-0 shadow-sm">
+				<div class="table-responsive">
+					<table class="table table-hover align-middle mb-0">
+						<thead class="bg-light">
+							<tr>
+								<th class="ps-4" style="width: 40%;">Membro</th>
+								<th class="text-center">Idade</th>
+								<th class="text-center">Contato</th>
+								<th class="text-end pe-4">Ação</th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if(!empty($membrosAusentes)): ?>
+								<?php foreach($membrosAusentes as $m): ?>
+								<tr>
+									<td class="ps-4">
+										<div class="d-flex align-items-center">
+											<div class="rounded-circle bg-danger-subtle text-danger d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight: bold;">
+												<?= strtoupper(substr($m['membro_nome'], 0, 1)) ?>
+											</div>
+											<div>
+												<span class="fw-bold text-dark d-block"><?= $m['membro_nome'] ?></span>
+												<small class="text-muted"><?= $m['membro_email'] ?? 'Sem e-mail' ?></small>
+											</div>
+										</div>
+									</td>
+									<td class="text-center text-muted"><?= $m['idade'] ?> anos</td>
+									<td class="text-center">
+										<?php if($m['membro_telefone']): ?>
+											<a href="https://wa.me/55<?= preg_replace('/\D/', '', $m['membro_telefone']) ?>" target="_blank" class="btn btn-sm btn-outline-success rounded-pill">
+												<i class="fab fa-whatsapp me-1"></i> Enviar Mensagem
+											</a>
+										<?php else: ?>
+											<span class="badge bg-light text-muted">Sem telefone</span>
+										<?php endif; ?>
+									</td>
+									<td class="text-end pe-4">
+										<a href="<?= url('membros/perfil/'.$m['membro_id']) ?>" class="btn btn-sm btn-light border shadow-sm">
+											<i class="fas fa-search me-1"></i> Prontuário
+										</a>
+									</td>
+								</tr>
+								<?php endforeach; ?>
+							<?php else: ?>
+								<tr>
+									<td colspan="4" class="text-center py-4 text-muted">
+										<i class="fas fa-check-circle text-success mb-2 d-block fa-2x"></i>
+										Todos os membros ativos participaram de alguma atividade recentemente.
+									</td>
+								</tr>
+							<?php endif; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</div>
+<style>
     /* Estilos extras para deixar o visual mais "limpo" */
     .border-left-primary { border-left: 4px solid #4e73df !important; }
     .shadow-hover:hover { transform: translateY(-3px); transition: 0.3s; }

@@ -665,28 +665,84 @@ class Financeiro {
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-	public function getComparativoAnual($igrejaId, $anoReferencia) {
-		$anoAnterior = $anoReferencia - 1;
+	public function getComparativoAnual($igrejaId, $ano) {
+		$anoAnterior = $ano - 1;
 
 		$sql = "SELECT
-					cat.financeiro_categoria_nome as categoria,
-					sub.financeiro_subcategoria_nome as subcategoria,
-					MONTH(m.financeiro_movimentacao_data) as mes,
-					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = ? THEN m.financeiro_movimentacao_valor ELSE 0 END) as valor_atual,
-					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = ? THEN m.financeiro_movimentacao_valor ELSE 0 END) as valor_anterior
-				FROM financeiro_movimentacoes m
-				INNER JOIN financeiro_subcategorias sub ON m.financeiro_movimentacao_subcategoria_id = sub.financeiro_subcategoria_id
-				INNER JOIN financeiro_categorias cat ON sub.financeiro_subcategoria_categoria_id = cat.financeiro_categoria_id
-				WHERE m.financeiro_movimentacao_igreja_id = ?
-				AND m.financeiro_movimentacao_tipo = 'saida'
-				AND YEAR(m.financeiro_movimentacao_data) IN (?, ?)
-				GROUP BY cat.financeiro_categoria_id, sub.financeiro_subcategoria_id, MONTH(m.financeiro_movimentacao_data)
-				ORDER BY cat.financeiro_categoria_nome, sub.financeiro_subcategoria_nome, mes";
+					s.subcategoria_nome,
+					c.financeiro_categoria_nome,
+					-- Soma Ano Atual por Mês
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = ? THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_atual,
+					-- Soma Ano Anterior Total
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = ? THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_anterior,
+					-- Detalhamento mensal ano atual
+					" . $this->buildMonthlySumQuery($ano) . "
+				FROM financeiro_subcategorias s
+				JOIN financeiro_categorias c ON s.subcategoria_categoria_id = c.financeiro_categoria_id
+				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_categoria_id = s.subcategoria_id
+					AND m.financeiro_movimentacao_igreja_id = ?
+					AND YEAR(m.financeiro_movimentacao_data) IN (?, ?)
+				WHERE s.subcategoria_igreja_id = ? AND c.financeiro_categoria_tipo = 'entrada'
+				GROUP BY s.subcategoria_id
+				ORDER BY c.financeiro_categoria_nome, s.subcategoria_nome";
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$anoReferencia, $anoAnterior, $igrejaId, $anoReferencia, $anoAnterior]);
+		$stmt->execute([$ano, $anoAnterior, $igrejaId, $ano, $anoAnterior, $igrejaId]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
+
+	public function getComparativoReceitasAnual($igrejaId, $ano) {
+		$anoAnterior = $ano - 1;
+
+		// Criamos as colunas de SUM(CASE...) para cada mês dinamicamente
+		$mesesSql = "";
+		for ($i = 1; $i <= 12; $i++) {
+			$mesesSql .= "SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano AND MONTH(m.financeiro_movimentacao_data) = $i THEN m.financeiro_movimentacao_valor ELSE 0 END) as mes_$i, ";
+		}
+
+		$sql = "SELECT
+					s.subcategoria_nome,
+					c.financeiro_categoria_nome,
+					$mesesSql
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_atual,
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $anoAnterior THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_anterior
+				FROM financeiro_subcategorias s
+				JOIN financeiro_categorias c ON s.subcategoria_categoria_id = c.financeiro_categoria_id
+				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_categoria_id = s.subcategoria_id
+					AND m.financeiro_movimentacao_igreja_id = ?
+				WHERE s.subcategoria_igreja_id = ?
+				  AND c.financeiro_categoria_tipo = 'entrada'
+				GROUP BY s.subcategoria_id, s.subcategoria_nome, c.financeiro_categoria_nome
+				ORDER BY c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId, $igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+	public function getComparativoDespesasAnual($igrejaId, $ano) {
+		$anoAnterior = $ano - 1;
+
+		$sql = "SELECT
+					s.subcategoria_nome,
+					c.financeiro_categoria_nome,
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_atual,
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $anoAnterior THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_anterior
+				FROM financeiro_subcategorias s
+				JOIN financeiro_categorias c ON s.subcategoria_categoria_id = c.financeiro_categoria_id
+				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_categoria_id = s.subcategoria_id
+					AND m.financeiro_movimentacao_igreja_id = ?
+				WHERE s.subcategoria_igreja_id = ?
+				  AND c.financeiro_categoria_tipo = 'saida'
+				GROUP BY s.subcategoria_id
+				HAVING total_atual > 0 OR total_anterior > 0
+				ORDER BY total_atual DESC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId, $igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
 
 	public function getRelatorioRateioMembros($igrejaId, $ano) {
 		$sql = "SELECT
@@ -963,5 +1019,17 @@ class Financeiro {
 		$sql = "UPDATE financeiro_receita_membros SET receita_membro_comprovante = ? WHERE receita_membro_id = ?";
 		return $this->db->prepare($sql)->execute([$caminho, $membroId]);
 	}
+
+
+
+
+	private function buildMonthlySumQuery($ano) {
+		$query = "";
+		for ($i = 1; $i <= 12; $i++) {
+			$query .= "SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano AND MONTH(m.financeiro_movimentacao_data) = $i THEN m.financeiro_movimentacao_valor ELSE 0 END) as mes_$i" . ($i < 12 ? "," : "");
+		}
+		return $query;
+	}
+
 
 }

@@ -22,15 +22,19 @@ class DashboardController extends Controller
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 
 		$igreja = $this->modelIgreja->getByIgreja($igrejaId);
-		$totalMembros = $this->model->getTotalMembros($igrejaId); // Nova linha
+		$totalMembros = $this->model->getTotalMembros($igrejaId);
 		$ebdDinamica = $this->model->getMetricasEBD($igrejaId);
 		$sociedades = $this->model->getMetricasSociedades($igrejaId);
 
+		// Nova métrica para o cuidado pastoral (Top 10 ausentes > 3 meses)
+		$membrosAusentes = $this->model->getMembrosAusentes($igrejaId);
+
 		$this->view('dashboard/index', [
 			'igreja' => $igreja,
-			'totalMembros' => $totalMembros, // Enviando para a view
+			'totalMembros' => $totalMembros,
 			'ebd' => $ebdDinamica,
-			'sociedades' => $sociedades
+			'sociedades' => $sociedades,
+			'membrosAusentes' => $membrosAusentes // Enviando a lista para a view
 		]);
 	}
 }

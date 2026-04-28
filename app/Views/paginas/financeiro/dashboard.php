@@ -49,6 +49,119 @@
         </div>
     </div>
 
+
+<div class="row g-4 mb-5">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold py-3">
+                <i class="bi bi-arrow-left-right me-2 text-primary"></i>Comparativo de Receitas: <?= $anoAnterior ?> vs <?= $anoAtual ?>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead class="bg-light text-muted">
+                        <tr>
+                            <th class="ps-3">Subcategoria</th>
+                            <th class="text-center"><?= $anoAnterior ?></th>
+                            <th class="text-center"><?= $anoAtual ?></th>
+                            <th class="text-end pe-3">Evolução</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if(!empty($compReceitas)): foreach($compReceitas as $r):
+                            $dif = $r['total_anterior'] > 0 ? (($r['total_atual'] - $r['total_anterior']) / $r['total_anterior']) * 100 : 0;
+                        ?>
+                        <tr>
+                            <td class="ps-3">
+                                <span class="fw-bold d-block text-dark"><?= $r['subcategoria_nome'] ?></span>
+                                <small class="text-muted"><?= $r['financeiro_categoria_nome'] ?></small>
+                            </td>
+                            <td class="text-center">R$ <?= number_format($r['total_anterior'], 2, ',', '.') ?></td>
+                            <td class="text-center fw-bold text-primary">R$ <?= number_format($r['total_atual'], 2, ',', '.') ?></td>
+                            <td class="text-end pe-3">
+                                <span class="badge <?= $dif >= 0 ? 'bg-success' : 'bg-danger' ?> rounded-pill">
+                                    <?= ($dif > 0 ? '+' : '') . number_format($dif, 1) ?>%
+                                </span>
+                            </td>
+                        </tr>
+                        <?php endforeach; else: ?>
+                            <tr><td colspan="4" class="text-center py-3 text-muted">Nenhum dado de receita encontrado.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold py-3">Distribuição de Crescimento</div>
+            <div class="card-body">
+                <div style="height: 320px;">
+                    <canvas id="chartComparativoBarras"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold py-3">
+                <i class="bi bi-arrow-down-right me-2 text-danger"></i>Comparativo de Despesas: <?= $anoAnterior ?> vs <?= $anoAtual ?>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead class="bg-light text-muted">
+                        <tr>
+                            <th class="ps-3">Subcategoria</th>
+                            <th class="text-center"><?= $anoAnterior ?></th>
+                            <th class="text-center"><?= $anoAtual ?></th>
+                            <th class="text-end pe-3">Diferença</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if(!empty($compDespesas)): foreach($compDespesas as $d):
+                            $dif = $d['total_anterior'] > 0 ? (($d['total_atual'] - $d['total_anterior']) / $d['total_anterior']) * 100 : 0;
+                        ?>
+                        <tr>
+                            <td class="ps-3">
+                                <span class="fw-bold d-block text-dark"><?= $d['subcategoria_nome'] ?></span>
+                                <small class="text-muted"><?= $d['financeiro_categoria_nome'] ?></small>
+                            </td>
+                            <td class="text-center">R$ <?= number_format($d['total_anterior'], 2, ',', '.') ?></td>
+                            <td class="text-center fw-bold text-danger">R$ <?= number_format($d['total_atual'], 2, ',', '.') ?></td>
+                            <td class="text-end pe-3">
+                                <span class="badge <?= $dif <= 0 ? 'bg-success' : 'bg-warning text-dark' ?> rounded-pill">
+                                    <?= ($dif > 0 ? '+' : '') . number_format($dif, 1) ?>%
+                                </span>
+                            </td>
+                        </tr>
+                        <?php endforeach; else: ?>
+                            <tr><td colspan="4" class="text-center py-3 text-muted">Nenhum dado de despesa encontrado.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold py-3">Maiores Gastos do Ano</div>
+            <div class="card-body">
+                <div style="height: 320px;">
+                    <canvas id="chartCompDespesasBarras"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
     <div class="row g-4 mb-5">
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm h-100">
@@ -267,73 +380,60 @@ $totalGeralReceitas = 0;
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const ctx = document.getElementById('chartFluxo').getContext('2d');
-    const labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-
-    const entradas = [<?= implode(',', array_column($fluxoAnual, 'entradas')) ?>];
-    const saidas = [<?= implode(',', array_column($fluxoAnual, 'saidas')) ?>];
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Entradas (R$)',
-                data: entradas,
-                borderColor: '#198754',
-                backgroundColor: 'rgba(25, 135, 84, 0.05)',
-                borderWidth: 4,
-                pointRadius: 4,
-                pointBackgroundColor: '#198754',
-                tension: 0.4,
-                fill: true
-            }, {
-                label: 'Saídas (R$)',
-                data: saidas,
-                borderColor: '#dc3545',
-                backgroundColor: 'rgba(220, 53, 69, 0.05)',
-                borderWidth: 4,
-                pointRadius: 4,
-                pointBackgroundColor: '#dc3545',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top', align: 'end', labels: { boxWidth: 10, usePointStyle: true } },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: '#f0f0f0' },
-                    ticks: { callback: (value) => 'R$ ' + value.toLocaleString('pt-BR') }
-                },
-                x: { grid: { display: false } }
-            }
-        }
-    });
-});
-
-
-//GRAFICO DE BARRAS POR CONTA CORRENTE
-// --- GRÁFICO DE PIZZA (DESPESAS POR CATEGORIA) ---
-document.addEventListener("DOMContentLoaded", function() {
-    // Verifica se a biblioteca Chart.js foi carregada corretamente
+    // Verificação global da biblioteca
     if (typeof Chart === 'undefined') {
-        console.error("Erro: A biblioteca Chart.js não foi carregada. Verifique o link do script.");
+        console.error("Erro: A biblioteca Chart.js não foi carregada.");
         return;
     }
 
-    // --- 1. GRÁFICO DE PIZZA (DESPESAS POR CATEGORIA) ---
+    // --- 1. GRÁFICO DE LINHA (FLUXO MENSAL) ---
+    const ctxFluxo = document.getElementById('chartFluxo');
+    if (ctxFluxo) {
+        const labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        const entradas = [<?= implode(',', array_column($fluxoAnual, 'entradas')) ?>];
+        const saidas = [<?= implode(',', array_column($fluxoAnual, 'saidas')) ?>];
+
+        new Chart(ctxFluxo.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Entradas (R$)',
+                    data: entradas,
+                    borderColor: '#198754',
+                    backgroundColor: 'rgba(25, 135, 84, 0.05)',
+                    borderWidth: 4,
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Saídas (R$)',
+                    data: saidas,
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.05)',
+                    borderWidth: 4,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', align: 'end', labels: { boxWidth: 10, usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ctx.dataset.label + ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2})
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: (v) => 'R$ ' + v.toLocaleString('pt-BR') } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // --- 2. GRÁFICO DE PIZZA (DESPESAS POR CATEGORIA) ---
     const ctxPizza = document.getElementById('chartPizzaDespesas');
     if (ctxPizza) {
         const dadosSaida = <?= json_encode($relatorio['saida'] ?? []); ?>;
@@ -372,32 +472,19 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-// --- GRÁFICO 2: PIZZA (SALDOS POR CONTA) ---
-try {
-    const ctxB = document.getElementById('chartSaldosContas');
-    if (ctxB) {
+    // --- 3. GRÁFICO DE PIZZA (SALDOS POR CONTA) ---
+    const ctxSaldos = document.getElementById('chartSaldosContas');
+    if (ctxSaldos) {
         const dadosContas = <?= json_encode($contas ?? []); ?>;
-
-        // Filtra apenas contas que possuem saldo maior que zero para a pizza não ficar poluída
         const contasComSaldo = dadosContas.filter(c => parseFloat(c.financeiro_conta_financeira_saldo) > 0);
 
-        const labelsB = contasComSaldo.map(c => c.financeiro_conta_financeira_nome);
-        const valoresB = contasComSaldo.map(c => parseFloat(c.financeiro_conta_financeira_saldo));
-
-        new Chart(ctxB.getContext('2d'), {
-            type: 'pie', // Alterado para Pizza
+        new Chart(ctxSaldos.getContext('2d'), {
+            type: 'pie',
             data: {
-                labels: labelsB,
+                labels: contasComSaldo.map(c => c.financeiro_conta_financeira_nome),
                 datasets: [{
-                    data: valoresB,
-                    backgroundColor: [
-                        '#0d6efd', // Azul (BB/Principal)
-                        '#fd7e14', // Laranja (Caixa)
-                        '#198754', // Verde
-                        '#0dcaf0', // Ciano
-                        '#6f42c1'  // Roxo
-                    ],
-                    hoverOffset: 15,
+                    data: contasComSaldo.map(c => parseFloat(c.financeiro_conta_financeira_saldo)),
+                    backgroundColor: ['#0d6efd', '#fd7e14', '#198754', '#0dcaf0', '#6f42c1'],
                     borderWidth: 2,
                     borderColor: '#ffffff'
                 }]
@@ -405,83 +492,137 @@ try {
             options: {
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { boxWidth: 12, font: { size: 11 } }
-                    },
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
-                                return label + ': R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-                            }
+                            label: (ctx) => ctx.label + ': R$ ' + ctx.parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
                         }
                     }
                 }
             }
         });
     }
-} catch (e) { console.error("Erro na Pizza de Saldos:", e); }
-});
 
-// --- GRÁFICO 3: PIZZA (RECEITAS POR CATEGORIA ANUAL) ---
-(function() {
-    const renderReceitas = function() {
-        const ctxPizzaR = document.getElementById('chartPizzaReceitas');
-        if (!ctxPizzaR) return;
+    // --- 4. GRÁFICO DE PIZZA (RECEITAS POR CATEGORIA ANUAL) ---
+    const ctxPizzaR = document.getElementById('chartPizzaReceitas');
+    if (ctxPizzaR) {
+        const dadosReceita = <?= json_encode($relatorio['entrada'] ?? []); ?>;
+        const labelsR = [];
+        const valoresR = [];
 
-        try {
-            // Pegamos os dados do relatório de entrada (Receitas)
-            const dadosReceita = <?= json_encode($relatorio['entrada'] ?? []); ?>;
+        Object.values(dadosReceita).forEach(cat => {
+            const totalCat = Object.values(cat.meses).reduce((a, b) => a + b, 0);
+            if (totalCat > 0) {
+                labelsR.push(cat.nome);
+                valoresR.push(totalCat);
+            }
+        });
 
-            const labelsPizzaR = [];
-            const valoresPizzaR = [];
-
-            // Extraindo totais anuais por categoria
-            Object.values(dadosReceita).forEach(cat => {
-                const totalCat = Object.values(cat.meses).reduce((a, b) => a + b, 0);
-                if (totalCat > 0) {
-                    labelsPizzaR.push(cat.nome);
-                    valoresPizzaR.push(totalCat);
-                }
-            });
-
-            new Chart(ctxPizzaR.getContext('2d'), {
-                type: 'pie',
-                data: {
-                    labels: labelsPizzaR,
-                    datasets: [{
-                        data: valoresPizzaR,
-                        backgroundColor: ['#198754', '#20c997', '#0dcaf0', '#0d6efd', '#6f42c1'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-                        tooltip: {
-                            callbacks: {
-                                label: (ctx) => ctx.label + ': R$ ' + ctx.parsed.toLocaleString('pt-BR', {minimumFractionDigits: 2})
-                            }
+        new Chart(ctxPizzaR.getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: labelsR,
+                datasets: [{
+                    data: valoresR,
+                    backgroundColor: ['#198754', '#20c997', '#0dcaf0', '#0d6efd', '#6f42c1'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ctx.label + ': R$ ' + ctx.parsed.toLocaleString('pt-BR', {minimumFractionDigits: 2})
                         }
                     }
                 }
-            });
-        } catch (e) {
-            console.error("Erro interno no gráfico de Receitas:", e);
-        }
-    };
-
-    // Tenta rodar agora ou espera o DOM estar pronto
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        renderReceitas();
-    } else {
-        document.addEventListener("DOMContentLoaded", renderReceitas);
+            }
+        });
     }
-})();
 
+    // --- 5. NOVO GRÁFICO: BARRAS COMPARATIVO RECEITAS ---
+    const ctxCompRec = document.getElementById('chartComparativoBarras');
+    if (ctxCompRec) {
+        const dadosCompRec = <?= json_encode($compReceitas ?? []); ?>;
+        const topRec = dadosCompRec.slice(0, 8);
+
+        new Chart(ctxCompRec.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: topRec.map(d => d.subcategoria_nome),
+                datasets: [
+                    {
+                        label: '<?= $anoAnterior ?>',
+                        data: topRec.map(d => d.total_anterior),
+                        backgroundColor: '#e9ecef',
+                        borderRadius: 4
+                    },
+                    {
+                        label: '<?= $anoAtual ?>',
+                        data: topRec.map(d => d.total_atual),
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: { label: (ctx) => ctx.dataset.label + ': R$ ' + ctx.parsed.x.toLocaleString('pt-BR', {minimumFractionDigits: 2}) }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { callback: (v) => 'R$ ' + v.toLocaleString('pt-BR') } }
+                }
+            }
+        });
+    }
+
+    // --- 6. NOVO GRÁFICO: BARRAS COMPARATIVO DESPESAS ---
+    const ctxCompDesp = document.getElementById('chartCompDespesasBarras');
+    if (ctxCompDesp) {
+        const dadosCompDesp = <?= json_encode($compDespesas ?? []); ?>;
+        const topDesp = dadosCompDesp.slice(0, 8);
+
+        new Chart(ctxCompDesp.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: topDesp.map(d => d.subcategoria_nome),
+                datasets: [
+                    {
+                        label: '<?= $anoAnterior ?>',
+                        data: topDesp.map(d => d.total_anterior),
+                        backgroundColor: '#e9ecef',
+                        borderRadius: 4
+                    },
+                    {
+                        label: '<?= $anoAtual ?>',
+                        data: topDesp.map(d => d.total_atual),
+                        backgroundColor: '#dc3545',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: { label: (ctx) => ctx.dataset.label + ': R$ ' + ctx.parsed.x.toLocaleString('pt-BR', {minimumFractionDigits: 2}) }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { callback: (v) => 'R$ ' + v.toLocaleString('pt-BR') } }
+                }
+            }
+        });
+    }
+});
 </script>
-
