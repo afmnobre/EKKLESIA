@@ -243,5 +243,25 @@ class Igreja
 	}
 
 
+    public function listarTodas() {
+        $sql = "SELECT i.*, m.membro_nome as pastor_nome
+                FROM igrejas i
+                LEFT JOIN membros m ON i.igreja_pastor_id = m.membro_id
+                ORDER BY i.igreja_nome ASC";
+        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function salvar($data) {
+        if (isset($data['igreja_id'])) {
+            $sql = "UPDATE igrejas SET igreja_nome = ?, igreja_cnpj = ?, igreja_endereco = ?, igreja_pastor_id = ? WHERE igreja_id = ?";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([$data['igreja_nome'], $data['igreja_cnpj'], $data['igreja_endereco'], $data['igreja_pastor_id'], $data['igreja_id']]);
+        }
+        $sql = "INSERT INTO igrejas (igreja_nome, igreja_cnpj, igreja_endereco, igreja_pastor_id, igreja_data_criacao) VALUES (?, ?, ?, ?, NOW())";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$data['igreja_nome'], $data['igreja_cnpj'], $data['igreja_endereco'], $data['igreja_pastor_id']]);
+    }
+
+
 }
 

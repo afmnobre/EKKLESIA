@@ -112,6 +112,7 @@
         <?php if ($isAdmin): ?>
             <a class="menu-link" data-bs-toggle="collapse" href="#configuracoes">⚙️ Configurações</a>
             <div class="collapse submenu" id="configuracoes">
+                <a target='_blank' href="<?= url('admin/igrejas') ?>">Igrejas</a>
                 <a target='_blank' href="<?= url('admin/usuarios') ?>">Gestão de Usuários</a>
                 <a target='_blank' href="<?= url('admin/perfis') ?>">Perfis e Permissões</a>
                 <a href="<?= url('Backup') ?>">Backup Database</a>

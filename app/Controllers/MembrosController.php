@@ -5,16 +5,27 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\Membro;
 use App\Core\Utils;
+use App\Core\Database;
 
 class MembrosController extends Controller
 {
     private $model;
 
-    public function __construct()
-    {
-        exigirLogin();
-        $this->model = new Membro();
-    }
+	public function __construct()
+	{
+		// Captura a URL para identificar se é API
+		$url = $_GET['url'] ?? '';
+
+		if (strpos($url, 'api') !== false) {
+			// Se for API, inicializa o model e encerra o construtor aqui
+			$this->model = new \App\Models\Membro();
+			return;
+		}
+
+		// Se não for API, segue o fluxo normal do site
+		exigirLogin();
+		$this->model = new \App\Models\Membro();
+	}
 
     /**
      * Lista principal de membros
@@ -610,4 +621,87 @@ class MembrosController extends Controller
 		]);
 	}
 
+	public function apiCarteirinha($id)
+	{
+		// Removemos a necessidade de view e retornamos JSON
+		header('Content-Type: application/json');
+
+		$membro = $this->model->getDadosCarteirinha($id);
+
+		if (!$membro) {
+			echo json_encode(['error' => 'Membro não encontrado']);
+			return;
+		}
+
+		// Montagem da URL da foto conforme sua estrutura de pastas
+		$baseFotoUrl = "https://magic.4sql.net/EKKLESIA/assets/uploads/";
+		$caminhoFoto = $membro['membro_igreja_id'] . "/membros/" . $membro['membro_registro_interno'] . "/" . $membro['membro_foto_arquivo'];
+
+		$fotoCompleta = !empty($membro['membro_foto_arquivo']) ? $baseFotoUrl . $caminhoFoto : null;
+
+		$resposta = [
+			'nome'     => $membro['membro_nome'],
+			'registro' => $membro['membro_registro_interno'],
+			'igreja'   => $membro['igreja_nome'],
+			'cargo'    => $membro['cargos_nomes'] ?? 'Membro',
+			'status'   => $membro['membro_status'],
+			'foto'     => $fotoCompleta
+		];
+
+		echo json_encode($resposta);
+	}
+
+	public function apiLogin()
+	{
+		// Inicia um buffer de saída para capturar qualquer erro intruso
+		ob_start();
+
+		header('Content-Type: application/json');
+		header("Access-Control-Allow-Origin: *");
+		header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+		header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
+		if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+			ob_end_clean();
+			exit;
+		}
+
+		try {
+			$json = file_get_contents('php://input');
+			$dados = json_decode($json, true);
+
+			$email = $dados['email'] ?? '';
+			$senha = $dados['senha'] ?? '';
+
+			// Usamos o caminho absoluto da classe para evitar falhas de autoload
+			$db = \App\Core\Database::getInstance();
+			$sql = "SELECT membro_id, membro_senha FROM membros WHERE membro_email = ? LIMIT 1";
+			$stmt = $db->prepare($sql);
+			$stmt->execute([$email]);
+			$user = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+			// Limpa qualquer erro ou aviso (Notice/Warning) que tenha sido gerado até aqui
+			ob_end_clean();
+
+			if ($user && password_verify($senha, $user['membro_senha'])) {
+				echo json_encode([
+					'success' => true,
+					'membro_id' => $user['membro_id']
+				]);
+			} else {
+				echo json_encode([
+					'success' => false,
+					'message' => 'E-mail ou senha inválidos'
+				]);
+			}
+		} catch (\Throwable $e) {
+			// Se houver erro de classe ou banco, captura e retorna JSON
+			ob_end_clean();
+			echo json_encode([
+				'success' => false,
+				'message' => 'Erro interno: ' . $e->getMessage()
+			]);
+		}
+		exit; // Mata a execução aqui para o framework não renderizar mais nada
+	}
 }

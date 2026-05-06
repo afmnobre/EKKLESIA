@@ -639,5 +639,23 @@ class Membro
 		return $resultados;
 	}
 
+	public function getDadosCarteirinha($membroId)
+	{
+		$sql = "SELECT m.membro_id, m.membro_nome, m.membro_registro_interno, m.membro_status,
+					   m.membro_igreja_id, i.igreja_nome, f.membro_foto_arquivo,
+					   GROUP_CONCAT(c.cargo_nome SEPARATOR ', ') as cargos_nomes
+				FROM membros m
+				LEFT JOIN igrejas i ON m.membro_igreja_id = i.igreja_id
+				LEFT JOIN membros_fotos f ON m.membro_id = f.membro_foto_membro_id
+				LEFT JOIN membros_cargos_vinculo v ON m.membro_id = v.vinculo_membro_id
+				LEFT JOIN cargos c ON v.vinculo_cargo_id = c.cargo_id
+				WHERE m.membro_id = ?
+				GROUP BY m.membro_id";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$membroId]);
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
+
 
 }

@@ -143,4 +143,76 @@ class AdminController extends Controller {
 		exit;
 	}
 
+
+    /**
+     * Listagem de Igrejas
+     */
+    public function igrejas() {
+        AuthMiddleware::handle();
+
+        $model = new Admin();
+
+        $this->rawview('admin/igrejas_lista', [
+            'igrejas' => $model->listarIgrejas(),
+            'titulo'  => 'Gestão de Igrejas'
+        ]);
+    }
+
+    /**
+     * Salva uma nova igreja
+     */
+    public function salvar_igreja() {
+        AuthMiddleware::handle();
+
+        $dados = [
+            'nome'      => $_POST['igreja_nome'],
+            'cnpj'      => $_POST['igreja_cnpj'],
+            'endereco'  => $_POST['igreja_endereco'],
+            'pastor_id' => !empty($_POST['igreja_pastor_id']) ? $_POST['igreja_pastor_id'] : null
+        ];
+
+        $model = new Admin();
+
+        if ($model->criarIgreja($dados)) {
+            $_SESSION['sucesso'] = "Igreja cadastrada com sucesso!";
+        } else {
+            $_SESSION['erro'] = "Erro ao cadastrar igreja.";
+        }
+
+        header("Location: " . url('admin/igrejas'));
+        exit;
+    }
+
+    /**
+     * Atualiza dados de uma igreja existente
+     */
+    public function editar_igreja() {
+        AuthMiddleware::handle();
+
+        $id = $_POST['igreja_id'] ?? null;
+        if (!$id) {
+            header("Location: " . url('admin/igrejas?erro=id_invalido'));
+            exit;
+        }
+
+        $dados = [
+            'nome'      => $_POST['igreja_nome'],
+            'cnpj'      => $_POST['igreja_cnpj'],
+            'endereco'  => $_POST['igreja_endereco'],
+            'pastor_id' => !empty($_POST['igreja_pastor_id']) ? $_POST['igreja_pastor_id'] : null
+        ];
+
+        $model = new Admin();
+
+        if ($model->atualizarIgreja($id, $dados)) {
+            $_SESSION['sucesso'] = "Dados da igreja atualizados!";
+        } else {
+            $_SESSION['erro'] = "Falha ao atualizar igreja.";
+        }
+
+        header("Location: " . url('admin/igrejas'));
+        exit;
+    }
+
+
 }
