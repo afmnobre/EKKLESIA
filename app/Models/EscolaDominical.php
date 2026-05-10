@@ -17,28 +17,35 @@ class EscolaDominical
     /**
      * Lista as classes de uma igreja específica com o nome do professor
      */
-    public function getClassesByIgreja($igrejaId)
-    {
-        $sql = "SELECT c.*, m.membro_nome as professor_nome
-                FROM classes_escola c
-                LEFT JOIN membros m ON c.classe_professor_id = m.membro_id
-                WHERE c.classe_igreja_id = ?
-                ORDER BY c.classe_nome ASC";
+	public function getClassesByIgreja($igrejaId)
+	{
+		// Adicionamos o JOIN com membros_fotos para pegar o arquivo da foto
+		$sql = "SELECT c.*, m.membro_registro_interno, m.membro_nome as professor_nome, f.membro_foto_arquivo
+				FROM classes_escola c
+				LEFT JOIN membros m ON c.classe_professor_id = m.membro_id
+				LEFT JOIN membros_fotos f ON m.membro_id = f.membro_foto_membro_id
+				WHERE c.classe_igreja_id = ?
+				ORDER BY c.classe_nome ASC";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$igrejaId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
 
     /**
      * Retorna detalhes de uma classe
      */
-    public function getClasseById($id)
-    {
-        $stmt = $this->db->prepare("SELECT * FROM classes_escola WHERE classe_id = ?");
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
+	public function getClasseById($classeId)
+	{
+		$sql = "SELECT c.*, m.membro_nome as professor_nome, i.igreja_logo
+				FROM classes_escola c
+				LEFT JOIN membros m ON c.classe_professor_id = m.membro_id
+				LEFT JOIN igrejas i ON c.classe_igreja_id = i.igreja_id
+				WHERE c.classe_id = ?";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$classeId]);
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
 
     public function listarConfiguracoes($igrejaId) {
         $stmt = $this->db->prepare("SELECT * FROM classes_config WHERE config_igreja_id = ? ORDER BY config_idade_min ASC");
@@ -507,6 +514,23 @@ class EscolaDominical
 		$stmt->bindValue(':igrejaId', $igrejaId, PDO::PARAM_INT);
 		$stmt->execute();
 
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+
+	/**
+	 * Busca os alunos vinculados a uma classe específica
+	 */
+	public function getAlunosByClasse($classeId)
+	{
+		$sql = "SELECT m.membro_id, m.membro_nome
+				FROM membros m
+				INNER JOIN classes_membros cm ON m.membro_id = cm.classe_membro_membro_id
+				WHERE cm.classe_membro_classe_id = ?
+				ORDER BY m.membro_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$classeId]);
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 

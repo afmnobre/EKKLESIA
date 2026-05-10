@@ -254,6 +254,35 @@ class EscolaDominicalController extends Controller
 			'alunos' => $alunos,
 			'dataSelecionada' => $dataSelecionada
 		]);
+    }
+
+	public function imprimirChamadaMensal($classeId) {
+		exigirLogin();
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+
+		if (!$classeId) {
+			header("Location: " . url('escolaDominical'));
+			exit;
+		}
+
+		// Busca dados da classe (nome e professor)
+		$classe = $this->model->getClasseById($classeId);
+
+		// Validação de segurança: a classe pertence a esta igreja?
+		if (!$classe || $classe['classe_igreja_id'] != $igrejaId) {
+			header("Location: " . url('escolaDominical'));
+			exit;
+		}
+
+		// Busca os alunos matriculados
+		$alunos = $this->model->getAlunosByClasse($classeId);
+
+		// Renderiza a view da grade mensal
+		$this->rawview('escoladominical/chamada_sala', [
+			'classe' => $classe,
+			'alunos' => $alunos,
+			'titulo' => 'Diário de Classe - ' . $classe['classe_nome']
+		]);
 	}
 
 	public function salvarPresenca()

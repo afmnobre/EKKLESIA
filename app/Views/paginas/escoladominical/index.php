@@ -28,43 +28,64 @@
     <div class="row g-4">
         <?php if (!empty($classes)): ?>
             <?php foreach ($classes as $classe): ?>
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card h-100 border-0 shadow-sm hover-shadow transition">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div class="bg-light-primary p-3 rounded-3">
-                                    <i class="bi bi-people-fill fs-4 text-primary"></i>
-                                </div>
-								<div class="dropdown">
-									<button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
-										<i class="bi bi-three-dots-vertical"></i>
-									</button>
-									<ul class="dropdown-menu dropdown-menu-end shadow border-0">
-										<li>
-											<a class="dropdown-item btn-editar-classe" href="#"
-											   data-id="<?= $classe['classe_id'] ?>"
-											   data-nome="<?= $classe['classe_nome'] ?>"
-											   data-min="<?= $classe['classe_idade_min'] ?>"
-											   data-max="<?= $classe['classe_idade_max'] ?>"
-											   data-professor="<?= $classe['classe_professor_id'] ?>">
-												<i class="bi bi-pencil me-2 text-primary"></i>Editar Classe
-											</a>
-										</li>
-										<li><hr class="dropdown-divider"></li>
-										<li>
-											<a class="dropdown-item text-danger" href="<?= url('escolaDominical/excluirClasse/' . $classe['classe_id']) ?>"
-											   onclick="return confirm('Deseja realmente excluir esta classe?')">
-												<i class="bi bi-trash me-2"></i>Excluir
-											</a>
-										</li>
-									</ul>
-								</div>
-                            </div>
+					<div class="col-12 col-md-6 col-lg-4">
+						<div class="card h-100 border-0 shadow-sm hover-shadow transition">
+							<div class="card-body">
+								<div class="d-flex justify-content-between align-items-start mb-3">
+									<div class="d-flex align-items-center">
+										<div class="bg-light-primary p-3 rounded-3 me-2">
+											<i class="bi bi-people-fill fs-4 text-primary"></i>
+										</div>
 
-                            <h5 class="card-title fw-bold mb-1"><?= $classe['classe_nome'] ?></h5>
-                            <p class="text-muted small mb-3">
-                                <i class="bi bi-person-badge me-1"></i> Prof: <?= $classe['professor_nome'] ?? 'Não definido' ?>
-                            </p>
+										<div class="ms-n2">
+											<?php
+												$igrejaId = $_SESSION['usuario_igreja_id'];
+												// Caminho baseado na estrutura de uploads por igreja
+												$fotoPath = !empty($classe['membro_foto_arquivo'])
+													? url("assets/uploads/{$igrejaId}/membros/{$classe['membro_registro_interno']}/{$classe['membro_foto_arquivo']}")
+													: url("assets/img/avatar_padrao.png");
+											?>
+											<img src="<?= $fotoPath ?>"
+												 class="rounded-circle border border-3 border-white shadow-sm"
+												 style="width: 55px; height: 55px; object-fit: cover; margin-left: -15px;"
+												 alt="Professor"
+												 onerror="this.src='<?= url('assets/img/avatar_padrao.png') ?>'">
+										</div>
+									</div>
+
+									<div class="dropdown">
+										<button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+											<i class="bi bi-three-dots-vertical"></i>
+										</button>
+										<ul class="dropdown-menu dropdown-menu-end shadow border-0">
+											<li>
+												<a href="#"
+												   class="dropdown-item btn-editar-classe"
+												   data-id="<?= $classe['classe_id'] ?>"
+												   data-nome="<?= $classe['classe_nome'] ?>"
+												   data-min="<?= $classe['classe_idade_min'] ?>"
+												   data-max="<?= $classe['classe_idade_max'] ?>"
+												   data-professor="<?= $classe['classe_professor_id'] ?>"
+												   data-senha="<?= $classe['classe_senha'] ?>">
+													<i class="fas fa-edit me-2"></i>Editar
+												</a>
+											</li>
+											<li><hr class="dropdown-divider"></li>
+											<li>
+												<a class="dropdown-item text-danger" href="<?= url('escolaDominical/excluirClasse/' . $classe['classe_id']) ?>"
+												   onclick="return confirm('Deseja realmente excluir esta classe?')">
+													<i class="bi bi-trash me-2"></i>Excluir
+												</a>
+											</li>
+										</ul>
+									</div>
+								</div>
+
+								<h5 class="card-title fw-bold mb-1"><?= $classe['classe_nome'] ?></h5>
+								<p class="text-muted small mb-3">
+									<i class="bi bi-person-badge me-1"></i> Prof: <strong><?= $classe['professor_nome'] ?? 'Não definido' ?></strong>
+								</p>
+
 
 							<div class="mb-4">
 								<?php
@@ -82,9 +103,13 @@
 							</div>
 
                             <div class="d-grid gap-2">
-                                <a href="<?= url('escolaDominical/chamada/' . $classe['classe_id']) ?>" class="btn btn-outline-primary">
-                                    <i class="bi bi-check2-square me-2"></i>Fazer Chamada
-                                </a>
+								<a href="<?= url('escolaDominical/chamada/' . $classe['classe_id']) ?>" class="btn btn-outline-primary">
+									<i class="bi bi-phone me-2"></i>Chamada Digital
+								</a>
+
+								<a target="_blank" href="<?= url('escolaDominical/imprimirChamadaMensal/' . $classe['classe_id']) ?>" class="btn btn-light border shadow-sm">
+									<i class="bi bi-printer me-2"></i>Folha Mensal (Manual)
+								</a>
 
 								<button type="button" class="btn btn-warning btn-sm btn-presenca-professor"
 									data-id="<?= $classe['classe_id'] ?>"
@@ -372,7 +397,8 @@ document.getElementById('select-config-classe').addEventListener('change', funct
 
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-uppercase">Professor Responsável</label>
-                        <select name="classe_professor_id" id="edit_classe_professor" class="form-select">
+                        <select name="classe_professor_id" id="edit_classe_professor_choices" class="form-select">
+                            <option value="">Pesquise pelo nome do membro...</option>
                             <?php foreach($membros as $m): ?>
                                 <option value="<?= $m['membro_id'] ?>"><?= $m['membro_nome'] ?></option>
                             <?php endforeach; ?>
@@ -396,6 +422,84 @@ document.getElementById('select-config-classe').addEventListener('change', funct
         </div>
     </div>
 </div>
+
+<script>
+// Arquivo: app/Views/escolaDominical/configuracoes.php (ou onde estiver o modal)
+
+document.addEventListener('DOMContentLoaded', function() {
+    const element = document.getElementById('edit_classe_professor_choices');
+    if (!element) return; // Evita erro se o elemento não existir na página
+
+    // Inicializa o Choices.js
+    const choicesProfessor = new Choices(element, {
+        searchEnabled: true,
+        searchPlaceholderValue: "Digite o nome para buscar...",
+        noResultsText: 'Nenhum membro encontrado',
+        itemSelectText: '',
+        allowHTML: true
+    });
+
+    // Função para capturar os cliques nos botões de editar
+    // Certifique-se que seus botões tenham a classe '.btn-editar-classe'
+    document.querySelectorAll('.btn-editar-classe').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Captura os dados dos atributos data- do botão
+            const id = this.dataset.id;
+            const nome = this.dataset.nome;
+            const min = this.dataset.min;
+            const max = this.dataset.max;
+            const professorId = this.dataset.professor;
+            const senha = this.dataset.senha;
+
+            // Preenche os campos verificando se existem (evita o erro de 'null')
+            const fieldId = document.getElementById('edit_classe_id');
+            const fieldNome = document.getElementById('edit_classe_nome');
+            const fieldMin = document.getElementById('edit_classe_min');
+            const fieldMax = document.getElementById('edit_classe_max');
+            const fieldSenha = document.getElementById('edit_classe_senha');
+
+            if(fieldId) fieldId.value = id;
+            if(fieldNome) fieldNome.value = nome;
+            if(fieldMin) fieldMin.value = min;
+            if(fieldMax) fieldMax.value = max;
+            if(fieldSenha) fieldSenha.value = senha;
+
+            // Ajuste vital para o Choices.js:
+            // Ele não aceita .value comum, precisa do método setChoiceByValue
+            if (professorId) {
+                choicesProfessor.setChoiceByValue(professorId.toString());
+            } else {
+                choicesProfessor.removeActiveItems(); // Reseta se não houver professor
+            }
+
+            // Abre o modal manualmente via Bootstrap
+            const modalEl = document.getElementById('modalEditarClasse');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        });
+    });
+});
+</script>
+
+<style>
+    /* Ajuste para o Choices.js não ficar "cortado" dentro do modal */
+    .choices {
+        margin-bottom: 0;
+    }
+    .choices__inner {
+        background-color: #fff;
+        border-radius: 0.375rem;
+        border: 1px solid #dee2e6;
+        min-height: 38px;
+    }
+    .choices__list--dropdown {
+        z-index: 9999 !important;
+    }
+</style>
 
 
 
