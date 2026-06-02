@@ -394,5 +394,71 @@ class PortalMembroController extends Controller {
 		}
 	}
 
+	public function alterarFoto() {
+		if (!isset($_SESSION['membro_id'])) {
+			header("Location: " . url('PortalMembro/login'));
+			exit;
+		}
+
+		$idMembro = $_SESSION['membro_id'];
+		$igrejaId = $_SESSION['membro_igreja_id'];
+
+		if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['membro_foto']) && $_FILES['membro_foto']['error'] === 0) {
+			$file = $_FILES['membro_foto'];
+			$ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+			$allowed = ['jpg', 'jpeg', 'png', 'webp'];
+
+			if (!in_array(strtolower($ext), $allowed)) {
+				header("Location: " . url('PortalMembro/painel?erro_extensao=1'));
+				exit;
+			}
+
+			$model = new PortalMembro();
+			$perfil = $model->getMembroCompleto($idMembro);
+
+			if (!$perfil) {
+				header("Location: " . url('PortalMembro/painel'));
+				exit;
+			}
+
+			// Define o subdiretório baseado nas regras atuais da view
+			$diretorioMembro = ($perfil['membro_status'] === 'Ativo')
+				? $perfil['membro_registro_interno']
+				: "PENDENTE_{$idMembro}";
+
+			// Caminho físico exato igual ao usado no projeto
+			$diretorioDestino = dirname(__DIR__, 2) . "/public/assets/uploads/{$igrejaId}/membros/{$diretorioMembro}/";
+
+			if (!is_dir($diretorioDestino)) {
+				mkdir($diretorioDestino, 0777, true);
+			}
+
+			// 1. Remove a foto física anterior se ela existir para não acumular lixo no servidor
+			if (!empty($perfil['membro_foto_arquivo'])) {
+				$fotoAntiga = $diretorioDestino . $perfil['membro_foto_arquivo'];
+				if (file_exists($fotoAntiga)) {
+					@unlink($fotoAntiga);
+				}
+			}
+
+			// 2. Define o novo nome com timestamp para evitar cache no navegador
+			$novoNome = "avatar_" . time() . "_" . $idMembro . "." . strtolower($ext);
+			$caminhoFinal = $diretorioDestino . $novoNome;
+
+			// 3. Otimiza e move o arquivo usando o seu helper Utils
+			if (Utils::otimizarImagem($file['tmp_name'], $caminhoFinal)) {
+				// Atualiza ou insere o registro na tabela através do método dedicado do model
+				$model->atualizarFotoMembro($idMembro, $novoNome);
+				header("Location: " . url('PortalMembro/painel?sucesso_foto=1'));
+			} else {
+				error_log("ERRO EKKLESIA: Falha ao otimizar imagem de perfil do membro ID: " . $idMembro);
+				header("Location: " . url('PortalMembro/painel?erro_upload=1'));
+			}
+			exit;
+		}
+
+		header("Location: " . url('PortalMembro/painel'));
+		exit;
+	}
 
 }

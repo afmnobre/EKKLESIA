@@ -53,7 +53,6 @@
             <div class="collapse submenu" id="documentos">
                 <a href="<?= url('documentos') ?>">Listagem de Documentos</a>
                 <a href="<?= url('documentos/categorias') ?>">Categorias</a>
-                <a href="<?= url('documentos/dashboard') ?>">Dashboard</a>
             </div>
         <?php endif; ?>
 

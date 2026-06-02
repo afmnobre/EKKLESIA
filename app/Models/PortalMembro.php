@@ -331,6 +331,27 @@ class PortalMembro {
 			$agrupados[$mes][] = $item;
 		}
 		return $agrupados;
+    }
+
+	public function atualizarFotoMembro($membroId, $nomeArquivo) {
+		// Verifica se o membro já possui alguma foto registrada
+		$sqlCheck = "SELECT membro_foto_id FROM membros_fotos WHERE membro_foto_membro_id = ?";
+		$stmtCheck = $this->db->prepare($sqlCheck);
+		$stmtCheck->execute([$membroId]);
+		$existe = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+		if ($existe) {
+			// Se já existe, atualiza o nome do arquivo
+			$sql = "UPDATE membros_fotos SET membro_foto_arquivo = ? WHERE membro_foto_membro_id = ?";
+			$stmt = $this->db->prepare($sql);
+			return $stmt->execute([$nomeArquivo, $membroId]);
+		} else {
+			// Se não existe, cria um novo registro vinculado
+			$sql = "INSERT INTO membros_fotos (membro_foto_membro_id, membro_foto_arquivo) VALUES (?, ?)";
+			$stmt = $this->db->prepare($sql);
+			return $stmt->execute([$membroId, $nomeArquivo]);
+		}
 	}
+
 
 }

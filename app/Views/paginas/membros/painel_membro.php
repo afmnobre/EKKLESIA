@@ -66,7 +66,22 @@
 							? url("assets/uploads/{$_SESSION['membro_igreja_id']}/membros/{$diretorio}/{$perfil['membro_foto_arquivo']}")
 							: url("assets/img/avatar-default.png");
 					?>
-					<img src="<?= $fotoUrl ?>" class="rounded-circle shadow-sm border border-3 border-white me-3" style="width: 65px; height: 65px; object-fit: cover;">
+
+					<div class="position-relative d-inline-block me-3">
+						<img src="<?= $fotoUrl ?>" class="rounded-circle shadow-sm border border-3 border-white" style="width: 65px; height: 65px; object-fit: cover;">
+
+						<button type="button"
+								class="btn btn-ipb btn-sm rounded-circle position-absolute bottom-0 end-0 shadow d-flex align-items-center justify-content-center border border-white"
+								style="width: 24px; height: 24px; padding: 0; margin-bottom: -2px; margin-right: -2px; font-size: 0.65rem;"
+								onclick="document.getElementById('inputFotoMembro').click();"
+								title="Alterar Foto">
+							<i class="bi bi-camera-fill"></i>
+						</button>
+					</div>
+
+					<form id="formAlterarFotoMembro" action="<?= url('PortalMembro/alterarFoto') ?>" method="POST" enctype="multipart/form-data" class="d-none">
+						<input type="file" id="inputFotoMembro" name="membro_foto" accept="image/jpeg,image/png,image/webp">
+					</form>
 
 					<div>
 						<h5 class="fw-bold mb-0 text-white">Olá, <?= explode(' ', $perfil['membro_nome'])[0] ?>!</h5>
@@ -563,4 +578,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+
+// 7. ATUALIZAÇÃO DE FOTOS DE MEMBROS
+document.getElementById('inputFotoMembro').addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+        document.getElementById('formAlterarFotoMembro').submit();
+    }
+});
 </script>
+
+
