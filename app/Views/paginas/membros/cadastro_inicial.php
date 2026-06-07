@@ -145,7 +145,7 @@
 
 				<div class="mb-4 mt-4 text-center p-3 border rounded bg-light shadow-sm">
 					<label class="form-label d-block fw-bold text-primary">FOTO PARA CARTEIRINHA</label>
-					<input type="file" name="foto" class="form-control mb-2" accept="image/*" capture="user">
+					<input type="file" name="foto" class="form-control mb-2" accept="image/*">
 				</div>
 
 				<button type="button" class="btn btn-primary btn-lg w-100 shadow fw-bold py-3 text-uppercase" data-bs-toggle="modal" data-bs-target="#modalLGPD">

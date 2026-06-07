@@ -19,8 +19,8 @@ class EscolaDominical
      */
 	public function getClassesByIgreja($igrejaId)
 	{
-		// Adicionamos o JOIN com membros_fotos para pegar o arquivo da foto
-		$sql = "SELECT c.*, m.membro_registro_interno, m.membro_nome as professor_nome, f.membro_foto_arquivo
+		// AJUSTE: Adicionado m.membro_status e m.membro_id AS professor_id na projeção do SELECT
+		$sql = "SELECT c.*, m.membro_id AS professor_id, m.membro_status, m.membro_registro_interno, m.membro_nome as professor_nome, f.membro_foto_arquivo
 				FROM classes_escola c
 				LEFT JOIN membros m ON c.classe_professor_id = m.membro_id
 				LEFT JOIN membros_fotos f ON m.membro_id = f.membro_foto_membro_id

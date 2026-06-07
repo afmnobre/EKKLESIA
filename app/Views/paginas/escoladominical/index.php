@@ -40,16 +40,18 @@
 										<div class="ms-n2">
 											<?php
 												$igrejaId = $_SESSION['usuario_igreja_id'];
-												// Caminho baseado na estrutura de uploads por igreja
+
+												// AJUSTE: Descobre a pasta correta baseado no status do cadastro do professor
+												$diretorioMembro = (isset($classe['membro_status']) && $classe['membro_status'] === 'Ativo')
+													? $classe['membro_registro_interno']
+													: "PENDENTE_" . ($classe['professor_id'] ?? 0);
+
+												// Caminho baseado na estrutura de uploads por igreja apontando para o diretório dinâmico
 												$fotoPath = !empty($classe['membro_foto_arquivo'])
-													? url("assets/uploads/{$igrejaId}/membros/{$classe['membro_registro_interno']}/{$classe['membro_foto_arquivo']}")
+													? url("assets/uploads/{$igrejaId}/membros/{$diretorioMembro}/{$classe['membro_foto_arquivo']}")
 													: url("assets/img/avatar_padrao.png");
 											?>
-											<img src="<?= $fotoPath ?>"
-												 class="rounded-circle border border-3 border-white shadow-sm"
-												 style="width: 55px; height: 55px; object-fit: cover; margin-left: -15px;"
-												 alt="Professor"
-												 onerror="this.src='<?= url('assets/img/avatar_padrao.png') ?>'">
+                                                <i class="bi bi-file-earmark-image"></i>
 										</div>
 									</div>
 
