@@ -163,8 +163,7 @@ class PortalMembroController extends Controller {
 
 		$this->rawview('membros/painel_membro', $dados);
 	}
-
-    public function login($idIgreja = null) {
+	public function login($idIgreja = null) {
         $model = new PortalMembro();
         $igreja = $model->getIgreja($idIgreja);
 
@@ -172,7 +171,14 @@ class PortalMembroController extends Controller {
             die("Igreja inválida ou não encontrada.");
         }
 
-        return $this->rawview('membros/painel_membro_login', ['igreja' => $igreja]);
+        // AJUSTE: Captura se existe um parâmetro de erro vindo da função auth()
+        $erro = isset($_GET['erro']) ? "Telefone ou senha incorretos. Tente novamente." : null;
+
+        // Retorna a view injetando a variável de erro
+        return $this->rawview('membros/painel_membro_login', [
+            'igreja' => $igreja,
+            'erro'   => $erro
+        ]);
     }
 
     public function auth() {
@@ -189,7 +195,12 @@ class PortalMembroController extends Controller {
 
             header("Location: " . url('PortalMembro/painel'));
         } else {
-            header("Location: " . url('PortalMembro/login?erro=1'));
+            // AJUSTE: Se o membro foi encontrado mas a senha falhou, pegamos o ID dele,
+            // caso contrário tentamos pegar do POST (se seu formulário enviar) ou deixamos dinâmico.
+            $igrejaId = $membro ? $membro['membro_igreja_id'] : ($_POST['membro_igreja_id'] ?? 1);
+
+            // Redireciona mantendo a estrutura da sua URL: PortalMembro/login/ID?erro=1
+            header("Location: " . url("PortalMembro/login/{$igrejaId}?erro=1"));
         }
         exit;
     }

@@ -42,6 +42,15 @@
                     <?php endif; ?>
 
                     <form action="<?= url('PortalMembro/auth') ?>" method="POST">
+
+					<?php if (!empty($erro)): ?>
+						<div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+							<i class="bi bi-exclamation-triangle-fill me-2"></i>
+							<?= htmlspecialchars($erro) ?>
+							<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+						</div>
+					<?php endif; ?>
+
                         <input type="hidden" name="igreja_id" value="<?= $igreja['igreja_id'] ?>">
 
                         <div class="mb-3">

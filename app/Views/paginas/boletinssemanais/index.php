@@ -115,7 +115,7 @@ $semana = getNumeroSemanaAtual();
 
 		<div class="col-6 col-md-5 text-center order-2">
 			<h6 class="fw-bold mb-0 text-primary small text-uppercase" style="font-size: 0.6rem; letter-spacing: 1px;">
-				<?= htmlspecialchars($liturgia['igreja_nome']) ?>
+				<?= htmlspecialchars($liturgia['igreja_nome'] ?? 'Igreja Não Identificada') ?>
 			</h6>
 			<h2 class="fw-black mb-0" style="letter-spacing: -1.5px; font-weight: 900; font-size: 1.6rem; line-height: 1;">
 				BOLETIM SEMANAL
@@ -126,7 +126,7 @@ $semana = getNumeroSemanaAtual();
 		</div>
 
 		<div class="col-3 col-md-1 text-end order-3">
-			<?php if(!empty($liturgia['igreja_logo'])): ?>
+			<?php if(!empty($liturgia) && !empty($liturgia['igreja_logo'])): ?>
 				<img src="<?= url("assets/uploads/{$liturgia['igreja_liturgia_igreja_id']}/logo/{$liturgia['igreja_logo']}") ?>"
 					 style="height: 100px; max-width: 100px; object-fit: contain;">
 			<?php endif; ?>
@@ -463,7 +463,7 @@ $semana = getNumeroSemanaAtual();
         <div class="col-12">
             <p class="small italic mb-1 fw-bold" style="font-size: 0.8rem;">"Pois de Ti, Senhor, vem a nossa força."</p>
             <div style="font-size: 0.65rem;" class="fw-bold text-uppercase">
-                © <?= date('Y') ?> <?= $liturgia['igreja_nome'] ?> • Sistema Ekklesia
+                © <?= date('Y') ?> <?= !empty($liturgia['igreja_nome']) ? $liturgia['igreja_nome'] : 'Ekklesia' ?> • Sistema Ekklesia
             </div>
         </div>
     </div>
