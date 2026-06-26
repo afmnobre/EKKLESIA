@@ -94,5 +94,8 @@
         <a href="<?= url('sociedadeLider/banner') ?>" class="nav-link-soc">
             <i class="bi bi-card-checklist"></i> Banner/Flyier
         </a>
+        <a href="<?= url('sociedadeLider/rateio') ?>" class="nav-link-soc">
+            <i class="bi bi-card-checklist"></i> Rateio de Eventos
+        </a>
     </div>
 </div>

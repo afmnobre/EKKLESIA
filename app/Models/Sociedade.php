@@ -245,4 +245,17 @@ class Sociedade
         return $stmt->execute([$layoutJson, $idSociedade]);
     }
 
+    // Arquivo: app/Models/Sociedade.php
+	// Linha: Adicionar logo após a função update() antiga (~linha 90)
+
+	public function updateSenha($id, $idIgreja, $senhaCriptografada)
+	{
+		$sql = "UPDATE sociedades
+				SET sociedade_senha = ?
+				WHERE sociedade_id = ? AND sociedade_igreja_id = ?";
+		$stmt = $this->db->prepare($sql);
+		return $stmt->execute([$senhaCriptografada, $id, $idIgreja]);
+	}
+
+
 }

@@ -319,4 +319,31 @@ class SociedadesController extends Controller
         ]);
     }
 
+
+    // Arquivo: app/Controllers/SociedadesController.php
+	// Linha: Adicionar após o fechamento do método salvar() (~linha 55)
+
+	public function alterarSenha()
+	{
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$id = $_POST['sociedade_id'] ?? null;
+			$idIgreja = $_SESSION['usuario_igreja_id'];
+			$novaSenha = $_POST['nova_senha'] ?? '';
+
+			if ($id && !empty($novaSenha)) {
+				// Criptografa de forma segura antes de persistir
+				$senhaHash = password_hash($novaSenha, PASSWORD_DEFAULT);
+				$this->model->updateSenha($id, $idIgreja, $senhaHash);
+
+				header("Location: " . url("sociedades?sucesso=senha_alterada"));
+				exit;
+			}
+		}
+
+		header("Location: " . url("sociedades?erro=senha_invalida"));
+		exit;
+	}
+
+
+
 }

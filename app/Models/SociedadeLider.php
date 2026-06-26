@@ -613,4 +613,106 @@ class SociedadeLider {
 	}
 
 
+	// Arquivo: App\Models\SociedadeLider.php
+
+	public function listarRateiosPorSociedade($sociedadeId) {
+		$sql = "SELECT r.*,
+				(SELECT COUNT(*) FROM evento_rateio_linhas WHERE linha_rateio_id = r.rateio_id) as total_cotas,
+				(SELECT COUNT(*) FROM evento_rateio_linhas WHERE linha_rateio_id = r.rateio_id AND linha_status = 'Preenchido') as cotas_preenchidas
+				FROM evento_rateio r
+				WHERE r.rateio_sociedade_id = ?
+				ORDER BY r.rateio_id DESC";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$sociedadeId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	public function buscarRateioPorToken($token) {
+		$sql = "SELECT * FROM evento_rateio WHERE rateio_token = ? LIMIT 1";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$token]);
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
+
+	public function listarLinhasDoRateio($rateioId) {
+		$sql = "SELECT rl.*, m.membro_nome
+				FROM evento_rateio_linhas rl
+				LEFT JOIN membros m ON rl.linha_membro_id = m.membro_id
+				WHERE rl.linha_rateio_id = ?
+				ORDER BY rl.linha_id ASC";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$rateioId]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	public function salvarRateioComCotas($dadosEvento, $itens, $quantidades) {
+		$this->db->beginTransaction();
+		try {
+			// 1. Insere o Evento
+			$sql = "INSERT INTO evento_rateio (rateio_sociedade_id, rateio_igreja_id, rateio_titulo, rateio_descricao, rateio_data_limite, rateio_token) VALUES (?, ?, ?, ?, ?, ?)";
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute($dadosEvento);
+			$rateioId = $this->db->lastInsertId();
+
+			// 2. Cria as linhas repetidas com base na quantidade solicitada para cada item
+			$sqlLinha = "INSERT INTO evento_rateio_linhas (linha_rateio_id, linha_descricao) VALUES (?, ?)";
+			$stmtLinha = $this->db->prepare($sqlLinha);
+
+			foreach ($itens as $index => $descricaoItem) {
+				if (empty($descricaoItem)) continue;
+				$cotas = intval($quantidades[$index] ?? 1);
+
+				// Repete o item no banco a quantidade de vezes que o líder pediu
+				for ($i = 0; $i < $cotas; $i++) {
+					$stmtLinha->execute([$rateioId, $descricaoItem]);
+				}
+			}
+
+			$this->db->commit();
+			return true;
+		} catch (\Exception $e) {
+			$this->db->rollBack();
+			return false;
+		}
+	}
+
+	public function reservarLinhaCota($linhaId, $membroId, $nomeExterno) {
+		$sql = "UPDATE evento_rateio_linhas
+				SET linha_membro_id = ?, linha_nome_externo = ?, linha_status = 'Preenchido'
+				WHERE linha_id = ? AND linha_status = 'Disponivel'";
+		$stmt = $this->db->prepare($sql);
+		return $stmt->execute([$membroId ?: null, $nomeExterno ?: null, $linhaId]);
+	}
+
+	public function liberarLinhaCota($linhaId) {
+		$sql = "UPDATE evento_rateio_linhas
+				SET linha_membro_id = NULL, linha_nome_externo = NULL, linha_status = 'Disponivel'
+				WHERE linha_id = ?";
+		$stmt = $this->db->prepare($sql);
+		return $stmt->execute([$linhaId]);
+	}
+
+	public function excluirRateioTotal($id, $sociedadeId) {
+		$stmt = $this->db->prepare("DELETE FROM evento_rateio WHERE rateio_id = ? AND rateio_sociedade_id = ?");
+		return $stmt->execute([$id, $sociedadeId]);
+	}
+
+
+    // Arquivo: App\Models\SociedadeLider.php
+	// Adicione este método no final do arquivo antes do fechamento da classe
+
+	public function buscarMembrosPorIgrejaENome($igrejaId, $nomeBusca) {
+		$sql = "SELECT membro_id, membro_nome
+				FROM membros
+				WHERE membro_igreja_id = ?
+				  AND membro_status = 'Ativo'
+				  AND membro_nome LIKE ?
+				ORDER BY membro_nome ASC
+				LIMIT 10"; // Limita a 10 resultados para ficar rápido no celular
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId, "%{$nomeBusca}%"]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+
 }

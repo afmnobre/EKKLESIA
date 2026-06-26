@@ -455,6 +455,129 @@ class SociedadeLiderController extends Controller {
 			}
 			exit;
 		}
+    }
+
+
+	// Arquivo: App\Controllers\SociedadeLiderController.php
+
+	public function rateio() {
+		if (!isset($_SESSION['membro_id']) || !isset($_SESSION['sociedade_ativa_id'])) {
+			header("Location: " . url('sociedadeLider/login'));
+			exit;
+		}
+		$model = new SociedadeLider();
+		$sociedade = $model->getSociedadeVinculada($_SESSION['membro_id']);
+
+		$this->rawview('sociedade_portal/rateio_index', [
+			'sociedade' => $sociedade,
+			'items'     => $model->listarRateiosPorSociedade($_SESSION['sociedade_ativa_id']),
+			'titulo'    => 'Gerenciar Listas de Eventos'
+		]);
 	}
+
+	public function rateioCadastrar() {
+		if (!isset($_SESSION['sociedade_ativa_id'])) exit;
+
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$model = new SociedadeLider();
+			$token = md5(uniqid(rand(), true));
+
+			$dadosEvento = [
+				$_SESSION['sociedade_ativa_id'],
+				$_SESSION['usuario_igreja_id'],
+				$_POST['titulo'],
+				$_POST['descricao'],
+				$_POST['data_limite'],
+				$token
+			];
+
+			// Captura as listas enviadas dinamicamente do formulário
+			$itens = $_POST['item_descricao'] ?? [];
+			$quantidades = $_POST['item_cotas'] ?? [];
+
+			$model->salvarRateioComCotas($dadosEvento, $itens, $quantidades);
+			header("Location: " . url('sociedadeLider/rateio'));
+			exit;
+		}
+	}
+
+	public function rateioExcluir($id) {
+		if (!isset($_SESSION['sociedade_ativa_id'])) exit;
+		$model = new SociedadeLider();
+		$model->excluirRateioTotal($id, $_SESSION['sociedade_ativa_id']);
+		header("Location: " . url('sociedadeLider/rateio'));
+		exit;
+	}
+
+	// Link Público do WhatsApp
+	public function rateioParticipar($token) {
+		$model = new SociedadeLider();
+		$item = $model->buscarRateioPorToken($token);
+
+		if (!$item) {
+			die("Lista de evento não encontrada ou encerrada.");
+		}
+
+		$this->rawview('sociedade_portal/rateio_publico', [
+			'item'        => $item,
+			'linhas'      => $model->listarLinhasDoRateio($item['rateio_id']),
+			'membros'     => $model->getMeusMembros($item['rateio_sociedade_id'])
+		]);
+	}
+
+	public function rateioAssinarCota() {
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$model = new SociedadeLider();
+			$linhaId = $_POST['linha_id'];
+			$token = $_POST['token'];
+
+			$membroId = !empty($_POST['membro_id']) ? $_POST['membro_id'] : null;
+			$nomeExterno = !empty($_POST['nome_externo']) ? $_POST['nome_externo'] : null;
+
+			$model->reservarLinhaCota($linhaId, $membroId, $nomeExterno);
+			header("Location: " . full_url("sociedadeLider/rateioParticipar/{$token}"));
+			exit;
+		}
+	}
+
+	// Caso o líder queira retirar o nome de alguém de uma cota pelo painel ou link
+	public function rateioLiberarCota($linhaId, $token) {
+		$model = new SociedadeLider();
+		$model->liberarLinhaCota($linhaId);
+		header("Location: " . full_url("sociedadeLider/rateioParticipar/{$token}"));
+		exit;
+	}
+
+    // Arquivo: App\Controllers\SociedadeLiderController.php
+	// Adicione este método na classe
+
+	public function apiBuscarMembros() {
+		header('Content-Type: application/json');
+
+		$igrejaId = isset($_GET['igreja_id']) ? intval($_GET['igreja_id']) : 0;
+		$busca = isset($_GET['q']) ? trim($_GET['q']) : '';
+
+		if ($igrejaId === 0 || strlen($busca) < 3) {
+			echo json_encode([]);
+			exit;
+		}
+
+		$model = new SociedadeLider();
+		$membros = $model->buscarMembrosPorIgrejaENome($igrejaId, $busca);
+
+		// Formata a resposta para o padrão que o Choices.js espera
+		$resultado = [];
+		foreach ($membros as $m) {
+			$resultado[] = [
+				'value' => $m['membro_id'],
+				'label' => $m['membro_nome']
+			];
+		}
+
+		echo json_encode($resultado);
+		exit;
+	}
+
+
 
 }

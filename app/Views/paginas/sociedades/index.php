@@ -80,6 +80,12 @@
 									<i class="bi bi-star-fill"></i>
 								</button>
 
+								<button class="btn btn-sm btn-danger shadow-sm"
+										title="Alterar Senha de Acesso"
+										onclick="window.abrirModalSenha(<?= $soc['sociedade_id'] ?>, '<?= $soc['sociedade_nome'] ?>')">
+									<i class="bi bi-key-fill"></i>
+								</button>
+
 								<button class="btn btn-sm btn-light border shadow-sm"
 										onclick='window.editarSociedade(<?= json_encode($soc) ?>)'>
 									<i class="bi bi-pencil-square text-primary"></i>
@@ -95,6 +101,47 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalAlterarSenhaSociedade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form action="<?= url('sociedades/alterarSenha') ?>" method="POST" class="modal-content border-0 shadow">
+            <input type="hidden" name="sociedade_id" id="senha_sociedade_id">
+
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold" id="senha_modal_titulo">Alterar Senha</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3">Defina a nova senha para o líder acessar o portal exclusivo desta sociedade interna.</p>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Nova Senha de Acesso</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-lock-fill"></i></span>
+                        <input type="password" name="nova_senha" id="input_nova_senha" class="form-control text-dark" placeholder="Digite a nova senha" required minlength="4">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold">Salvar Nova Senha</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Função injetada no escopo window para disparar o Modal de forma limpa
+window.abrirModalSenha = function(id, nome) {
+    document.getElementById('senha_sociedade_id').value = id;
+    document.getElementById('senha_modal_titulo').innerText = "Senha: " + nome;
+    document.getElementById('input_nova_senha').value = "";
+
+    const meuModal = new bootstrap.Modal(document.getElementById('modalAlterarSenhaSociedade'));
+    meuModal.show();
+};
+</script>
+
 
 <div class="modal fade" id="modalSociedade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
