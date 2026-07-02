@@ -323,6 +323,5 @@ class IgrejaController extends Controller
 		], true);
 	}
 
-
 }
 

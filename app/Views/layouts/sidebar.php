@@ -102,6 +102,14 @@
             </div>
         <?php endif; ?>
 
+        <li class="nav-item">
+            <a class="nav-link text-white" href="#" data-bs-toggle="modal" data-bs-target="#modalLinkMural">
+                <i class="bi bi-heart-pulse-fill text-danger me-2"></i>
+                <span>Mural de Comunhão</span>
+            </a>
+        </li>
+
+
         <a class="menu-link text-warning" href="<?= url('igreja/acessos') ?>" target="_blank">
             <i class="bi bi-qr-code-scan"></i> Canais de Acesso
         </a>
@@ -131,3 +139,45 @@
         </div>
     </div>
 </div>
+
+
+
+<div class="modal fade" id="modalLinkMural" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow text-dark">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-share-fill me-2 text-danger"></i>Mural de Membros Externo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="small text-muted">Este link é público e **não exige login**. Copie e compartilhe no grupo da igreja para que os irmãos deixem mensagens e pedidos de oração nos avatares uns dos outros.</p>
+
+                <?php $urlMural = full_url("muralPublico/index/" . $_SESSION['usuario_igreja_id']); ?>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Link do Mural para o WhatsApp</label>
+                    <div class="input-group">
+                        <input type="text" id="input_link_mural" class="form-control bg-light text-dark small" value="<?= $urlMural ?>" readonly>
+                        <button class="btn btn-outline-primary" type="button" onclick="copiarLinkMural()">
+                            <i class="bi bi-clipboard"></i> Copiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <a href="<?= $urlMural ?>" target="_blank" class="btn btn-sm btn-dark rounded-pill px-3"><i class="bi bi-box-arrow-up-right me-1"></i> Visualizar Mural</a>
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copiarLinkMural() {
+    var copyText = document.getElementById("input_link_mural");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyText.value);
+    alert("Link copiado com sucesso! Agora é só colar no WhatsApp.");
+}
+</script>
