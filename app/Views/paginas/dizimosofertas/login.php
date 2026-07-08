@@ -9,12 +9,12 @@
     <style>
         body { background-color: #f4f7f6; height: 100vh; display: flex; align-items: center; }
         .login-card { border: none; border-radius: 15px; overflow: hidden; }
-        /* Ajuste no header para comportar os logos */
         .login-header { background: #212529; color: white; padding: 1.5rem; text-align: center; }
         .btn-primary { background: #212529; border: none; }
         .btn-primary:hover { background: #343a40; }
         .form-control-lg { border-radius: 10px; font-size: 1rem; }
         .logo-login { height: 50px; object-fit: contain; }
+        .toggle-type { font-size: 0.75rem; cursor: pointer; text-decoration: none; font-weight: normal; text-transform: none; }
     </style>
 </head>
 <body>
@@ -52,20 +52,28 @@
                     <form action="<?= url('dizimoOferta/autenticar') ?>" method="POST">
                         <input type="hidden" name="igreja_id" value="<?= $igreja['igreja_id'] ?>">
 
+                        <!-- 1º USUÁRIO -->
                         <div class="mb-4">
-                            <label class="form-label fw-bold small text-uppercase">1º Diácono / Presbítero</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-bold small text-uppercase m-0">1º Diácono / Presbítero</label>
+                                <a id="toggle-user1" class="toggle-type text-primary"><i class="bi bi-envelope"></i> Usar E-mail</a>
+                            </div>
                             <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-person"></i></span>
-                                <input type="text" name="user1" class="form-control form-control-lg border-start-0" placeholder="Usuário" required>
+                                <span class="input-group-text bg-light border-end-0"><i id="icon-user1" class="bi bi-card-text"></i></span>
+                                <input type="text" id="user1" name="user1" class="form-control form-control-lg border-start-0" placeholder="000.000.000-00" required>
                             </div>
                             <input type="password" name="pass1" class="form-control form-control-lg mt-2" placeholder="Senha" required>
                         </div>
 
+                        <!-- 2º USUÁRIO -->
                         <div class="mb-4 border-top pt-4">
-                            <label class="form-label fw-bold small text-uppercase text-primary">2º Diácono (Testemunha)</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-bold small text-uppercase text-primary m-0">2º Diácono (Testemunha)</label>
+                                <a id="toggle-user2" class="toggle-type text-primary"><i class="bi bi-envelope"></i> Usar E-mail</a>
+                            </div>
                             <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-check"></i></span>
-                                <input type="text" name="user2" class="form-control form-control-lg border-start-0" placeholder="Usuário" required>
+                                <span class="input-group-text bg-light border-end-0"><i id="icon-user2" class="bi bi-card-text"></i></span>
+                                <input type="text" id="user2" name="user2" class="form-control form-control-lg border-start-0" placeholder="000.000.000-00" required>
                             </div>
                             <input type="password" name="pass2" class="form-control form-control-lg mt-2" placeholder="Senha" required>
                         </div>
@@ -88,5 +96,58 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    function aplicarMascaraCPF(value) {
+        return value
+            .replace(/\D/g, "")
+            .replace(/(\d{3})(\d)/, "$1.$2")
+            .replace(/(\d{3})(\d)/, "$1.$2")
+            .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    }
+
+    function configurarCampoMascara(inputId, toggleId, iconId) {
+        const input = document.getElementById(inputId);
+        const toggle = document.getElementById(toggleId);
+        const icon = document.getElementById(iconId);
+
+        // Estado inicial: true = CPF, false = E-mail
+        let modoCPF = true;
+
+        // Monitora a digitação caso esteja em modo CPF
+        input.addEventListener("input", function(e) {
+            if (modoCPF) {
+                let value = e.target.value.replace(/\D/g, "");
+                if (value.length > 11) value = value.slice(0, 11);
+                e.target.value = aplicarMascaraCPF(value);
+            }
+        });
+
+        // Alternador do tipo de entrada
+        toggle.addEventListener("click", function() {
+            modoCPF = !modoCPF;
+            input.value = ""; // Limpa para evitar conflito de formatos
+
+            if (modoCPF) {
+                input.placeholder = "000.000.000-00";
+                input.type = "text";
+                toggle.innerHTML = '<i class="bi bi-envelope"></i> Usar E-mail';
+                icon.className = "bi bi-card-text";
+            } else {
+                input.placeholder = "exemplo@email.com";
+                input.type = "email";
+                toggle.innerHTML = '<i class="bi bi-vcard"></i> Usar CPF';
+                icon.className = "bi bi-envelope";
+            }
+            input.focus();
+        });
+    }
+
+    // Inicializa o comportamento nos dois blocos de login de forma independente
+    configurarCampoMascara("user1", "toggle-user1", "icon-user1");
+    configurarCampoMascara("user2", "toggle-user2", "icon-user2");
+});
+</script>
 </body>
 </html>
