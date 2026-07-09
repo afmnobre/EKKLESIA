@@ -48,6 +48,12 @@
                 <div class="card-body p-3">
                     <h6 class="fw-bold text-dark mb-3 small text-uppercase"><i class="bi bi-bar-chart-line me-1 text-primary"></i> Progresso da Lista</h6>
 
+                <div class="d-grid mb-3">
+                    <a href="<?= full_url("sociedadeLider/rateioConferencia/" . $item['rateio_token']) ?>" class="btn btn-dark shadow-sm fw-bold rounded-pill">
+                        <i class="bi bi-printer-fill me-2"></i> Relatório de Conferência / Impressão
+                    </a>
+                </div>
+
                     <div class="row g-2 text-center mb-3">
                         <div class="col-4">
                             <div class="p-2 bg-light rounded border">

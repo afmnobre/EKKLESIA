@@ -578,6 +578,45 @@ class SociedadeLiderController extends Controller {
 		exit;
 	}
 
+    // Arquivo: app/Controllers/SociedadeLiderController.php
+	// Linha: Adicione este novo método na classe
+
+	public function rateioConferencia($token) {
+		$model = new SociedadeLider();
+		$item = $model->buscarRateioPorToken($token);
+
+		if (!$item) {
+			die("Lista de evento não encontrada ou encerrada.");
+		}
+
+		// Obtém todas as linhas cruas cadastradas para o evento
+		$linhasCruas = $model->listarLinhasDoRateio($item['rateio_id']);
+
+		$participantes = [];
+		$itensLivres = [];
+
+		foreach ($linhasCruas as $l) {
+			if ($l['linha_status'] === 'Preenchido') {
+				// Define o nome de exibição baseado se é membro interno ou preenchimento externo
+				$nomeParticipante = !empty($l['membro_nome']) ? $l['membro_nome'] : $l['linha_nome_externo'];
+
+				// Agrupa os itens em um array usando o nome do participante como chave chave única
+				$participantes[$nomeParticipante][] = $l['linha_descricao'];
+			} else {
+				$itensLivres[] = $l['linha_descricao'];
+			}
+		}
+
+		// Ordena os participantes em ordem alfabética para facilitar a busca visual no papel
+		ksort($participantes);
+
+		$this->rawview('sociedade_portal/rateio_conferencia', [
+			'item'          => $item,
+			'participantes' => $participantes,
+			'itensLivres'   => $itensLivres
+		]);
+	}
+
 
 
 }
