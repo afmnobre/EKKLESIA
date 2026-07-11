@@ -57,9 +57,17 @@
                         </span>
                     </div>
                     <h5 class="fw-bold text-dark mb-1"><?= mb_strtoupper($membro['membro_nome']) ?></h5>
-                    <p class="text-muted small mb-0">Registro: #<?= $membro['membro_registro_interno'] ?></p>
+<p class="text-muted small mb-0">Registro: #<?= $membro['membro_registro_interno'] ?></p>
 
-                    <div class="bg-light rounded-3 p-2 mt-3">
+<?php if (isset($membro['membro_dizimista']) && $membro['membro_dizimista'] == 1): ?>
+    <div class="mt-2">
+        <span class="badge bg-light text-success border border-success px-3 py-1 rounded-pill fw-bold" style="font-size: 0.75rem;">
+            <i class="bi bi-cash-coin me-1"></i> DIZIMISTA ATIVO
+        </span>
+    </div>
+<?php endif; ?>
+
+<div class="bg-light rounded-3 p-2 mt-3">
                         <small class="text-muted d-block">Cadastro realizado em:</small>
                         <strong class="small text-dark">
                             <?= !empty($membro['membro_data_criacao']) ? date('d/m/Y H:i', strtotime($membro['membro_data_criacao'])) : '---' ?>
@@ -107,16 +115,26 @@
                                     <label class="text-muted small text-uppercase fw-bold">CPF</label>
                                     <p class="mb-0 border-bottom pb-1"><?= $membro['membro_cpf'] ?: '---' ?></p>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="text-muted small text-uppercase fw-bold">Estado Civil</label>
-                                    <p class="mb-0 border-bottom pb-1"><?= $membro['membro_estado_civil'] ?: '---' ?></p>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="text-muted small text-uppercase fw-bold">Casamento</label>
-                                    <p class="mb-0 border-bottom pb-1">
-                                        <?= (!empty($membro['membro_data_casamento']) && $membro['membro_data_casamento'] != '0000-00-00') ? date('d/m/Y', strtotime($membro['membro_data_casamento'])) : '---' ?>
-                                    </p>
-                                </div>
+								<div class="col-md-3">
+									<label class="text-muted small text-uppercase fw-bold">Estado Civil</label>
+									<p class="mb-0 border-bottom pb-1"><?= $membro['membro_estado_civil'] ?: '---' ?></p>
+								</div>
+								<div class="col-md-3">
+									<label class="text-muted small text-uppercase fw-bold">Casamento</label>
+									<p class="mb-0 border-bottom pb-1">
+										<?= (!empty($membro['membro_data_casamento']) && $membro['membro_data_casamento'] != '0000-00-00') ? date('d/m/Y', strtotime($membro['membro_data_casamento'])) : '---' ?>
+									</p>
+								</div>
+								<div class="col-md-3">
+									<label class="text-muted small text-uppercase fw-bold">Profissão</label>
+									<p class="mb-0 border-bottom pb-1"><?= $membro['membro_profissao'] ?: '---' ?></p>
+								</div>
+								<div class="col-md-3">
+									<label class="text-muted small text-uppercase fw-bold">Naturalidade</label>
+									<p class="mb-0 border-bottom pb-1"><?= $membro['membro_naturalidade'] ?: '---' ?></p>
+								</div>
+
+
 
                                 <div class="col-12 mt-4">
                                     <h6 class="text-primary fw-bold mb-3 d-print-block"><i class="bi bi-geo-alt me-1"></i> Localização</h6>
@@ -144,23 +162,32 @@
                             </div>
                         </div>
 
-                        <div class="tab-pane fade" id="nav-igreja" role="tabpanel">
-                            <div class="row g-4">
-                                <div class="col-md-6">
-                                    <label class="text-muted small text-uppercase fw-bold">Data de Batismo</label>
-                                    <p class="mb-0 border-bottom pb-1">
-                                        <?= (!empty($membro['membro_data_batismo']) && $membro['membro_data_batismo'] != '0000-00-00')
-                                            ? date('d/m/Y', strtotime($membro['membro_data_batismo']))
-                                            : 'Não informado' ?>
-                                    </p>
-                                </div>
+						<div class="tab-pane fade" id="nav-igreja" role="tabpanel">
+							<div class="row g-4">
+								<div class="col-md-4">
+									<label class="text-muted small text-uppercase fw-bold">Data de Batismo</label>
+									<p class="mb-0 border-bottom pb-1">
+										<?= (!empty($membro['membro_data_batismo']) && $membro['membro_data_batismo'] != '0000-00-00')
+											? date('d/m/Y', strtotime($membro['membro_data_batismo']))
+											: 'Não informado' ?>
+									</p>
+								</div>
 
-                                <div class="col-md-6">
-                                    <label class="text-muted small text-uppercase fw-bold">Status do Membro</label>
-                                    <p class="mb-0 border-bottom pb-1">
-                                        <?= strtoupper($membro['membro_status']) ?>
-                                    </p>
-                                </div>
+								<div class="col-md-4">
+									<label class="text-muted small text-uppercase fw-bold text-success">Profissão de Fé</label>
+									<p class="mb-0 border-bottom pb-1">
+										<?= (!empty($membro['membro_data_profissao_fe']) && $membro['membro_data_profissao_fe'] != '0000-00-00')
+											? date('d/m/Y', strtotime($membro['membro_data_profissao_fe']))
+											: 'Não informado' ?>
+									</p>
+								</div>
+
+								<div class="col-md-4">
+									<label class="text-muted small text-uppercase fw-bold">Status do Membro</label>
+									<p class="mb-0 border-bottom pb-1">
+										<?= strtoupper($membro['membro_status']) ?>
+									</p>
+								</div>
 
                                 <div class="col-12 mt-4">
                                     <label class="text-muted small text-uppercase fw-bold d-block mb-2">Cargos e Funções</label>

@@ -22,12 +22,17 @@ class PortalMembroController extends Controller {
         ]);
     }
 
+    // Arquivo: PortalMembroController.php
+    // Linha: Modifique o método salvar() adicionando as novas chaves ao array $dados
+
     public function salvar() {
         $model = new PortalMembro();
         $idIgreja = $_POST['igreja_id'];
 
         $dataBatismo = !empty($_POST['data_batismo']) ? $_POST['data_batismo'] : null;
         $dataCasamento = !empty($_POST['data_casamento']) ? $_POST['data_casamento'] : null;
+        // Nova variável para Profissão de Fé
+        $dataProfissaoFe = !empty($_POST['data_profissao_fe']) ? $_POST['data_profissao_fe'] : null;
 
         $dados = [
             'igreja_id'    => $idIgreja,
@@ -39,6 +44,10 @@ class PortalMembroController extends Controller {
             'estado_civil' => $_POST['estado_civil'],
             'data_batismo' => $dataBatismo,
             'data_casamento' => $dataCasamento,
+            'data_profissao_fe' => $dataProfissaoFe, // ADICIONADO
+            'profissao'    => !empty($_POST['profissao']) ? mb_strtoupper(trim($_POST['profissao'])) : null, // ADICIONADO
+            'naturalidade' => !empty($_POST['naturalidade']) ? mb_strtoupper(trim($_POST['naturalidade'])) : null, // ADICIONADO
+            'dizimista'    => isset($_POST['dizimista']) ? 1 : 0, // ADICIONADO
             'telefone'     => $_POST['telefone'],
             'rua'          => $_POST['rua'],
             'numero'       => $_POST['numero'],

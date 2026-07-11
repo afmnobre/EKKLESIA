@@ -92,6 +92,37 @@
                         </div>
                     </div>
 
+
+					<div class="col-md-3">
+						<label class="form-label mb-0 small fw-bold text-success">Profissão de Fé (Período)</label>
+						<div class="input-group input-group-sm">
+							<input type="date" name="prof_ini" class="form-control border-success" value="<?= $filtros['prof_ini'] ?? '' ?>">
+							<input type="date" name="prof_fim" class="form-control border-success" value="<?= $filtros['prof_fim'] ?? '' ?>">
+						</div>
+					</div>
+
+					<div class="col-md-3">
+						<label class="form-label mb-0 small fw-bold">Profissão</label>
+						<input type="text" name="profissao" class="form-control form-control-sm" value="<?= $filtros['profissao'] ?? '' ?>" placeholder="Buscar por profissão...">
+					</div>
+
+					<div class="col-md-3">
+						<label class="form-label mb-0 small fw-bold">Naturalidade</label>
+						<input type="text" name="naturalidade" class="form-control form-control-sm" value="<?= $filtros['naturalidade'] ?? '' ?>" placeholder="Cidade/UF natal...">
+					</div>
+
+					<div class="col-md-3">
+						<label class="form-label mb-0 small fw-bold text-success">Dizimista</label>
+						<select name="dizimista" class="form-select form-select-sm border-success">
+							<option value="">Todos</option>
+							<option value="1" <?= ($filtros['dizimista'] ?? '') === '1' ? 'selected' : '' ?>>Sim</option>
+							<option value="0" <?= ($filtros['dizimista'] ?? '') === '0' ? 'selected' : '' ?>>Não</option>
+						</select>
+					</div>
+
+
+
+
                     <div class="col-md-3">
                         <label class="form-label mb-0 small fw-bold">Cidade</label>
                         <select name="cidade" id="select-cidade" class="form-select form-select-sm">
@@ -137,10 +168,20 @@
                 <tbody>
                     <?php foreach ($membros as $m): ?>
                     <tr>
-                        <td class="ps-4">
-                            <div class="fw-bold text-dark"><?= $m['membro_nome'] ?></div>
-                            <small class="text-muted"><i class="bi bi-hash"></i> ROL: <?= $m['membro_registro_interno'] ?></small>
-                        </td>
+    <td class="ps-4">
+        <div class="fw-bold text-dark d-flex align-items-center gap-2">
+            <?= $m['membro_nome'] ?>
+            <?php if(isset($m['membro_dizimista']) && $m['membro_dizimista'] == 1): ?>
+                <span class="badge bg-light text-success border border-success rounded-pill fw-bold" style="font-size: 0.65rem;" title="Dizimista Ativo">
+                    <i class="bi bi-cash-coin"></i> DIZ.
+                </span>
+            <?php endif; ?>
+        </div>
+        <small class="text-muted"><i class="bi bi-hash"></i> ROL: <?= $m['membro_registro_interno'] ?></small>
+        <?php if(!empty($m['membro_profissao'])): ?>
+            <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-briefcase text-secondary"></i> <?= htmlspecialchars($m['membro_profissao']) ?></div>
+        <?php endif; ?>
+    </td>
                         <td>
                             <div class="small mb-1">
                                 <span class="badge bg-dark text-ipb border border-ipb w-100 text-start">
@@ -164,10 +205,11 @@
                                 <i class="bi bi-geo-alt"></i> <?= $m['membro_endereco_cidade'] ?>
                             </div>
                         </td>
-                        <td>
-                            <div class="small"><strong>Nasc:</strong> <?= date('d/m/Y', strtotime($m['membro_data_nascimento'])) ?></div>
-                            <div class="small text-muted"><strong>Bat:</strong> <?= $m['membro_data_batismo'] ? date('d/m/Y', strtotime($m['membro_data_batismo'])) : '---' ?></div>
-                        </td>
+    <td>
+        <div class="small"><strong>Nasc:</strong> <?= date('d/m/Y', strtotime($m['membro_data_nascimento'])) ?></div>
+        <div class="small text-muted"><strong>Bat:</strong> <?= $m['membro_data_batismo'] ? date('d/m/Y', strtotime($m['membro_data_batismo'])) : '---' ?></div>
+        <div class="small text-success"><strong>Prof. Fé:</strong> <?= !empty($m['membro_data_profissao_fe']) ? date('d/m/Y', strtotime($m['membro_data_profissao_fe'])) : '---' ?></div>
+    </td>
 						<td class="text-center">
 							<a href="<?= url('PesquisaMembro/perfil/' . $m['membro_id']) ?>"
 								class="btn btn-sm btn-outline-secondary"
@@ -216,7 +258,8 @@ function exportarMembrosExcel() {
         'nome', 'genero', 'nasc_ini', 'nasc_fim',
         'sociedade_id', 'classe_id', 'cargo_id',
         'bat_ini', 'bat_fim', 'cidade', 'bairro',
-        'cad_ini', 'cad_fim'
+        'cad_ini', 'cad_fim',
+        'prof_ini', 'prof_fim', 'profissao', 'naturalidade', 'dizimista' // Novos campos adicionados aqui
     ];
 
     let params = [];

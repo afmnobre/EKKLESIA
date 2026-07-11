@@ -107,23 +107,58 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-muted small text-uppercase">Data de Nascimento</label>
-                                <div class="input-group input-group-lg">
-                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-calendar-event"></i></span>
-                                    <input type="date" name="data_nascimento" class="form-control border-start-0"
-                                           value="<?= $isEdit ? $membro['membro_data_nascimento'] : '' ?>">
-                                </div>
-                            </div>
+							<div class="col-md-6">
+								<label class="form-label fw-bold text-muted small text-uppercase">Profissão</label>
+								<input type="text" name="profissao" class="form-control form-control-lg text-uppercase-input"
+									   placeholder="EX: ENGENHEIRO, AUTÔNOMO"
+									   value="<?= $isEdit && isset($membro['membro_profissao']) ? htmlspecialchars(strtoupper($membro['membro_profissao'])) : '' ?>">
+							</div>
 
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-muted small text-uppercase text-primary">Data de Batismo</label>
-                                <div class="input-group input-group-lg">
-                                    <span class="input-group-text bg-primary text-white border-end-0"><i class="bi bi-droplet"></i></span>
-                                    <input type="date" name="data_batismo" class="form-control border-start-0 border-primary shadow-sm"
-                                           value="<?= $isEdit ? $membro['membro_data_batismo'] : '' ?>">
-                                </div>
-                            </div>
+							<div class="col-md-6">
+								<label class="form-label fw-bold text-muted small text-uppercase">Naturalidade</label>
+								<input type="text" name="naturalidade" class="form-control form-control-lg text-uppercase-input"
+									   placeholder="EX: SÃO PAULO/SP"
+									   value="<?= $isEdit && isset($membro['membro_naturalidade']) ? htmlspecialchars(strtoupper($membro['membro_naturalidade'])) : '' ?>">
+							</div>
+
+							<div class="col-md-4">
+								<label class="form-label fw-bold text-muted small text-uppercase">Data de Nascimento</label>
+								<div class="input-group input-group-lg">
+									<span class="input-group-text bg-light border-end-0"><i class="bi bi-calendar-event"></i></span>
+									<input type="date" name="data_nascimento" class="form-control border-start-0"
+										   value="<?= $isEdit ? $membro['membro_data_nascimento'] : '' ?>">
+								</div>
+							</div>
+
+							<div class="col-md-4">
+								<label class="form-label fw-bold text-muted small text-uppercase text-primary">Data de Batismo</label>
+								<div class="input-group input-group-lg">
+									<span class="input-group-text bg-primary text-white border-end-0"><i class="bi bi-droplet"></i></span>
+									<input type="date" name="data_batismo" class="form-control border-start-0 border-primary"
+										   value="<?= $isEdit ? $membro['membro_data_batismo'] : '' ?>">
+								</div>
+							</div>
+
+							<div class="col-md-4">
+								<label class="form-label fw-bold text-muted small text-uppercase text-success">Profissão de Fé</label>
+								<div class="input-group input-group-lg">
+									<span class="input-group-text bg-success text-white border-end-0"><i class="bi bi-patch-check"></i></span>
+									<input type="date" name="data_profissao_fe" class="form-control border-start-0 border-success"
+										   value="<?= $isEdit && isset($membro['membro_data_profissao_fe']) ? $membro['membro_data_profissao_fe'] : '' ?>">
+								</div>
+							</div>
+
+							<div class="col-md-12 mt-4">
+								<div class="card card-body bg-light border shadow-sm">
+									<div class="form-check form-switch m-0">
+										<input class="form-check-input" type="checkbox" name="dizimista" id="dizimista_admin" value="1"
+											   <?= ($isEdit && isset($membro['membro_dizimista']) && $membro['membro_dizimista'] == 1) ? 'checked' : '' ?>>
+										<label class="form-check-label fw-bold text-dark text-uppercase small" for="dizimista_admin" style="cursor: pointer;">
+											<i class="bi bi-cash-coin text-success me-1"></i> Identificar membro como Dizimista / Contribuinte Ativo
+										</label>
+									</div>
+								</div>
+							</div>
                         </div>
 
                         <div class="mt-5 pt-3 border-top d-flex justify-content-end">

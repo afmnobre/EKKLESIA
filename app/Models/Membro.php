@@ -64,6 +64,8 @@ class Membro
 		return $stmt->fetch();
 	}
 
+    // Arquivo: Membro.php
+    // MODIFICAÇÃO 1: Substituir por completo o método insert() para contemplar as novas colunas
 	public function insert($data)
 	{
 		$sql = "INSERT INTO membros (
@@ -78,8 +80,12 @@ class Membro
 					membro_email,
 					membro_telefone,
 					membro_data_batismo,
+					membro_data_profissao_fe,
 					membro_data_casamento,
-					membro_status, -- Campo da tabela
+					membro_dizimista,
+					membro_profissao,
+					membro_naturalidade,
+					membro_status,
 					membro_data_criacao
 				) VALUES (
 					:igreja_id,
@@ -93,18 +99,22 @@ class Membro
 					:email,
 					:telefone,
 					:batismo,
+					:data_profissao_fe,
 					:data_casamento,
-                    :status,
-                    NOW()
+					:dizimista,
+					:profissao,
+					:naturalidade,
+					:status,
+					NOW()
 				)";
 
 		$stmt = $this->db->prepare($sql);
 		return $stmt->execute($data);
 	}
 
+    // MODIFICAÇÃO 2: Substituir por completo o método update() para persistir as alterações dos 4 campos
 	public function update($id, $igrejaId, $data)
 	{
-		// Adicionado membro_rg e membro_cpf no SET
 		$sql = "UPDATE membros SET
 					membro_nome = :nome,
 					membro_rg = :rg,
@@ -115,24 +125,32 @@ class Membro
 					membro_telefone = :telefone,
 					membro_data_nascimento = :nascimento,
 					membro_data_batismo = :batismo,
-					membro_data_casamento = :data_casamento
+					membro_data_profissao_fe = :data_profissao_fe,
+					membro_data_casamento = :data_casamento,
+					membro_dizimista = :dizimista,
+					membro_profissao = :profissao,
+					membro_naturalidade = :naturalidade
 				WHERE membro_id = :id AND membro_igreja_id = :igreja_id";
 
 		try {
 			$stmt = $this->db->prepare($sql);
 			return $stmt->execute([
-				'nome'           => $data['nome'],
-				'rg'             => $data['rg'] ?? null,
-				'cpf'            => $data['cpf'] ?? null,
-				'genero'         => $data['genero'] ?? null,
-				'estado_civil'   => $data['estado_civil'] ?? null,
-				'email'          => $data['email'],
-				'telefone'       => $data['telefone'],
-				'nascimento'     => $data['data_nascimento'], // Chave vinda do Controller
-				'batismo'        => $data['data_batismo'],    // Chave vinda do Controller
-				'data_casamento' => $data['data_casamento'],
-				'id'             => (int)$id,
-				'igreja_id'      => (int)$igrejaId
+				'nome'              => $data['nome'],
+				'rg'                => $data['rg'] ?? null,
+				'cpf'               => $data['cpf'] ?? null,
+				'genero'            => $data['genero'] ?? null,
+				'estado_civil'      => $data['estado_civil'] ?? null,
+				'email'             => $data['email'],
+				'telefone'          => $data['telefone'],
+				'nascimento'        => $data['data_nascimento'],
+				'batismo'           => $data['data_batismo'],
+				'data_profissao_fe' => $data['data_profissao_fe'],
+				'data_casamento'    => $data['data_casamento'],
+				'dizimista'         => (int)$data['dizimista'],
+				'profissao'         => $data['profissao'] ?? null,
+				'naturalidade'      => $data['naturalidade'] ?? null,
+				'id'                => (int)$id,
+				'igreja_id'         => (int)$igrejaId
 			]);
 		} catch (\PDOException $e) {
 			error_log("Erro ao atualizar membro: " . $e->getMessage());

@@ -72,13 +72,37 @@
 				</div>
 
 				<div class="row mb-3">
-					<div class="col-6">
+					<div class="col-4">
 						<label class="form-label small fw-bold">Nascimento</label>
 						<input type="date" name="data_nasc" class="form-control shadow-sm" required>
 					</div>
-					<div class="col-6">
-						<label class="form-label small fw-bold">Batismo</label>
+					<div class="col-4">
+						<label class="form-label small fw-bold">Batismo <span class="text-muted fw-normal">(Infantil/Adulto)</span></label>
 						<input type="date" name="data_batismo" class="form-control shadow-sm">
+					</div>
+					<div class="col-4">
+						<label class="form-label small fw-bold text-success">Profissão de Fé</label>
+						<input type="date" name="data_profissao_fe" class="form-control shadow-sm border-success">
+					</div>
+				</div>
+
+				<div class="row mb-3">
+					<div class="col-6">
+						<label class="form-label small fw-bold">Profissão</label>
+						<input type="text" name="profissao" class="form-control shadow-sm" placeholder="Ex: Administrador, Autônomo...">
+					</div>
+					<div class="col-6">
+						<label class="form-label small fw-bold">Naturalidade <span class="text-muted fw-normal">(Cidade/UF onde nasceu)</span></label>
+						<input type="text" name="naturalidade" class="form-control shadow-sm" placeholder="Ex: Guarulhos/SP">
+					</div>
+				</div>
+
+				<div class="mb-3 p-3 rounded border bg-white shadow-sm">
+					<div class="form-check form-switch m-0">
+						<input class="form-check-input border-primary" type="checkbox" name="dizimista" id="dizimista" value="1">
+						<label class="form-check-label fw-bold text-dark" for="dizimista" style="cursor: pointer;">
+							<i class="fa fa-hand-holding-usd text-success me-1"></i> Você é contribuinte/dizimista fiel nesta igreja local?
+						</label>
 					</div>
 				</div>
 

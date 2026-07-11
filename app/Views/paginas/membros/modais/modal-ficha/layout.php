@@ -32,20 +32,27 @@
                 </div>
 
                 <div class="col-md-9 ps-4">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h4 class="mb-0 text-primary fw-bold"><?= htmlspecialchars($membro['membro_nome']) ?></h4>
-                            <span class="badge bg-secondary text-white mt-1 mb-2 shadow-sm" style="font-size: 0.85rem; letter-spacing: 1px;">
-                                <i class="bi bi-hash me-1"></i>MATRÍCULA:
-                                <?php
-                                    $reg = $membro['membro_registro_interno'];
-                                    echo (strlen($reg) > 8) ? substr($reg, 0, -10) . " / " . substr($reg, -10, 4) . " / " . substr($reg, -6, 2) . " / " . substr($reg, -4) : $reg;
-                                ?>
-                            </span>
-                        </div>
-                        <span class="badge rounded-pill <?= $membro['membro_status'] == 'Ativo' ? 'bg-success' : 'bg-danger' ?>">
-                            <?= strtoupper($membro['membro_status']) ?>
-                        </span>
+					<div class="d-flex justify-content-between align-items-start">
+						<div>
+							<h4 class="mb-0 text-primary fw-bold"><?= htmlspecialchars($membro['membro_nome']) ?></h4>
+							<span class="badge bg-secondary text-white mt-1 mb-2 shadow-sm" style="font-size: 0.85rem; letter-spacing: 1px;">
+								<i class="bi bi-hash me-1"></i>MATRÍCULA:
+								<?php
+									$reg = $membro['membro_registro_interno'];
+									echo (strlen($reg) > 8) ? substr($reg, 0, -10) . " / " . substr($reg, -10, 4) . " / " . substr($reg, -6, 2) . " / " . substr($reg, -4) : $reg;
+								?>
+							</span>
+						</div>
+						<div class="d-flex flex-column align-items-end gap-1">
+							<span class="badge rounded-pill <?= $membro['membro_status'] == 'Ativo' ? 'bg-success' : 'bg-danger' ?>">
+								<?= strtoupper($membro['membro_status']) ?>
+							</span>
+							<?php if(isset($membro['membro_dizimista']) && $membro['membro_dizimista'] == 1): ?>
+								<span class="badge bg-light text-success border border-success rounded-pill fw-bold" style="font-size: 0.7rem;">
+									<i class="bi bi-cash-coin me-1"></i>DIZIMISTA
+								</span>
+							<?php endif; ?>
+						</div>
                     </div>
 
 					<div class="row small mt-3">
@@ -53,14 +60,14 @@
 							<label class="fw-bold text-muted d-block small">
 								<i class="bi bi-envelope-at me-1"></i> E-MAIL
 							</label>
-							<span class="text-dark"><?= $membro['membro_email'] ?: '---' ?></span>
+							<span class="text-dark"><?= htmlspecialchars($membro['membro_email'] ?? '---') ?></span>
 						</div>
 
 						<div class="col-6 mb-2">
 							<label class="fw-bold text-muted d-block small">
 								<i class="bi bi-whatsapp me-1"></i> TELEFONE
 							</label>
-							<span class="text-dark"><?= $membro['membro_telefone'] ?: '---' ?></span>
+							<span class="text-dark"><?= htmlspecialchars($membro['membro_telefone'] ?? '---') ?></span>
 						</div>
 
 						<div class="col-6 mb-2">
@@ -72,9 +79,23 @@
 
 						<div class="col-6 mb-2">
 							<label class="fw-bold text-muted d-block small">
-								<i class="bi bi-calendar me-1"></i> DATA DE BATISMO
+								<i class="bi bi-geo-fill me-1"></i> NATURALIDADE
+							</label>
+							<span class="text-dark text-uppercase"><?= htmlspecialchars($membro['membro_naturalidade'] ?? '---') ?></span>
+						</div>
+
+						<div class="col-6 mb-2">
+							<label class="fw-bold text-muted d-block small">
+								<i class="bi bi-droplet me-1"></i> DATA DE BATISMO
 							</label>
 							<span class="text-dark"><?= !empty($membro['membro_data_batismo']) ? date('d/m/Y', strtotime($membro['membro_data_batismo'])) : 'Não Informado' ?></span>
+						</div>
+
+						<div class="col-6 mb-2">
+							<label class="fw-bold text-muted d-block small text-success">
+								<i class="bi bi-patch-check me-1"></i> PROFISSÃO DE FÉ
+							</label>
+							<span class="text-dark fw-bold"><?= !empty($membro['membro_data_profissao_fe']) ? date('d/m/Y', strtotime($membro['membro_data_profissao_fe'])) : 'Não Informada' ?></span>
 						</div>
 
 						<div class="col-6 mb-2">
@@ -91,9 +112,16 @@
 							<span class="text-dark"><?= $membro['membro_estado_civil'] ?: '---' ?></span>
 						</div>
 
-						<div class="col-12 mb-2">
+						<div class="col-6 mb-2">
 							<label class="fw-bold text-muted d-block small">
-								<i class="bi bi-briefcase me-1"></i> CARGO / FUNÇÃO
+								<i class="bi bi-briefcase me-1"></i> PROFISSÃO
+							</label>
+							<span class="text-dark text-uppercase"><?= htmlspecialchars($membro['membro_profissao'] ?? 'Não Informada') ?></span>
+						</div>
+
+						<div class="col-6 mb-2">
+							<label class="fw-bold text-muted d-block small">
+								<i class="bi bi-person-badge me-1"></i> CARGO / FUNÇÃO
 							</label>
 							<span class="text-primary fw-bold text-uppercase">
 								<?= htmlspecialchars($membro['membro_cargo'] ?? 'Membro Comum') ?>

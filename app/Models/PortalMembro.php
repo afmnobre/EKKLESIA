@@ -11,10 +11,12 @@ class PortalMembro {
         $this->db = Database::getInstance();
     }
 
+// Arquivo: PortalMembro.php
+// Linha: Substitua por completo o método registrarPendente()
+
 	public function registrarPendente($dados) {
 		try {
-			// 1. Inserção na tabela de Membros
-			// Adicionada a coluna membro_data_casamento e corrigida a ordem para garantir membro_data_batismo
+			// 1. Inserção na tabela de Membros com as 4 novas colunas mapeadas
 			$sqlMembro = "INSERT INTO membros (
 				membro_igreja_id,
 				membro_nome,
@@ -27,13 +29,17 @@ class PortalMembro {
 				membro_senha,
 				membro_telefone,
 				membro_data_batismo,
+				membro_data_profissao_fe,
 				membro_data_casamento,
 				membro_status,
+				membro_dizimista,
+				membro_profissao,
+				membro_naturalidade,
 				membro_data_criacao,
 				membro_aceite_lgpd,
 				membro_data_aceite,
 				membro_ip_aceite
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', NOW(), ?, ?, ?)";
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', ?, ?, ?, NOW(), ?, ?, ?)";
 
 			$stmt = $this->db->prepare($sqlMembro);
 
@@ -48,8 +54,12 @@ class PortalMembro {
 				$dados['email'],
 				$dados['senha'],
 				$dados['telefone'],
-				!empty($dados['data_batismo']) ? $dados['data_batismo'] : null,   // CORREÇÃO DATA BATISMO
-				!empty($dados['data_casamento']) ? $dados['data_casamento'] : null, // CORREÇÃO DATA CASAMENTO
+				!empty($dados['data_batismo']) ? $dados['data_batismo'] : null,
+				!empty($dados['data_profissao_fe']) ? $dados['data_profissao_fe'] : null,
+				!empty($dados['data_casamento']) ? $dados['data_casamento'] : null,
+				$dados['dizimista'],
+				$dados['profissao'],
+				$dados['naturalidade'],
 				$dados['aceite_lgpd'],
 				$dados['data_aceite_lgpd'],
 				$dados['ip_aceite_lgpd']
@@ -59,7 +69,6 @@ class PortalMembro {
 
 			if ($membroId) {
 				// 2. Inserção na tabela de Endereços
-				// Adicionado membro_endereco_complemento e membro_endereco_igreja_id
 				$sqlEnd = "INSERT INTO membros_enderecos (
 					membro_endereco_membro_id,
 					membro_endereco_igreja_id,
@@ -75,10 +84,10 @@ class PortalMembro {
 				$stmtEnd = $this->db->prepare($sqlEnd);
 				$stmtEnd->execute([
 					$membroId,
-					$dados['igreja_id'],            // CORREÇÃO IGREJA_ID NO ENDEREÇO
+					$dados['igreja_id'],
 					$dados['rua'],
 					$dados['numero'],
-					$dados['complemento'] ?? null,  // CORREÇÃO COMPLEMENTO
+					$dados['complemento'] ?? null,
 					$dados['bairro'],
 					$dados['cidade'],
 					$dados['estado'],
@@ -91,7 +100,6 @@ class PortalMembro {
 			return false;
 		} catch (\PDOException $e) {
 			error_log("ERRO BANCO EKKLESIA: " . $e->getMessage());
-			// die($e->getMessage()); // Descomente para ver o erro na tela se falhar
 			return false;
 		}
 	}

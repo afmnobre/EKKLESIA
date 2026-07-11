@@ -333,6 +333,8 @@ class MembrosController extends Controller
 
     public function create() { $this->view('membros/cadastrar'); }
 
+    // Arquivo: MembroController.php
+    // MODIFICAÇÃO 1: Atualizar o array do método store()
 	public function store()
 	{
 		$idIgreja = $_SESSION['usuario_igreja_id'] ?? die("Sessão expirada");
@@ -341,19 +343,23 @@ class MembrosController extends Controller
 		$registroInterno = $idIgreja . date('Ym') . str_pad($proximoId, 4, '0', STR_PAD_LEFT);
 
 		$data = [
-			'igreja_id'        => $idIgreja,
-			'registro_interno' => $registroInterno,
-			'nome'             => strtoupper(trim($_POST['nome'])), // Garante UPPERCASE no PHP
-			'rg'               => $_POST['rg'] ?? null,            // Novo campo
-			'cpf'              => $_POST['cpf'] ?? null,           // Novo campo
-			'nascimento'       => $_POST['data_nascimento'] ?: null,
-			'genero'           => $_POST['genero'] ?? null,
-			'estado_civil'     => $_POST['estado_civil'] ?? null,
-			'email'            => $_POST['email'] ?? null,
-			'telefone'         => $_POST['telefone'] ?? null,
-			'batismo'          => $_POST['data_batismo'] ?: null,
-			'data_casamento'   => $_POST['data_casamento'] ?: null,
-			'status'           => 'Ativo'
+			'igreja_id'         => $idIgreja,
+			'registro_interno'  => $registroInterno,
+			'nome'              => strtoupper(trim($_POST['nome'])),
+			'rg'                => $_POST['rg'] ?? null,
+			'cpf'               => $_POST['cpf'] ?? null,
+			'nascimento'        => $_POST['data_nascimento'] ?: null,
+			'genero'            => $_POST['genero'] ?? null,
+			'estado_civil'      => $_POST['estado_civil'] ?? null,
+			'email'             => $_POST['email'] ?? null,
+			'telefone'          => $_POST['telefone'] ?? null,
+			'batismo'           => $_POST['data_batismo'] ?: null,
+			'data_profissao_fe' => $_POST['data_profissao_fe'] ?: null,
+			'data_casamento'    => $_POST['data_casamento'] ?: null,
+			'dizimista'         => isset($_POST['dizimista']) ? 1 : 0,
+			'profissao'         => !empty($_POST['profissao']) ? strtoupper(trim($_POST['profissao'])) : null,
+			'naturalidade'      => !empty($_POST['naturalidade']) ? strtoupper(trim($_POST['naturalidade'])) : null,
+			'status'            => 'Ativo'
 		];
 
 		if ($this->model->insert($data)) {
@@ -372,21 +378,26 @@ class MembrosController extends Controller
         $this->view('membros/cadastrar', ['membro' => $membro]);
     }
 
+    // MODIFICAÇÃO 2: Atualizar o array do método update()
 	public function update($id)
 	{
 		$idIgreja = $_SESSION['usuario_igreja_id'] ?? die("Sessão expirada");
 
 		$dados = [
-			'nome'            => strtoupper(trim($_POST['nome'])), // Força Uppercase no servidor
-			'rg'              => $_POST['rg'] ?? null,            // Adicionado
-			'cpf'             => $_POST['cpf'] ?? null,           // Adicionado
-			'genero'          => $_POST['genero'] ?? null,
-			'estado_civil'    => $_POST['estado_civil'] ?? null,
-			'email'           => $_POST['email'] ?? null,
-			'telefone'        => $_POST['telefone'] ?? null,
-			'data_nascimento' => $_POST['data_nascimento'] ?: null, // Operador ?: garante NULL se string vazia
-			'data_batismo'    => $_POST['data_batismo'] ?: null,    // Operador ?: garante NULL se string vazia
-			'data_casamento'  => $_POST['data_casamento'] ?: null     // Operador ?: garante NULL se string vazia
+			'nome'              => strtoupper(trim($_POST['nome'])),
+			'rg'                => $_POST['rg'] ?? null,
+			'cpf'               => $_POST['cpf'] ?? null,
+			'genero'            => $_POST['genero'] ?? null,
+			'estado_civil'      => $_POST['estado_civil'] ?? null,
+			'email'             => $_POST['email'] ?? null,
+			'telefone'          => $_POST['telefone'] ?? null,
+			'data_nascimento'   => $_POST['data_nascimento'] ?: null,
+			'data_batismo'      => $_POST['data_batismo'] ?: null,
+			'data_profissao_fe' => $_POST['data_profissao_fe'] ?: null,
+			'data_casamento'    => $_POST['data_casamento'] ?: null,
+			'dizimista'         => isset($_POST['dizimista']) ? 1 : 0,
+			'profissao'         => !empty($_POST['profissao']) ? strtoupper(trim($_POST['profissao'])) : null,
+			'naturalidade'      => !empty($_POST['naturalidade']) ? strtoupper(trim($_POST['naturalidade'])) : null
 		];
 
 		if ($this->model->update($id, $idIgreja, $dados)) {
@@ -395,7 +406,7 @@ class MembrosController extends Controller
 			header('Location: ' . url('membros/edit/' . $id . '?erro=1'));
 		}
 		exit;
-	}
+    }
 
     public function updateCargos()
     {

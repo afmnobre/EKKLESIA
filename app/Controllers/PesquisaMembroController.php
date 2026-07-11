@@ -50,9 +50,11 @@ class PesquisaMembroController extends Controller
 
 		$membros = $this->model->pesquisar($igrejaId, $filtros);
 
+// Arquivo: App/Controllers/PesquisaMembroController.php
+// Linha: Dentro do método exportarExcel()
+
 		$filename = "Relatorio_Membros_" . date('d-m-Y_H-i') . ".xls";
 
-		// Configuração do Header para Excel (Padrão que funcionou no seu financeiro)
 		header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
 		header("Content-Disposition: attachment; filename=\"$filename\"");
 		header("Pragma: no-cache");
@@ -61,7 +63,7 @@ class PesquisaMembroController extends Controller
 		echo "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>";
 
 		echo "<table border='1'>";
-		echo "<tr><th colspan='8' style='background-color:#0d6efd; color:white; font-size:16px;'>RELATÓRIO DE MEMBROS FILTRADOS</th></tr>";
+		echo "<tr><th colspan='12' style='background-color:#0d6efd; color:white; font-size:16px;'>RELATÓRIO DE MEMBROS FILTRADOS</th></tr>";
 		echo "<tr style='background-color:#f8f9fa;'>
 				<th>Nome</th>
 				<th>ROL</th>
@@ -71,6 +73,10 @@ class PesquisaMembroController extends Controller
 				<th>Classe EBD</th>
 				<th>Telefone</th>
 				<th>Cidade/Bairro</th>
+				<th>Profissão</th>
+				<th>Naturalidade</th>
+				<th>Dizimista</th>
+				<th>Profissão de Fé</th>
 			  </tr>";
 
 		if (!empty($membros)) {
@@ -79,6 +85,8 @@ class PesquisaMembroController extends Controller
 				$sociedades = $m['sociedades_nomes'] ?? 'Sem Sociedade';
 				$classes = $m['classes_nomes'] ?? 'Não Matriculado';
 				$local = $m['membro_endereco_cidade'] . " / " . $m['membro_endereco_bairro'];
+				$dizimista = (isset($m['membro_dizimista']) && $m['membro_dizimista'] == 1) ? 'Sim' : 'Não';
+				$dataProfissao = !empty($m['membro_data_profissao_fe']) ? date('d/m/Y', strtotime($m['membro_data_profissao_fe'])) : '---';
 
 				echo "<tr>
 						<td>{$m['membro_nome']}</td>
@@ -89,10 +97,14 @@ class PesquisaMembroController extends Controller
 						<td><small>$classes</small></td>
 						<td>{$m['membro_telefone']}</td>
 						<td>$local</td>
+						<td>{$m['membro_profissao']}</td>
+						<td>{$m['membro_naturalidade']}</td>
+						<td align='center'>$dizimista</td>
+						<td align='center'>$dataProfissao</td>
 					  </tr>";
 			}
 		} else {
-			echo "<tr><td colspan='8' align='center'>Nenhum membro encontrado.</td></tr>";
+			echo "<tr><td colspan='12' align='center'>Nenhum membro encontrado.</td></tr>";
 		}
 		echo "</table>";
 		exit;

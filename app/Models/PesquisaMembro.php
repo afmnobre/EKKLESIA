@@ -100,6 +100,31 @@ class PesquisaMembro
 			}
 		}
 
+        // Arquivo: App/Models/PesquisaMembro.php
+        // Linha: Dentro do método pesquisar(), após os filtros de intervalos de datas existentes (~linha 125)
+        // --- NOVOS FILTROS ADICIONADOS ---
+        if (!empty($filtros['profissao'])) {
+            $sql .= " AND m.membro_profissao LIKE :profissao";
+            $params[':profissao'] = '%' . $filtros['profissao'] . '%';
+        }
+        if (!empty($filtros['naturalidade'])) {
+            $sql .= " AND m.membro_naturalidade LIKE :naturalidade";
+            $params[':naturalidade'] = '%' . $filtros['naturalidade'] . '%';
+        }
+        if (isset($filtros['dizimista']) && $filtros['dizimista'] !== '') {
+            $sql .= " AND m.membro_dizimista = :dizimista";
+            $params[':dizimista'] = (int)$filtros['dizimista'];
+        }
+        if (!empty($filtros['prof_ini'])) {
+            $sql .= " AND m.membro_data_profissao_fe >= :prof_ini";
+            $params[':prof_ini'] = $filtros['prof_ini'];
+        }
+        if (!empty($filtros['prof_fim'])) {
+            $sql .= " AND m.membro_data_profissao_fe <= :prof_fim";
+            $params[':prof_fim'] = $filtros['prof_fim'];
+        }
+
+
         // --- INTERVALOS DE DATAS ---
         if (!empty($filtros['nasc_ini'])) {
             $sql .= " AND m.membro_data_nascimento >= :nasc_ini";
