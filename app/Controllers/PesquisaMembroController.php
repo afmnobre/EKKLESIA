@@ -23,13 +23,15 @@ class PesquisaMembroController extends Controller
 		$membros = $this->model->pesquisar($igrejaId, $filtros);
 
 		$dados = [
-			'membros'      => $membros,
-			'totalMembros' => count($membros), // Contagem dos filtrados
-			'sociedades'   => $this->model->getSociedades($igrejaId),
-			'cargos'       => $this->model->getCargos(),
-			'classes'      => $this->model->getClassesEBD($igrejaId),
-			'cidades'      => $this->model->getCidadesCadastradas($igrejaId),
-			'filtros'      => $filtros
+			'membros'       => $membros,
+			'totalMembros'  => count($membros), // Contagem dos filtrados
+			'sociedades'    => $this->model->getSociedades($igrejaId),
+			'cargos'        => $this->model->getCargos(),
+			'classes'       => $this->model->getClassesEBD($igrejaId),
+            'cidades'       => $this->model->getCidadesCadastradas($igrejaId),
+            'profissoes'    => $this->model->getProfissoesCadastradas($igrejaId),    // <- Linha Adicionada
+			'naturalidades' => $this->model->getNaturalidadesCadastradas($igrejaId),
+			'filtros'       => $filtros
 		];
 
 		$this->view('pesquisas/membros', $dados);
@@ -61,9 +63,8 @@ class PesquisaMembroController extends Controller
 		header("Expires: 0");
 
 		echo "<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>";
-
 		echo "<table border='1'>";
-		echo "<tr><th colspan='12' style='background-color:#0d6efd; color:white; font-size:16px;'>RELATÓRIO DE MEMBROS FILTRADOS</th></tr>";
+		echo "<tr><th colspan='13' style='background-color:#0d6efd; color:white; font-size:16px;'>RELATÓRIO DE MEMBROS FILTRADOS</th></tr>";
 		echo "<tr style='background-color:#f8f9fa;'>
 				<th>Nome</th>
 				<th>ROL</th>
@@ -75,6 +76,7 @@ class PesquisaMembroController extends Controller
 				<th>Cidade/Bairro</th>
 				<th>Profissão</th>
 				<th>Naturalidade</th>
+				<th>Escolaridade</th>
 				<th>Dizimista</th>
 				<th>Profissão de Fé</th>
 			  </tr>";
@@ -87,6 +89,7 @@ class PesquisaMembroController extends Controller
 				$local = $m['membro_endereco_cidade'] . " / " . $m['membro_endereco_bairro'];
 				$dizimista = (isset($m['membro_dizimista']) && $m['membro_dizimista'] == 1) ? 'Sim' : 'Não';
 				$dataProfissao = !empty($m['membro_data_profissao_fe']) ? date('d/m/Y', strtotime($m['membro_data_profissao_fe'])) : '---';
+				$escolaridade = $m['membro_escolaridade'] ?? 'Não Informado';
 
 				echo "<tr>
 						<td>{$m['membro_nome']}</td>
@@ -99,12 +102,13 @@ class PesquisaMembroController extends Controller
 						<td>$local</td>
 						<td>{$m['membro_profissao']}</td>
 						<td>{$m['membro_naturalidade']}</td>
+						<td>$escolaridade</td>
 						<td align='center'>$dizimista</td>
 						<td align='center'>$dataProfissao</td>
 					  </tr>";
 			}
 		} else {
-			echo "<tr><td colspan='12' align='center'>Nenhum membro encontrado.</td></tr>";
+			echo "<tr><td colspan='13' align='center'>Nenhum membro encontrado.</td></tr>";
 		}
 		echo "</table>";
 		exit;

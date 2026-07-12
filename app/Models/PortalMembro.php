@@ -35,11 +35,12 @@ class PortalMembro {
 				membro_dizimista,
 				membro_profissao,
 				membro_naturalidade,
+				membro_escolaridade,
 				membro_data_criacao,
 				membro_aceite_lgpd,
 				membro_data_aceite,
 				membro_ip_aceite
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', ?, ?, ?, NOW(), ?, ?, ?)";
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', ?, ?, ?, ?, NOW(), ?, ?, ?)";
 
 			$stmt = $this->db->prepare($sqlMembro);
 
@@ -60,6 +61,7 @@ class PortalMembro {
 				$dados['dizimista'],
 				$dados['profissao'],
 				$dados['naturalidade'],
+				$dados['escolaridade'],
 				$dados['aceite_lgpd'],
 				$dados['data_aceite_lgpd'],
 				$dados['ip_aceite_lgpd']

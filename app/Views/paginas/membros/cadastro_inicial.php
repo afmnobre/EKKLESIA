@@ -97,6 +97,23 @@
 					</div>
 				</div>
 
+				<div class="mb-3">
+					<label class="form-label small fw-bold">Escolaridade</label>
+					<select name="escolaridade" class="form-select shadow-sm" required>
+						<option value="" selected disabled>Selecione sua escolaridade...</option>
+						<option value="Ensino Fundamental Incompleto">Ensino Fundamental Incompleto</option>
+						<option value="Ensino Fundamental Completo">Ensino Fundamental Completo</option>
+						<option value="Ensino Médio Incompleto">Ensino Médio Incompleto</option>
+						<option value="Ensino Médio Completo">Ensino Médio Completo</option>
+						<option value="Ensino Técnico">Ensino Técnico</option>
+						<option value="Ensino Superior Incompleto">Ensino Superior Incompleto</option>
+						<option value="Ensino Superior Completo">Ensino Superior Completo</option>
+						<option value="Pós-Graduação / Especialização">Pós-Graduação / Especialização</option>
+						<option value="Mestrado">Mestrado</option>
+						<option value="Doutorado">Doutorado</option>
+					</select>
+				</div>
+
 				<div class="mb-3 p-3 rounded border bg-white shadow-sm">
 					<div class="form-check form-switch m-0">
 						<input class="form-check-input border-primary" type="checkbox" name="dizimista" id="dizimista" value="1">

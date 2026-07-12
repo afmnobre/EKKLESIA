@@ -101,15 +101,19 @@ class PesquisaMembro
 		}
 
         // Arquivo: App/Models/PesquisaMembro.php
-        // Linha: Dentro do método pesquisar(), após os filtros de intervalos de datas existentes (~linha 125)
-        // --- NOVOS FILTROS ADICIONADOS ---
+        // Linha: Dentro do método pesquisar(), altere as regras de profissão e naturalidade para '='
+
         if (!empty($filtros['profissao'])) {
-            $sql .= " AND m.membro_profissao LIKE :profissao";
-            $params[':profissao'] = '%' . $filtros['profissao'] . '%';
+            $sql .= " AND m.membro_profissao = :profissao"; // Alterado de LIKE para =
+            $params[':profissao'] = $filtros['profissao'];
         }
         if (!empty($filtros['naturalidade'])) {
-            $sql .= " AND m.membro_naturalidade LIKE :naturalidade";
-            $params[':naturalidade'] = '%' . $filtros['naturalidade'] . '%';
+            $sql .= " AND m.membro_naturalidade = :naturalidade"; // Alterado de LIKE para =
+            $params[':naturalidade'] = $filtros['naturalidade'];
+        }
+        if (!empty($filtros['escolaridade'])) {
+            $sql .= " AND m.membro_escolaridade = :escolaridade";
+            $params[':escolaridade'] = $filtros['escolaridade'];
         }
         if (isset($filtros['dizimista']) && $filtros['dizimista'] !== '') {
             $sql .= " AND m.membro_dizimista = :dizimista";
@@ -157,6 +161,32 @@ class PesquisaMembro
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+	public function getProfissoesCadastradas($igrejaId)
+	{
+		$sql = "SELECT DISTINCT membro_profissao
+				FROM membros
+				WHERE membro_igreja_id = :igreja_id
+				  AND membro_profissao IS NOT NULL
+				  AND membro_profissao != ''
+				ORDER BY membro_profissao ASC";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([':igreja_id' => $igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_COLUMN);
+	}
+
+	public function getNaturalidadesCadastradas($igrejaId)
+	{
+		$sql = "SELECT DISTINCT membro_naturalidade
+				FROM membros
+				WHERE membro_igreja_id = :igreja_id
+				  AND membro_naturalidade IS NOT NULL
+				  AND membro_naturalidade != ''
+				ORDER BY membro_naturalidade ASC";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([':igreja_id' => $igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_COLUMN);
+	}
 
     public function getSociedades($igrejaId) {
         $sql = "SELECT sociedade_id, sociedade_nome FROM sociedades WHERE sociedade_igreja_id = ? ORDER BY sociedade_nome ASC";

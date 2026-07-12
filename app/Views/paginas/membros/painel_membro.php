@@ -84,8 +84,15 @@
 					</form>
 
 					<div>
-						<h5 class="fw-bold mb-0 text-white">Olá, <?= explode(' ', $perfil['membro_nome'])[0] ?>!</h5>
-						<p class="small mb-0 opacity-75">
+						<div class="d-flex align-items-center gap-2 flex-wrap">
+							<h5 class="fw-bold mb-0 text-white">Olá, <?= explode(' ', $perfil['membro_nome'])[0] ?>!</h5>
+							<?php if (isset($perfil['membro_dizimista']) && $perfil['membro_dizimista'] == 1): ?>
+								<span class="badge bg-white text-success rounded-pill fw-bold" style="font-size: 0.6rem; letter-spacing: 0.5px; padding: 3px 8px;">
+									<i class="bi bi-cash-coin"></i> DIZIMISTA
+								</span>
+							<?php endif; ?>
+						</div>
+						<p class="small mb-0 opacity-75 mt-1">
 							<i class="bi bi-card-text me-1"></i> ROL: <?= $perfil['membro_registro_interno'] ?? 'Aguardando...' ?>
 						</p>
 					</div>
@@ -154,7 +161,7 @@
 						<p class="mb-0 text-dark"><?= $perfil['membro_genero'] ?: '---' ?> / <?= $perfil['membro_estado_civil'] ?: '---' ?></p>
 					</div>
 
-					<div class="col-md-4 border-bottom pb-2">
+					<div class="col-md-3 border-bottom pb-2">
 						<label class="form-label small fw-bold text-muted mb-0">Nascimento</label>
 						<p class="mb-0 text-dark">
 							<?= date('d/m/Y', strtotime($perfil['membro_data_nascimento'])) ?>
@@ -166,7 +173,7 @@
 							?>
 						</p>
 					</div>
-					<div class="col-md-4 border-bottom pb-2">
+					<div class="col-md-3 border-bottom pb-2">
 						<label class="form-label small fw-bold text-muted mb-0">Data de Batismo</label>
 						<p class="mb-0 text-dark">
 							<?php if(!empty($perfil['membro_data_batismo']) && $perfil['membro_data_batismo'] != '0000-00-00'): ?>
@@ -174,14 +181,29 @@
 								<?php
 									$bat = new DateTime($perfil['membro_data_batismo']);
 									$tempoBat = $hoje->diff($bat)->y;
-									echo " <span class='badge bg-info-subtle text-info fw-bold small' style='font-size:0.7rem;'>{$tempoBat}º ANO</span>";
+									echo " <span class='badge bg-info-subtle text-info fw-bold small' style='font-size:0.65rem;'>{$tempoBat}º ANO</span>";
 								?>
 							<?php else: ?>
 								---
 							<?php endif; ?>
 						</p>
 					</div>
-					<div class="col-md-4 border-bottom pb-2">
+					<div class="col-md-3 border-bottom pb-2">
+						<label class="form-label small fw-bold text-success mb-0">Profissão de Fé</label>
+						<p class="mb-0 text-dark">
+							<?php if(!empty($perfil['membro_data_profissao_fe']) && $perfil['membro_data_profissao_fe'] != '0000-00-00'): ?>
+								<?= date('d/m/Y', strtotime($perfil['membro_data_profissao_fe'])) ?>
+								<?php
+									$profFe = new DateTime($perfil['membro_data_profissao_fe']);
+									$tempoProfFe = $hoje->diff($profFe)->y;
+									echo " <span class='badge bg-success-subtle text-success fw-bold small' style='font-size:0.65rem;'>{$tempoProfFe}º ANO</span>";
+								?>
+							<?php else: ?>
+								---
+							<?php endif; ?>
+						</p>
+					</div>
+					<div class="col-md-3 border-bottom pb-2">
 						<label class="form-label small fw-bold text-muted mb-0">Data de Casamento</label>
 						<p class="mb-0 text-dark">
 							<?php if(!empty($perfil['membro_data_casamento']) && $perfil['membro_data_casamento'] != '0000-00-00'): ?>
@@ -189,7 +211,7 @@
 								<?php
 									$casam = new DateTime($perfil['membro_data_casamento']);
 									$tempoCasam = $hoje->diff($casam)->y;
-									echo " <span class='badge bg-danger-subtle text-danger fw-bold small' style='font-size:0.7rem;'>{$tempoCasam}º ANO</span>";
+									echo " <span class='badge bg-danger-subtle text-danger fw-bold small' style='font-size:0.65rem;'>{$tempoCasam}º ANO</span>";
 								?>
 							<?php else: ?>
 								---
@@ -204,6 +226,19 @@
 					<div class="col-md-6 border-bottom pb-2">
 						<label class="form-label small fw-bold text-muted mb-0">E-mail</label>
 						<p class="mb-0 text-dark"><?= $perfil['membro_email'] ?: 'Não informado' ?></p>
+					</div>
+
+					<div class="col-md-4 border-bottom pb-2">
+						<label class="form-label small fw-bold text-muted mb-0">Profissão</label>
+						<p class="mb-0 text-dark text-uppercase"><?= $perfil['membro_profissao'] ?: '---' ?></p>
+					</div>
+					<div class="col-md-4 border-bottom pb-2">
+						<label class="form-label small fw-bold text-muted mb-0">Naturalidade</label>
+						<p class="mb-0 text-dark text-uppercase"><?= $perfil['membro_naturalidade'] ?: '---' ?></p>
+					</div>
+					<div class="col-md-4 border-bottom pb-2">
+						<label class="form-label small fw-bold text-muted mb-0">Escolaridade</label>
+						<p class="mb-0 text-dark text-uppercase"><?= $perfil['membro_escolaridade'] ?: '---' ?></p>
 					</div>
 
 					<div class="col-12">

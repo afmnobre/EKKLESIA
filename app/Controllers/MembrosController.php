@@ -359,6 +359,7 @@ class MembrosController extends Controller
 			'dizimista'         => isset($_POST['dizimista']) ? 1 : 0,
 			'profissao'         => !empty($_POST['profissao']) ? strtoupper(trim($_POST['profissao'])) : null,
 			'naturalidade'      => !empty($_POST['naturalidade']) ? strtoupper(trim($_POST['naturalidade'])) : null,
+			'escolaridade'      => $_POST['escolaridade'] ?? null, // <- Linha Adicionada
 			'status'            => 'Ativo'
 		];
 
@@ -397,7 +398,8 @@ class MembrosController extends Controller
 			'data_casamento'    => $_POST['data_casamento'] ?: null,
 			'dizimista'         => isset($_POST['dizimista']) ? 1 : 0,
 			'profissao'         => !empty($_POST['profissao']) ? strtoupper(trim($_POST['profissao'])) : null,
-			'naturalidade'      => !empty($_POST['naturalidade']) ? strtoupper(trim($_POST['naturalidade'])) : null
+			'naturalidade'      => !empty($_POST['naturalidade']) ? strtoupper(trim($_POST['naturalidade'])) : null,
+			'escolaridade'      => $_POST['escolaridade'] ?? null // <- Linha Adicionada
 		];
 
 		if ($this->model->update($id, $idIgreja, $dados)) {

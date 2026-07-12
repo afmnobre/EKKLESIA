@@ -47,6 +47,7 @@ class PortalMembroController extends Controller {
             'data_profissao_fe' => $dataProfissaoFe, // ADICIONADO
             'profissao'    => !empty($_POST['profissao']) ? mb_strtoupper(trim($_POST['profissao'])) : null, // ADICIONADO
             'naturalidade' => !empty($_POST['naturalidade']) ? mb_strtoupper(trim($_POST['naturalidade'])) : null, // ADICIONADO
+            'escolaridade' => !empty($_POST['escolaridade']) ? mb_strtoupper(trim($_POST['escolaridade'])) : null, // LINHA ADICIONADA
             'dizimista'    => isset($_POST['dizimista']) ? 1 : 0, // ADICIONADO
             'telefone'     => $_POST['telefone'],
             'rua'          => $_POST['rua'],

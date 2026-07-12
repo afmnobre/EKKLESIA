@@ -19,40 +19,39 @@
             </div>
         </div>
 
-        <div class="card-body bg-light py-2">
+        <div class="card-body bg-light p-4">
             <form method="GET" action="<?= url('PesquisaMembro/index') ?>" id="formPesquisa">
-                <div class="row g-2 align-items-end">
 
-                    <div class="col-md-4">
-                        <label class="form-label mb-0 small fw-bold">Nome do Membro</label>
-                        <input type="text" name="nome" class="form-control form-control-sm" value="<?= $filtros['nome'] ?? '' ?>" placeholder="Nome ou ROL...">
+                <h6 class="text-secondary border-bottom pb-1 mb-3"><i class="bi bi-person me-1"></i> Dados Pessoais</h6>
+                <div class="row g-3 mb-4 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label mb-1 small fw-bold">Nome do Membro ou ROL</label>
+                        <input type="text" name="nome" class="form-control form-control-sm" value="<?= $filtros['nome'] ?? '' ?>" placeholder="Digite o nome ou número do registro...">
                     </div>
 
-                    <div class="col-md-2">
-                        <label class="form-label mb-0 small fw-bold">Gênero</label>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1 small fw-bold">Gênero</label>
                         <select name="genero" class="form-select form-select-sm">
                             <option value="">Ambos</option>
-                            <option value="Masculino" <?= ($filtros['genero'] ?? '') == 'Masculino' ? 'selected' : '' ?>>Masc.</option>
-                            <option value="Feminino" <?= ($filtros['genero'] ?? '') == 'Feminino' ? 'selected' : '' ?>>Fem.</option>
+                            <option value="Masculino" <?= ($filtros['genero'] ?? '') == 'Masculino' ? 'selected' : '' ?>>Masculino</option>
+                            <option value="Feminino" <?= ($filtros['genero'] ?? '') == 'Feminino' ? 'selected' : '' ?>>Feminino</option>
                         </select>
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label mb-0 small fw-bold text-success">Nascimento (Início/Fim)</label>
+                        <label class="form-label mb-1 small fw-bold text-success">Período de Nascimento</label>
                         <div class="input-group input-group-sm">
                             <input type="date" name="nasc_ini" class="form-control" value="<?= $filtros['nasc_ini'] ?? '' ?>">
+                            <span class="input-group-text bg-white border-start-0 border-end-0 text-muted small">até</span>
                             <input type="date" name="nasc_fim" class="form-control" value="<?= $filtros['nasc_fim'] ?? '' ?>">
                         </div>
                     </div>
+                </div>
 
-                    <div class="col-md-2 d-grid">
-                        <button type="submit" class="btn btn-sm btn-ipb fw-bold shadow-sm">
-                            <i class="bi bi-filter me-1"></i> FILTRAR
-                        </button>
-                    </div>
-
+                <h6 class="text-secondary border-bottom pb-1 mb-3"><i class="bi bi-church me-1"></i> Dados Eclesiásticos</h6>
+                <div class="row g-3 mb-4 align-items-end">
                     <div class="col-md-3">
-                        <label class="form-label mb-0 small fw-bold text-ipb">Sociedade</label>
+                        <label class="form-label mb-1 small fw-bold text-ipb">Sociedade Interna</label>
                         <select name="sociedade_id" class="form-select form-select-sm border-ipb">
                             <option value="">Todas</option>
                             <option value="sem_sociedade" <?= ($filtros['sociedade_id'] ?? '') == 'sem_sociedade' ? 'selected' : '' ?>>-- SEM SOCIEDADE --</option>
@@ -63,7 +62,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <label class="form-label mb-0 small fw-bold text-danger">Classe EBD</label>
+                        <label class="form-label mb-1 small fw-bold text-danger">Classe EBD</label>
                         <select name="classe_id" class="form-select form-select-sm border-danger">
                             <option value="">Todas</option>
                             <option value="sem_classe" <?= ($filtros['classe_id'] ?? '') == 'sem_classe' ? 'selected' : '' ?>>-- NÃO MATRICULADO --</option>
@@ -74,7 +73,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <label class="form-label mb-0 small fw-bold text-primary">Cargo</label>
+                        <label class="form-label mb-1 small fw-bold text-primary">Cargo Oficinal</label>
                         <select name="cargo_id" class="form-select form-select-sm border-primary">
                             <option value="">Todos</option>
                             <option value="sem_cargo" <?= ($filtros['cargo_id'] ?? '') == 'sem_cargo' ? 'selected' : '' ?>>-- SEM CARGO --</option>
@@ -85,46 +84,91 @@
                     </div>
 
                     <div class="col-md-3">
-                        <label class="form-label mb-0 small fw-bold text-primary">Batismo (Período)</label>
+                        <label class="form-label mb-1 small fw-bold text-success">Dizimista / Contribuinte</label>
+                        <select name="dizimista" class="form-select form-select-sm border-success">
+                            <option value="">Todos</option>
+                            <option value="1" <?= ($filtros['dizimista'] ?? '') === '1' ? 'selected' : '' ?>>Sim</option>
+                            <option value="0" <?= ($filtros['dizimista'] ?? '') === '0' ? 'selected' : '' ?>>Não</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 small fw-bold text-primary">Data de Batismo (Período)</label>
                         <div class="input-group input-group-sm">
                             <input type="date" name="bat_ini" class="form-control border-primary" value="<?= $filtros['bat_ini'] ?? '' ?>">
+                            <span class="input-group-text bg-white border-primary text-muted small">até</span>
                             <input type="date" name="bat_fim" class="form-control border-primary" value="<?= $filtros['bat_fim'] ?? '' ?>">
                         </div>
                     </div>
 
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 small fw-bold text-success">Profissão de Fé (Período)</label>
+                        <div class="input-group input-group-sm">
+                            <input type="date" name="prof_ini" class="form-control border-success" value="<?= $filtros['prof_ini'] ?? '' ?>">
+                            <span class="input-group-text bg-white border-success text-muted small">até</span>
+                            <input type="date" name="prof_fim" class="form-control border-success" value="<?= $filtros['prof_fim'] ?? '' ?>">
+                        </div>
+                    </div>
 
-					<div class="col-md-3">
-						<label class="form-label mb-0 small fw-bold text-success">Profissão de Fé (Período)</label>
-						<div class="input-group input-group-sm">
-							<input type="date" name="prof_ini" class="form-control border-success" value="<?= $filtros['prof_ini'] ?? '' ?>">
-							<input type="date" name="prof_fim" class="form-control border-success" value="<?= $filtros['prof_fim'] ?? '' ?>">
-						</div>
-					</div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 small fw-bold text-secondary">Data de Cadastro (Período)</label>
+                        <div class="input-group input-group-sm">
+                            <input type="date" name="cad_ini" class="form-control" value="<?= $filtros['cad_ini'] ?? '' ?>">
+                            <span class="input-group-text bg-white text-muted small">até</span>
+                            <input type="date" name="cad_fim" class="form-control" value="<?= $filtros['cad_fim'] ?? '' ?>">
+                        </div>
+                    </div>
+                </div>
 
-					<div class="col-md-3">
-						<label class="form-label mb-0 small fw-bold">Profissão</label>
-						<input type="text" name="profissao" class="form-control form-control-sm" value="<?= $filtros['profissao'] ?? '' ?>" placeholder="Buscar por profissão...">
-					</div>
+                <h6 class="text-secondary border-bottom pb-1 mb-3"><i class="bi bi-briefcase me-1"></i> Histórico Profissional & Acadêmico</h6>
+                <div class="row g-3 mb-4 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 small fw-bold text-muted">Profissão</label>
+                        <select name="profissao" class="form-select form-select-sm">
+                            <option value="">Todas</option>
+                            <?php foreach($profissoes as $prof): ?>
+                                <option value="<?= htmlspecialchars($prof) ?>" <?= (isset($filtros['profissao']) && $filtros['profissao'] == $prof) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($prof) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-					<div class="col-md-3">
-						<label class="form-label mb-0 small fw-bold">Naturalidade</label>
-						<input type="text" name="naturalidade" class="form-control form-control-sm" value="<?= $filtros['naturalidade'] ?? '' ?>" placeholder="Cidade/UF natal...">
-					</div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 small fw-bold text-muted">Naturalidade</label>
+                        <select name="naturalidade" class="form-select form-select-sm">
+                            <option value="">Todas</option>
+                            <?php foreach($naturalidades as $nat): ?>
+                                <option value="<?= htmlspecialchars($nat) ?>" <?= (isset($filtros['naturalidade']) && $filtros['naturalidade'] == $nat) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($nat) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-					<div class="col-md-3">
-						<label class="form-label mb-0 small fw-bold text-success">Dizimista</label>
-						<select name="dizimista" class="form-select form-select-sm border-success">
-							<option value="">Todos</option>
-							<option value="1" <?= ($filtros['dizimista'] ?? '') === '1' ? 'selected' : '' ?>>Sim</option>
-							<option value="0" <?= ($filtros['dizimista'] ?? '') === '0' ? 'selected' : '' ?>>Não</option>
-						</select>
-					</div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 small fw-bold text-muted">Escolaridade</label>
+                        <select name="escolaridade" class="form-select form-select-sm">
+                            <option value="">Todas</option>
+                            <?php
+                                $niveisBusca = [
+                                    'Fundamental Incompleto', 'Fundamental Completo',
+                                    'Médio Incompleto', 'Médio Completo',
+                                    'Superior Incompleto', 'Superior Completo', 'Pós-Graduação', 'Mestrado', 'Doutorado'
+                                ];
+                                foreach($niveisBusca as $nivel):
+                                    $selected = (isset($filtros['escolaridade']) && $filtros['escolaridade'] == $nivel) ? 'selected' : '';
+                                    echo "<option value=\"$nivel\" $selected>$nivel</option>";
+                                endforeach;
+                            ?>
+                        </select>
+                    </div>
+                </div>
 
-
-
-
-                    <div class="col-md-3">
-                        <label class="form-label mb-0 small fw-bold">Cidade</label>
+                <h6 class="text-secondary border-bottom pb-1 mb-3"><i class="bi bi-geo-alt me-1"></i> Localização Residencial</h6>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 small fw-bold">Cidade</label>
                         <select name="cidade" id="select-cidade" class="form-select form-select-sm">
                             <option value="">Todas as Cidades</option>
                             <?php foreach($cidades as $c): ?>
@@ -133,21 +177,20 @@
                         </select>
                     </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label mb-0 small fw-bold">Bairro</label>
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 small fw-bold">Bairro</label>
                         <select name="bairro" id="select-bairro" class="form-select form-select-sm">
                             <option value="">Todos os Bairros</option>
                         </select>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label mb-0 small fw-bold text-secondary">Cadastro (Período)</label>
-                        <div class="input-group input-group-sm">
-                            <input type="date" name="cad_ini" class="form-control" value="<?= $filtros['cad_ini'] ?? '' ?>">
-                            <input type="date" name="cad_fim" class="form-control" value="<?= $filtros['cad_fim'] ?? '' ?>">
-                        </div>
+                    <div class="col-md-4 d-grid">
+                        <button type="submit" class="btn btn-sm btn-ipb fw-bold shadow-sm py-2">
+                            <i class="bi bi-filter-circle-fill me-1"></i> EXECUTAR FILTRAGEM AVANÇADA
+                        </button>
                     </div>
                 </div>
+
             </form>
         </div>
     </div>
@@ -162,26 +205,27 @@
                         <th>Eclesiástico (Cargo/Sociedade/EBD)</th>
                         <th>Contatos / Local</th>
                         <th>Datas Importantes</th>
+                        <th>Escolaridade</th>
                         <th class="text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($membros as $m): ?>
                     <tr>
-    <td class="ps-4">
-        <div class="fw-bold text-dark d-flex align-items-center gap-2">
-            <?= $m['membro_nome'] ?>
-            <?php if(isset($m['membro_dizimista']) && $m['membro_dizimista'] == 1): ?>
-                <span class="badge bg-light text-success border border-success rounded-pill fw-bold" style="font-size: 0.65rem;" title="Dizimista Ativo">
-                    <i class="bi bi-cash-coin"></i> DIZ.
-                </span>
-            <?php endif; ?>
-        </div>
-        <small class="text-muted"><i class="bi bi-hash"></i> ROL: <?= $m['membro_registro_interno'] ?></small>
-        <?php if(!empty($m['membro_profissao'])): ?>
-            <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-briefcase text-secondary"></i> <?= htmlspecialchars($m['membro_profissao']) ?></div>
-        <?php endif; ?>
-    </td>
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                                <?= $m['membro_nome'] ?>
+                                <?php if(isset($m['membro_dizimista']) && $m['membro_dizimista'] == 1): ?>
+                                    <span class="badge bg-light text-success border border-success rounded-pill fw-bold" style="font-size: 0.65rem;" title="Dizimista Ativo">
+                                        <i class="bi bi-cash-coin"></i> DIZ.
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                            <small class="text-muted"><i class="bi bi-hash"></i> ROL: <?= $m['membro_registro_interno'] ?></small>
+                                <?php if(!empty($m['membro_profissao'])): ?>
+                                    <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-briefcase text-secondary"></i> <?= htmlspecialchars($m['membro_profissao']) ?></div>
+                                <?php endif; ?>
+                        </td>
                         <td>
                             <div class="small mb-1">
                                 <span class="badge bg-dark text-ipb border border-ipb w-100 text-start">
@@ -205,11 +249,12 @@
                                 <i class="bi bi-geo-alt"></i> <?= $m['membro_endereco_cidade'] ?>
                             </div>
                         </td>
-    <td>
-        <div class="small"><strong>Nasc:</strong> <?= date('d/m/Y', strtotime($m['membro_data_nascimento'])) ?></div>
-        <div class="small text-muted"><strong>Bat:</strong> <?= $m['membro_data_batismo'] ? date('d/m/Y', strtotime($m['membro_data_batismo'])) : '---' ?></div>
-        <div class="small text-success"><strong>Prof. Fé:</strong> <?= !empty($m['membro_data_profissao_fe']) ? date('d/m/Y', strtotime($m['membro_data_profissao_fe'])) : '---' ?></div>
-    </td>
+                        <td>
+                            <div class="small"><strong>Nasc:</strong> <?= date('d/m/Y', strtotime($m['membro_data_nascimento'])) ?></div>
+                            <div class="small text-muted"><strong>Bat:</strong> <?= $m['membro_data_batismo'] ? date('d/m/Y', strtotime($m['membro_data_batismo'])) : '---' ?></div>
+                            <div class="small text-success"><strong>Prof. Fé:</strong> <?= !empty($m['membro_data_profissao_fe']) ? date('d/m/Y', strtotime($m['membro_data_profissao_fe'])) : '---' ?></div>
+                        </td>
+                        <td><?= htmlspecialchars($m['membro_escolaridade'] ?? '---') ?></td>
 						<td class="text-center">
 							<a href="<?= url('PesquisaMembro/perfil/' . $m['membro_id']) ?>"
 								class="btn btn-sm btn-outline-secondary"

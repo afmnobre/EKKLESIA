@@ -85,6 +85,7 @@ class Membro
 					membro_dizimista,
 					membro_profissao,
 					membro_naturalidade,
+					membro_escolaridade,
 					membro_status,
 					membro_data_criacao
 				) VALUES (
@@ -104,13 +105,14 @@ class Membro
 					:dizimista,
 					:profissao,
 					:naturalidade,
+					:escolaridade,
 					:status,
 					NOW()
 				)";
 
 		$stmt = $this->db->prepare($sql);
 		return $stmt->execute($data);
-	}
+    }
 
     // MODIFICAÇÃO 2: Substituir por completo o método update() para persistir as alterações dos 4 campos
 	public function update($id, $igrejaId, $data)
@@ -129,7 +131,8 @@ class Membro
 					membro_data_casamento = :data_casamento,
 					membro_dizimista = :dizimista,
 					membro_profissao = :profissao,
-					membro_naturalidade = :naturalidade
+					membro_naturalidade = :naturalidade,
+					membro_escolaridade = :escolaridade
 				WHERE membro_id = :id AND membro_igreja_id = :igreja_id";
 
 		try {
@@ -149,6 +152,7 @@ class Membro
 				'dizimista'         => (int)$data['dizimista'],
 				'profissao'         => $data['profissao'] ?? null,
 				'naturalidade'      => $data['naturalidade'] ?? null,
+				'escolaridade'      => $data['escolaridade'] ?? null,
 				'id'                => (int)$id,
 				'igreja_id'         => (int)$igrejaId
 			]);

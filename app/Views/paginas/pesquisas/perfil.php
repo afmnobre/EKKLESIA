@@ -57,17 +57,18 @@
                         </span>
                     </div>
                     <h5 class="fw-bold text-dark mb-1"><?= mb_strtoupper($membro['membro_nome']) ?></h5>
-<p class="text-muted small mb-0">Registro: #<?= $membro['membro_registro_interno'] ?></p>
+						<p class="text-muted small mb-0">Registro: #<?= $membro['membro_registro_interno'] ?></p>
 
-<?php if (isset($membro['membro_dizimista']) && $membro['membro_dizimista'] == 1): ?>
-    <div class="mt-2">
-        <span class="badge bg-light text-success border border-success px-3 py-1 rounded-pill fw-bold" style="font-size: 0.75rem;">
-            <i class="bi bi-cash-coin me-1"></i> DIZIMISTA ATIVO
-        </span>
-    </div>
-<?php endif; ?>
+						<?php if (isset($membro['membro_dizimista']) && $membro['membro_dizimista'] == 1): ?>
+							<div class="mt-2">
+								<span class="badge bg-light text-success border border-success px-3 py-1 rounded-pill fw-bold" style="font-size: 0.75rem;">
+									<i class="bi bi-cash-coin me-1"></i> DIZIMISTA ATIVO
+								</span>
+							</div>
+						<?php endif; ?>
 
-<div class="bg-light rounded-3 p-2 mt-3">
+						<div class="bg-light rounded-3 p-2 mt-3">
+
                         <small class="text-muted d-block">Cadastro realizado em:</small>
                         <strong class="small text-dark">
                             <?= !empty($membro['membro_data_criacao']) ? date('d/m/Y H:i', strtotime($membro['membro_data_criacao'])) : '---' ?>
@@ -133,8 +134,10 @@
 									<label class="text-muted small text-uppercase fw-bold">Naturalidade</label>
 									<p class="mb-0 border-bottom pb-1"><?= $membro['membro_naturalidade'] ?: '---' ?></p>
 								</div>
-
-
+								<div class="col-md-3">
+									<label class="text-muted small text-uppercase fw-bold">Escolaridade</label>
+									<p class="mb-0 border-bottom pb-1"><?= $membro['membro_escolaridade'] ?: '---' ?></p>
+								</div>
 
                                 <div class="col-12 mt-4">
                                     <h6 class="text-primary fw-bold mb-3 d-print-block"><i class="bi bi-geo-alt me-1"></i> Localização</h6>

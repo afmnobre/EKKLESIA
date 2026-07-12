@@ -107,18 +107,36 @@
                                 </div>
                             </div>
 
-							<div class="col-md-6">
+							<div class="col-md-4">
 								<label class="form-label fw-bold text-muted small text-uppercase">Profissão</label>
 								<input type="text" name="profissao" class="form-control form-control-lg text-uppercase-input"
 									   placeholder="EX: ENGENHEIRO, AUTÔNOMO"
-									   value="<?= $isEdit && isset($membro['membro_profissao']) ? htmlspecialchars(strtoupper($membro['membro_profissao'])) : '' ?>">
+									   value="<?= $isEdit ? htmlspecialchars(strtoupper($membro['membro_profissao'] ?? '')) : '' ?>">
 							</div>
 
-							<div class="col-md-6">
+							<div class="col-md-4">
 								<label class="form-label fw-bold text-muted small text-uppercase">Naturalidade</label>
 								<input type="text" name="naturalidade" class="form-control form-control-lg text-uppercase-input"
 									   placeholder="EX: SÃO PAULO/SP"
-									   value="<?= $isEdit && isset($membro['membro_naturalidade']) ? htmlspecialchars(strtoupper($membro['membro_naturalidade'])) : '' ?>">
+									   value="<?= $isEdit ? htmlspecialchars(strtoupper($membro['membro_naturalidade'] ?? '')) : '' ?>">
+							</div>
+
+							<div class="col-md-4">
+								<label class="form-label fw-bold text-muted small text-uppercase">Escolaridade</label>
+								<select name="escolaridade" class="form-select form-control-lg">
+									<option value="" disabled <?= !$isEdit ? 'selected' : '' ?>>Selecione...</option>
+									<?php
+										$niveis = [
+											'Fundamental Incompleto', 'Fundamental Completo',
+											'Médio Incompleto', 'Médio Completo',
+											'Superior Incompleto', 'Superior Completo', 'Pós-Graduação', 'Mestrado', 'Doutorado'
+										];
+										foreach($niveis as $nivel):
+											$selected = ($isEdit && isset($membro['membro_escolaridade']) && $membro['membro_escolaridade'] == $nivel) ? 'selected' : '';
+											echo "<option value=\"$nivel\" $selected>$nivel</option>";
+										endforeach;
+									?>
+								</select>
 							</div>
 
 							<div class="col-md-4">
