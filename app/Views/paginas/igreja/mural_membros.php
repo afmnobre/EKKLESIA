@@ -1,3 +1,6 @@
+<!-- Arquivo: app/Views/publico/mural_membros.php -->
+<!-- Substitua todo o código do arquivo por esta versão atualizada -->
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -9,49 +12,104 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         body {
-            background-color: #f3f4f6;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1e293b;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-        .avatar-container {
-            width: 85px;
-            height: 85px;
-            margin: 0 auto 12px;
+
+        /* Ambiente do Quadro Negro / Lousa */
+        .mural-quadro {
+            background-color: #24372c; /* Cor clássica de lousa escolar verde */
+            background-image: radial-gradient(rgba(255,255,255,0.04) 15%, transparent 15%);
+            background-size: 4px 4px;
+            border: 12px solid #5c4033; /* Moldura de madeira */
+            border-radius: 8px;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.7), 0 10px 25px rgba(0,0,0,0.4);
+            padding: 40px 25px;
+        }
+
+        /* Efeito Giz nos Títulos */
+        .titulo-giz {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 0 4px rgba(255,255,255,0.4), 1px 1px 2px rgba(0,0,0,0.6);
+            letter-spacing: 1px;
+        }
+
+        /* Card Estilo Colagem Polaroid (Foto Aumentada) */
+        .card-membro-polaroid {
+            background: #ffffff;
+            padding: 12px 12px 18px 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            transform: rotate(var(--rotacao-polaroid, 0deg));
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            border: none;
             position: relative;
         }
-        .avatar-img {
+
+        .card-membro-polaroid:hover {
+            transform: scale(1.06) rotate(0deg) !important;
+            box-shadow: 0 12px 22px rgba(0, 0, 0, 0.6);
+            z-index: 5;
+        }
+
+        /* Fita Adesiva/Durex segurando a colagem */
+        .card-membro-polaroid::before {
+            content: "";
+            position: absolute;
+            top: -12px;
+            left: 35%;
+            width: 30%;
+            height: 24px;
+            background-color: rgba(255, 255, 255, 0.22);
+            backdrop-filter: blur(1px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transform: rotate(-2deg);
+        }
+
+        /* Foto do Membro Quadrada Perfeita e Expandida */
+        .avatar-container-quadrado {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+        }
+
+        .avatar-img-quadrada {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 50%;
-            border: 3px solid #fff;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .avatar-icon-placeholder {
+
+        .avatar-placeholder-quadrado {
             width: 100%;
             height: 100%;
-            border-radius: 50%;
-            border: 3px solid #fff;
             background-color: #e9ecef;
-            color: #6c757d;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            color: #adb5bd;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .avatar-icon-placeholder i {
-            font-size: 3rem;
-            line-height: 1;
+
+        .avatar-placeholder-quadrado i {
+            font-size: 4.5rem;
         }
-        .card-membro {
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            border: none;
-            background-color: #ffffff;
+
+        /* Mensagem de Giz abaixo da Colagem */
+        .container-mensagem-giz {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            color: #f8f9fa;
+            font-size: 0.85rem;
+            line-height: 1.3;
+            margin-top: 14px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.15);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
         }
-        .card-membro:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px rgba(0,0,0,0.08);
-        }
+
         .modal-body-scroll {
             max-height: 380px;
             overflow-y: auto;
@@ -60,11 +118,12 @@
 </head>
 <body>
 
-<div class="container my-5" style="max-width: 1000px;">
-    <div class="text-center mb-5">
-        <h2 class="fw-bold text-dark"><i class="bi bi-heart-pulse-fill text-danger me-2"></i>Mural da Família da Fé</h2>
-        <p class="text-muted mx-auto" style="max-width: 600px;">
-            Clique sobre o avatar de um irmão ou irmã para ler as mensagens deixadas, enviar uma palavra de encorajamento ou registrar um pedido de oração.
+<div class="container my-5" style="max-width: 1100px;">
+
+    <div class="text-center mb-4">
+        <h2 class="titulo-giz fw-bold"><i class="bi bi-heart-pulse-fill text-danger me-2"></i>Mural da Família da Fé</h2>
+        <p class="text-white-50 mx-auto mb-0" style="max-width: 650px;">
+            Clique sobre a foto de um irmão ou irmã para ler as mensagens deixadas, enviar uma palavra de encorajamento ou registrar um pedido de oração.
         </p>
     </div>
 
@@ -75,78 +134,106 @@
         </div>
     <?php endif; ?>
 
-    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-4">
-        <?php if (!empty($membros)): foreach ($membros as $m):
-            $totalMsgs = count($m['mensagens']);
+    <!-- Início do Quadro Negro -->
+    <div class="mural-quadro">
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-5 justify-content-center">
+            <?php if (!empty($membros)): $index = 0; foreach ($membros as $m):
+                $totalMsgs = count($m['mensagens']);
+                $temFotoValida = false;
+                $urlFotoExibicao = '';
 
-            $temFotoValida = false;
-            $urlFotoExibicao = '';
+                if (!empty($m['membro_foto_arquivo']) && !empty($m['membro_registro_interno'])) {
+                    $caminhoRelativo = "uploads/" . $igreja_id . "/membros/" . $m['membro_registro_interno'] . "/" . $m['membro_foto_arquivo'];
+                    $urlFotoExibicao = asset($caminhoRelativo);
+                    $temFotoValida = true;
+                }
 
-            // Baseado exatamente no seu helper funcional extraído do seu ambiente:
-            if (!empty($m['membro_foto_arquivo']) && !empty($m['membro_registro_interno'])) {
-                $caminhoRelativo = "uploads/" . $igreja_id . "/membros/" . $m['membro_registro_interno'] . "/" . $m['membro_foto_arquivo'];
-                $urlFotoExibicao = asset($caminhoRelativo);
-                $temFotoValida = true;
-            }
-        ?>
-        <div class="col">
-            <div class="card h-100 text-center p-3 card-membro shadow-sm" onclick="abrirMuralMembro(<?= htmlspecialchars(json_encode($m), ENT_QUOTES, 'UTF-8') ?>, '<?= $temFotoValida ? $urlFotoExibicao : 'padrao' ?>')">
-                <div class="avatar-container">
-                    <?php if ($temFotoValida): ?>
-                        <img src="<?= $urlFotoExibicao ?>" class="avatar-img" alt="<?= htmlspecialchars($m['membro_nome']) ?>" loading="lazy">
+                // Variantes de rotação controladas para o efeito de colagem manual descolada
+                $rotacoes = ['-2.5deg', '2deg', '-1.5deg', '3deg', '-3deg', '1.5deg'];
+                $rotacaoAtual = $rotacoes[$index % count($rotacoes)];
+                $index++;
+            ?>
+            <div class="col d-flex flex-column justify-content-between align-items-center">
+
+                <!-- Card Estilo Polaroid -->
+                <div class="card card-membro-polaroid w-100 shadow text-center"
+                     style="--rotacao-polaroid: <?= $rotacaoAtual ?>;"
+                     onclick="abrirMuralMembro(<?= htmlspecialchars(json_encode($m), ENT_QUOTES, 'UTF-8') ?>, '<?= $temFotoValida ? $urlFotoExibicao : 'padrao' ?>')">
+
+                    <!-- Container da Foto Expandida e Quadrada -->
+                    <div class="avatar-container-quadrado">
+                        <?php if ($temFotoValida): ?>
+                            <img src="<?= $urlFotoExibicao ?>" class="avatar-img-quadrada" alt="<?= htmlspecialchars($m['membro_nome']) ?>" loading="lazy">
+                        <?php else: ?>
+                            <div class="avatar-placeholder-quadrado">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Contador de mensagens no topo da foto -->
+                        <?php if ($totalMsgs > 0): ?>
+                            <span class="position-absolute top-0 end-0 m-2 badge rounded-pill bg-danger shadow-sm fs-7">
+                                <?= $totalMsgs ?> <?= $totalMsgs === 1 ? 'recado' : 'recados' ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Dados dentro do papel fotográfico -->
+                    <h6 class="fw-bold text-dark mb-1 text-truncate px-1" title="<?= htmlspecialchars($m['membro_nome']) ?>">
+                        <?= htmlspecialchars($m['membro_nome']) ?>
+                    </h6>
+
+                    <div class="d-flex flex-wrap justify-content-center gap-1 px-1">
+                        <?php if (!empty($m['cargos_nomes'])): ?>
+                            <span class="badge bg-primary text-white" style="font-size: 0.65rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= htmlspecialchars($m['cargos_nomes']) ?>">
+                                <?= htmlspecialchars($m['cargos_nomes']) ?>
+                            </span>
+                        <?php endif; ?>
+
+                        <?php if (!empty($m['sociedades_siglas'])): ?>
+                            <span class="badge bg-dark text-white" style="font-size: 0.65rem;">
+                                <?= htmlspecialchars($m['sociedades_siglas']) ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- MENSAGENS ABAIXO DA FOTO (Efeito Lousa / Giz) -->
+                <div class="container-mensagem-giz text-center w-100 px-2">
+                    <?php if ($totalMsgs > 0):
+                        // Pega o último recado enviado para exibir diretamente abaixo no quadro
+                        $ultimaMsg = end($m['mensagens']);
+                        $prefixoIcone = $ultimaMsg['msg_tipo'] === 'Oracao' ? '🙏' : '💬';
+                    ?>
+                        <span class="d-block text-truncate-2" title="<?= htmlspecialchars($ultimaMsg['msg_texto']) ?>">
+                            <?= $prefixoIcone ?> "<?= htmlspecialchars($ultimaMsg['msg_texto']) ?>"
+                        </span>
+                        <small class="text-white-50 d-block mt-1 text-end" style="font-size: 0.7rem;">
+                            - Por: <?= htmlspecialchars($ultimaMsg['msg_autor']) ?>
+                        </small>
                     <?php else: ?>
-                        <div class="avatar-icon-placeholder">
-                            <i class="bi bi-person-circle"></i>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($totalMsgs > 0): ?>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm">
-                            <?= $totalMsgs ?>
-                        </span>
+                        <span class="text-white-50 opacity-75 small"><em><i class="bi bi-chat-left text-white-50 me-1"></i> Sem recados ainda</em></span>
                     <?php endif; ?>
                 </div>
 
-                <h6 class="fw-bold text-dark mb-1 text-truncate" title="<?= htmlspecialchars($m['membro_nome']) ?>">
-                    <?= htmlspecialchars($m['membro_nome']) ?>
-                </h6>
-
-                <div class="mb-2 d-flex flex-wrap justify-content-center gap-1">
-                    <?php if (!empty($m['cargos_nomes'])): ?>
-                        <span class="badge bg-primary text-white" style="font-size: 0.65rem; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= htmlspecialchars($m['cargos_nomes']) ?>">
-                            <?= htmlspecialchars($m['cargos_nomes']) ?>
-                        </span>
-                    <?php endif; ?>
-
-                    <?php if (!empty($m['sociedades_siglas'])): ?>
-                        <span class="badge bg-dark text-white" style="font-size: 0.65rem;">
-                            <?= htmlspecialchars($m['sociedades_siglas']) ?>
-                        </span>
-                    <?php endif; ?>
-                </div>
-
-                <small class="text-muted mt-auto pt-1 d-block" style="font-size: 0.72rem;"><i class="bi bi-chat-left-text me-1"></i> Interagir</small>
             </div>
+            <?php endforeach; else: ?>
+                <div class="col-12 text-center py-5">
+                    <p class="titulo-giz fs-4">Nenhum membro ativo disponível para o mural no momento.</p>
+                </div>
+            <?php endif; ?>
         </div>
-        <?php endforeach; else: ?>
-            <div class="col-12 text-center py-5">
-                <div class="p-4 bg-white rounded border shadow-sm">
-                    <i class="bi bi-people text-muted fs-1 mb-2 d-block"></i>
-                    <p class="text-muted mb-0">Nenhum membro ativo disponível para o mural no momento.</p>
-                </div>
-            </div>
-        <?php endif; ?>
     </div>
 </div>
 
+<!-- Modal de Detalhes e Envio de Mensagens -->
 <div class="modal fade" id="modalMural" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
 
             <div class="modal-header bg-dark text-white border-0">
                 <div class="d-flex align-items-center">
-                    <div class="me-3" id="modal_avatar_container" style="width: 45px; height: 45px;">
-                        </div>
+                    <div class="me-3" id="modal_avatar_container" style="width: 45px; height: 45px;"></div>
                     <div>
                         <h6 class="modal-title fw-bold mb-0" id="modal_nome_membro">Nome do Membro</h6>
                         <small class="text-white-50" style="font-size: 0.75rem;" id="modal_info_membro">Mural de Interações</small>
@@ -155,8 +242,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body p-4 bg-light modal-body-scroll" id="lista_recados_membro">
-                </div>
+            <div class="modal-body p-4 bg-light modal-body-scroll" id="lista_recados_membro"></div>
 
             <form action="<?= full_url('muralPublico/enviarMensagem') ?>" method="POST" class="modal-footer d-block border-0 bg-white p-4 shadow-sm">
                 <input type="hidden" name="membro_id" id="form_membro_id">
@@ -218,9 +304,6 @@ function abrirMuralMembro(membro, urlFoto) {
     const containerRecados = document.getElementById('lista_recados_membro');
     containerRecados.innerHTML = "";
 
-// Arquivo: app/Views/publico/mural_membros.php
-// Linha: Localize a função abrirMuralMembro no bloco <script> final e substitua o laço forEach por este:
-
     if (!membro.mensagens || membro.mensagens.length === 0) {
         containerRecados.innerHTML = `
             <div class="text-center py-4 text-muted small">
@@ -237,7 +320,6 @@ function abrirMuralMembro(membro, urlFoto) {
             const autorLimpo = msg.msg_autor.replace(/</g, "&lt;").replace(/>/g, "&gt;");
             const textoLimpo = msg.msg_texto.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-            // Alterado: Injeção direta do PHP <?= $igreja_id ?> no campo oculto 'igreja_id'
             const botaoDeletar = `
                 <form action="<?= full_url('muralPublico/deletarMensagem') ?>" method="POST" class="d-inline m-0" onsubmit="return confirm('Deseja realmente apagar esta mensagem?')">
                     <input type="hidden" name="mensagem_id" value="${msg.mensagem_id}">

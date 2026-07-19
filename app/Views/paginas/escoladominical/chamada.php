@@ -34,7 +34,7 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
+<div class="card border-0 shadow-sm">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
@@ -47,8 +47,42 @@
                     <?php if (!empty($alunos)): foreach ($alunos as $aluno): ?>
                         <tr>
                             <td class="ps-4">
-                                <div class="fw-bold text-dark"><?= $aluno['membro_nome'] ?></div>
-                                <small class="text-muted">Registro: <?= $aluno['membro_registro_interno'] ?? '---' ?></small>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="position-relative" style="width: 50px; height: 50px;">
+                                        <?php
+                                        if (!empty($aluno['membro_foto_arquivo'])):
+                                            $igrejaId = $_SESSION['usuario_igreja_id'];
+                                            $diretorio = ($aluno['membro_status'] === 'Ativo')
+                                                ? $aluno['membro_registro_interno']
+                                                : "PENDENTE_" . $aluno['membro_id'];
+
+                                            $fotoUrl = url("assets/uploads/{$igrejaId}/membros/{$diretorio}/" . $aluno['membro_foto_arquivo']);
+                                            $placeholderId = "placeholder-chamada-" . $aluno['membro_id'];
+                                        ?>
+                                            <img src="<?= $fotoUrl ?>"
+                                                 alt="<?= htmlspecialchars($aluno['membro_nome']) ?>"
+                                                 class="rounded-circle object-fit-cover shadow-sm"
+                                                 style="width: 50px; height: 50px; border: 2px solid #dee2e6;"
+                                                 onerror="this.style.display='none'; document.getElementById('<?= $placeholderId ?>').classList.remove('d-none');">
+
+                                            <div id="<?= $placeholderId ?>"
+                                                 class="rounded-circle bg-secondary bg-opacity-10 text-secondary d-flex d-none align-items-center justify-content-center shadow-sm"
+                                                 style="width: 50px; height: 50px; border: 2px solid #dee2e6;">
+                                                 <i class="bi bi-person-fill fs-4"></i>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="rounded-circle bg-secondary bg-opacity-10 text-secondary d-flex align-items-center justify-content-center shadow-sm"
+                                                 style="width: 50px; height: 50px; border: 2px solid #dee2e6;">
+                                                 <i class="bi bi-person-fill fs-4"></i>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div>
+                                        <div class="fw-bold text-dark"><?= htmlspecialchars($aluno['membro_nome']) ?></div>
+                                        <small class="text-muted">Registro: <?= htmlspecialchars($aluno['membro_registro_interno'] ?? '---') ?></small>
+                                    </div>
+                                </div>
                             </td>
                             <td class="text-center">
                                 <div class="btn-group" role="group" aria-label="Presença">

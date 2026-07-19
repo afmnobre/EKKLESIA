@@ -28,98 +28,108 @@
     <div class="row g-4">
         <?php if (!empty($classes)): ?>
             <?php foreach ($classes as $classe): ?>
-					<div class="col-12 col-md-6 col-lg-4">
-						<div class="card h-100 border-0 shadow-sm hover-shadow transition">
-							<div class="card-body">
-								<div class="d-flex justify-content-between align-items-start mb-3">
-									<div class="d-flex align-items-center">
-										<div class="bg-light-primary p-3 rounded-3 me-2">
-											<i class="bi bi-people-fill fs-4 text-primary"></i>
-										</div>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm hover-shadow transition">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light-primary p-3 rounded-3 me-2">
+                                        <i class="bi bi-people-fill fs-4 text-primary"></i>
+                                    </div>
 
-										<div class="ms-n2">
-											<?php
-												$igrejaId = $_SESSION['usuario_igreja_id'];
+                                    <div class="ms-n2">
+                                        <?php
+                                            $igrejaId = $_SESSION['usuario_igreja_id'];
 
-												// AJUSTE: Descobre a pasta correta baseado no status do cadastro do professor
-												$diretorioMembro = (isset($classe['membro_status']) && $classe['membro_status'] === 'Ativo')
-													? $classe['membro_registro_interno']
-													: "PENDENTE_" . ($classe['professor_id'] ?? 0);
+                                            $temFoto = !empty($classe['membro_foto_arquivo']);
 
-												// Caminho baseado na estrutura de uploads por igreja apontando para o diretório dinâmico
-												$fotoPath = !empty($classe['membro_foto_arquivo'])
-													? url("assets/uploads/{$igrejaId}/membros/{$diretorioMembro}/{$classe['membro_foto_arquivo']}")
-													: url("assets/img/avatar_padrao.png");
-											?>
-                                                <i class="bi bi-file-earmark-image"></i>
-										</div>
-									</div>
+                                            if ($temFoto) {
+                                                // Descobre a pasta correta baseado no status do cadastro do professor
+                                                $diretorioMembro = (isset($classe['membro_status']) && $classe['membro_status'] === 'Ativo')
+                                                    ? $classe['membro_registro_interno']
+                                                    : "PENDENTE_" . ($classe['professor_id'] ?? 0);
 
-									<div class="dropdown">
-										<button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
-											<i class="bi bi-three-dots-vertical"></i>
-										</button>
-										<ul class="dropdown-menu dropdown-menu-end shadow border-0">
-											<li>
-												<a href="#"
-												   class="dropdown-item btn-editar-classe"
-												   data-id="<?= $classe['classe_id'] ?>"
-												   data-nome="<?= $classe['classe_nome'] ?>"
-												   data-min="<?= $classe['classe_idade_min'] ?>"
-												   data-max="<?= $classe['classe_idade_max'] ?>"
-												   data-professor="<?= $classe['classe_professor_id'] ?>"
-												   data-senha="<?= $classe['classe_senha'] ?>">
-													<i class="fas fa-edit me-2"></i>Editar
-												</a>
-											</li>
-											<li><hr class="dropdown-divider"></li>
-											<li>
-												<a class="dropdown-item text-danger" href="<?= url('escolaDominical/excluirClasse/' . $classe['classe_id']) ?>"
-												   onclick="return confirm('Deseja realmente excluir esta classe?')">
-													<i class="bi bi-trash me-2"></i>Excluir
-												</a>
-											</li>
-										</ul>
-									</div>
-								</div>
+                                                $fotoPath = url("assets/uploads/{$igrejaId}/membros/{$diretorioMembro}/{$classe['membro_foto_arquivo']}");
+                                            }
+                                        ?>
 
-								<h5 class="card-title fw-bold mb-1"><?= $classe['classe_nome'] ?></h5>
-								<p class="text-muted small mb-3">
-									<i class="bi bi-person-badge me-1"></i> Prof: <strong><?= $classe['professor_nome'] ?? 'Não definido' ?></strong>
-								</p>
+                                        <?php if ($temFoto): ?>
+                                            <img src="<?= $fotoPath ?>"
+                                                 alt="<?= htmlspecialchars($classe['professor_nome'] ?? 'Professor') ?>"
+                                                 class="rounded-circle object-fit-cover shadow-sm"
+                                                 style="width: 80px; height: 80px; border: 2.5px solid #dee2e6;"
+                                                 onerror="this.style.display='none'; document.getElementById('placeholder-icon-<?= $classe['classe_id'] ?>').classList.remove('d-none');">
+                                        <?php endif; ?>
 
+                                        <div id="placeholder-icon-<?= $classe['classe_id'] ?>"
+                                             class="rounded-circle bg-secondary bg-opacity-10 text-secondary d-flex align-items-center justify-content-center shadow-sm <?= $temFoto ? 'd-none' : '' ?>"
+                                             style="width: 80px; height: 80px; border: 2.5px solid #dee2e6;"
+                                             title="<?= htmlspecialchars($classe['professor_nome'] ?? 'Professor') ?>">
+                                            <i class="bi bi-person-fill fs-2"></i>
+                                        </div>
+                                    </div>
+                                </div> <div class="dropdown">
+                                    <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                        <li>
+                                            <a href="#"
+                                               class="dropdown-item btn-editar-classe"
+                                               data-id="<?= $classe['classe_id'] ?>"
+                                               data-nome="<?= $classe['classe_nome'] ?>"
+                                               data-min="<?= $classe['classe_idade_min'] ?>"
+                                               data-max="<?= $classe['classe_idade_max'] ?>"
+                                               data-professor="<?= $classe['classe_professor_id'] ?>"
+                                               data-senha="<?= $classe['classe_senha'] ?>">
+                                                <i class="fas fa-edit me-2"></i>Editar
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="<?= url('escolaDominical/excluirClasse/' . $classe['classe_id']) ?>"
+                                               onclick="return confirm('Deseja realmente excluir esta classe?')">
+                                                <i class="bi bi-trash me-2"></i>Excluir
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div> <h5 class="card-title fw-bold mb-1"><?= $classe['classe_nome'] ?></h5>
+                            <p class="text-muted small mb-3">
+                                <i class="bi bi-person-badge me-1"></i> Prof: <strong><?= $classe['professor_nome'] ?? 'Não definido' ?></strong>
+                            </p>
 
-							<div class="mb-4">
-								<?php
-									// Definimos a cor baseada na idade mínima para manter um padrão visual
-									$cor = "bg-secondary";
-									if($classe['classe_idade_min'] <= 3) $cor = "bg-info";
-									elseif($classe['classe_idade_min'] <= 6) $cor = "bg-success";
-									elseif($classe['classe_idade_min'] <= 12) $cor = "bg-warning text-dark";
-									elseif($classe['classe_idade_min'] <= 17) $cor = "bg-primary";
-									else $cor = "bg-dark";
-								?>
-								<span class="badge <?= $cor ?> rounded-pill px-3">
-									<?= $classe['classe_idade_min'] ?> a <?= $classe['classe_idade_max'] ?> anos
-								</span>
-							</div>
+                            <div class="mb-4">
+                                <?php
+                                    // Definimos a cor baseada na idade mínima para manter um padrão visual
+                                    $cor = "bg-secondary";
+                                    if($classe['classe_idade_min'] <= 3) $cor = "bg-info";
+                                    elseif($classe['classe_idade_min'] <= 6) $cor = "bg-success";
+                                    elseif($classe['classe_idade_min'] <= 12) $cor = "bg-warning text-dark";
+                                    elseif($classe['classe_idade_min'] <= 17) $cor = "bg-primary";
+                                    else $cor = "bg-dark";
+                                ?>
+                                <span class="badge <?= $cor ?> rounded-pill px-3">
+                                    <?= $classe['classe_idade_min'] ?> a <?= $classe['classe_idade_max'] ?> anos
+                                </span>
+                            </div>
 
                             <div class="d-grid gap-2">
-								<a href="<?= url('escolaDominical/chamada/' . $classe['classe_id']) ?>" class="btn btn-outline-primary">
-									<i class="bi bi-phone me-2"></i>Chamada Digital
-								</a>
+                                <a href="<?= url('escolaDominical/chamada/' . $classe['classe_id']) ?>" class="btn btn-outline-primary">
+                                    <i class="bi bi-phone me-2"></i>Chamada Digital
+                                </a>
 
-								<a target="_blank" href="<?= url('escolaDominical/imprimirChamadaMensal/' . $classe['classe_id']) ?>" class="btn btn-light border shadow-sm">
-									<i class="bi bi-printer me-2"></i>Folha Mensal (Manual)
-								</a>
+                                <a target="_blank" href="<?= url('escolaDominical/imprimirChamadaMensal/' . $classe['classe_id']) ?>" class="btn btn-light border shadow-sm">
+                                    <i class="bi bi-printer me-2"></i>Folha Mensal (Manual)
+                                </a>
 
-								<button type="button" class="btn btn-warning btn-sm btn-presenca-professor"
-									data-id="<?= $classe['classe_id'] ?>"
-									data-nome="<?= $classe['classe_nome'] ?>"
-									data-professor-id="<?= $classe['classe_professor_id'] ?>"
-									data-professor-nome="<?= $classe['professor_nome'] ?>">
-									<i class="bi bi-person-check me-1"></i>Presença Prof.
-								</button>
+                                <button type="button" class="btn btn-warning btn-sm btn-presenca-professor"
+                                    data-id="<?= $classe['classe_id'] ?>"
+                                    data-nome="<?= $classe['classe_nome'] ?>"
+                                    data-professor-id="<?= $classe['classe_professor_id'] ?>"
+                                    data-professor-nome="<?= $classe['professor_nome'] ?>">
+                                    <i class="bi bi-person-check me-1"></i>Presença Prof.
+                                </button>
 
                                 <button type="button"
                                     class="btn btn-light btn-gerenciar-alunos"
@@ -181,55 +191,6 @@
         </div>
     </div>
 </div>
-
-
-<!-- <div class="modal fade" id="modalNovaClasse" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Cadastrar Nova Classe</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="<?= url('escolaDominical/cadastrar') ?>" method="POST">
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-uppercase">Nome da Classe</label>
-						<select name="classe_nome" class="form-select" required id="select-config-classe">
-							<option value="" disabled selected>Selecione uma opção...</option>
-
-							<?php foreach($configuracoes as $conf): ?>
-								<option value="<?= $conf['config_nome'] ?>"
-										data-min="<?= $conf['config_idade_min'] ?>"
-										data-max="<?= $conf['config_idade_max'] ?>">
-									<?= $conf['config_nome'] ?> (<?= $conf['config_idade_min'] ?> a <?= $conf['config_idade_max'] ?> anos)
-								</option>
-							<?php endforeach; ?>
-
-							<option value="Outra">Outra (Personalizada)</option>
-						</select>
-                        <input type="hidden" name="classe_idade_min" id="input_min">
-                        <input type="hidden" name="classe_idade_max" id="input_max">
-                    </div>
-
-					<div class="mb-3">
-						<label class="form-label fw-bold small text-uppercase text-muted">Professor Responsável</label>
-						<select name="classe_professor_id" id="choices-professor" class="form-select" required>
-							<option value="">Pesquise pelo nome do membro...</option>
-							<?php foreach($membros as $m): ?>
-								<option value="<?= $m['membro_id'] ?>"><?= $m['membro_nome'] ?></option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary px-4">Salvar Classe</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
--->
 
 <div class="modal fade" id="modalNovaClasse" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -349,17 +310,17 @@ document.getElementById('select-config-classe').addEventListener('change', funct
                 </div>
 
                 <h6 class="fw-bold mb-3">Alunos Matriculados (<span id="cntMatriculados">0</span>)</h6>
-                <div class="table-responsive" style="min-height: 200px;">
+                    <div class="table-responsive" style="min-height: 200px;">
                     <table class="table table-hover align-middle" id="tabelaMatriculados">
                         <thead class="table-light small text-uppercase">
                             <tr>
-                                <th>Nome do Aluno</th>
+                                <th style="width: 50px;">Foto</th> <th>Nome do Aluno</th>
                                 <th>Registro</th>
                                 <th class="text-end">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
-                            </tbody>
+                        </tbody>
                     </table>
                     <div id="loadingAlunos" class="text-center py-5 d-none">
                         <div class="spinner-border text-primary" role="status"></div>
@@ -592,19 +553,62 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 3. Auxiliar: Renderiza a tabela de alunos atuais
+
+// Arquivo: app/Views/escoladominical/index.php
+// Linha: Modifique o método preencherTabelaMatriculados(alunos)
+
+    // 3. Auxiliar: Renderiza a tabela de alunos atuais
     function preencherTabelaMatriculados(alunos) {
         const tbody = document.getElementById('tabelaMatriculados').querySelector('tbody');
         tbody.innerHTML = '';
         document.getElementById('cntMatriculados').innerText = alunos.length;
 
         if (alunos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted">Nenhum aluno matriculado nesta classe.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">Nenhum aluno matriculado nesta classe.</td></tr>';
             return;
         }
 
+        const igrejaId = '<?= $_SESSION['usuario_igreja_id'] ?>';
+        const baseUrl = '<?= url('') ?>';
+
         alunos.forEach(aluno => {
+            let fotoHtml = '';
+
+            if (aluno.membro_foto_arquivo) {
+                // Descobre o diretório dinamicamente
+                const diretorio = (aluno.membro_status === 'Ativo')
+                    ? aluno.membro_registro_interno
+                    : `PENDENTE_${aluno.membro_id}`;
+
+                const fotoUrl = `${baseUrl}assets/uploads/${igrejaId}/membros/${diretorio}/${aluno.membro_foto_arquivo}`;
+                const placeholderId = `placeholder-aluno-${aluno.classe_membro_id}`;
+
+                // AJUSTE: Tamanhos alterados de 35px para 70px. Ícone de fallback aumentado para fs-3.
+                fotoHtml = `
+                    <img src="${fotoUrl}"
+                         alt="${aluno.membro_nome}"
+                         class="rounded-circle object-fit-cover shadow-sm"
+                         style="width: 70px; height: 70px; border: 2px solid #dee2e6;"
+                         onerror="this.style.display='none'; document.getElementById('${placeholderId}').classList.remove('d-none');">
+                    <div id="${placeholderId}"
+                         class="rounded-circle bg-secondary bg-opacity-10 text-secondary d-flex d-none align-items-center justify-content-center shadow-sm"
+                         style="width: 70px; height: 70px; border: 2px solid #dee2e6;">
+                         <i class="bi bi-person-fill fs-3"></i>
+                    </div>
+                `;
+            } else {
+                // Se não tem foto cadastrada, mostra diretamente o ícone com 70px e tamanho fs-3
+                fotoHtml = `
+                    <div class="rounded-circle bg-secondary bg-opacity-10 text-secondary d-flex align-items-center justify-content-center shadow-sm"
+                         style="width: 70px; height: 70px; border: 2px solid #dee2e6;">
+                         <i class="bi bi-person-fill fs-3"></i>
+                    </div>
+                `;
+            }
+
             tbody.innerHTML += `
                 <tr>
+                    <td>${fotoHtml}</td>
                     <td class="fw-bold text-dark">${aluno.membro_nome}</td>
                     <td><span class="badge bg-light text-secondary border">${aluno.membro_registro_interno || 'N/A'}</span></td>
                     <td class="text-end">

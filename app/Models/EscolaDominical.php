@@ -61,11 +61,14 @@ class EscolaDominical
 	/**
 	 * Lista os membros que já estão matriculados em uma classe específica
 	 */
+
 	public function getAlunosMatriculados($classeId)
 	{
-		$sql = "SELECT m.membro_id, m.membro_nome, m.membro_registro_interno, cm.classe_membro_id
+		// AJUSTE: Adicionado m.membro_status e f.membro_foto_arquivo com LEFT JOIN
+		$sql = "SELECT m.membro_id, m.membro_nome, m.membro_registro_interno, m.membro_status, cm.classe_membro_id, f.membro_foto_arquivo
 				FROM classes_membros cm
 				JOIN membros m ON cm.classe_membro_membro_id = m.membro_id
+				LEFT JOIN membros_fotos f ON m.membro_id = f.membro_foto_membro_id
 				WHERE cm.classe_membro_classe_id = ?
 				ORDER BY m.membro_nome ASC";
 
@@ -143,13 +146,15 @@ class EscolaDominical
 
 	public function getAlunosEPresenca($classeId, $data)
 	{
-		$sql = "SELECT m.membro_id, m.membro_nome, m.membro_registro_interno,
-					   p.presenca_status
+		// AJUSTE: Incluído m.membro_status, f.membro_foto_arquivo e LEFT JOIN com membros_fotos
+		$sql = "SELECT m.membro_id, m.membro_nome, m.membro_registro_interno, m.membro_status,
+					   p.presenca_status, f.membro_foto_arquivo
 				FROM classes_membros cm
 				JOIN membros m ON cm.classe_membro_membro_id = m.membro_id
 				LEFT JOIN classes_presencas p ON p.presenca_membro_id = m.membro_id
 					 AND p.presenca_classe_id = ?
 					 AND p.presenca_data = ?
+				LEFT JOIN membros_fotos f ON m.membro_id = f.membro_foto_membro_id
 				WHERE cm.classe_membro_classe_id = ?
 				ORDER BY m.membro_nome ASC";
 
