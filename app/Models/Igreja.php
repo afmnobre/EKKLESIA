@@ -263,5 +263,24 @@ class Igreja
     }
 
 
+public function atualizarFotoIgreja($idIgreja, $novoNome)
+	{
+		// 1. Busca o nome da foto antiga usando a chave correta 'igreja_id'
+		$sqlBusca = "SELECT igreja_foto FROM igrejas WHERE igreja_id = :id";
+		$stmtBusca = $this->db->prepare($sqlBusca);
+		$stmtBusca->execute([':id' => $idIgreja]);
+		$fotoAntiga = $stmtBusca->fetchColumn();
+
+		// 2. Atualiza a coluna igreja_foto usando 'igreja_id' no WHERE
+		$sql = "UPDATE igrejas SET igreja_foto = :foto WHERE igreja_id = :id";
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([
+			':foto' => $novoNome,
+			':id'   => $idIgreja
+		]);
+
+		return $fotoAntiga;
+	}
+
 }
 

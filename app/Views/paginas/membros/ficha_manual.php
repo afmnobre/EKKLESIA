@@ -1,3 +1,6 @@
+<!-- Arquivo: app/Views/publico/ficha_cadastro.php -->
+<!-- Substitua todo o conteúdo do arquivo por esta versão atualizada -->
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -122,20 +125,32 @@
             </div>
         </div>
         <div class="field-box" style="flex: 1.5;"><span class="field-label">Estado Civil</span></div>
-        <div class="field-box" style="flex: 1.5;"><span class="field-label">Celular / WhatsApp</span><div class="field-content">(___) _________-________</div></div>
+        <div class="field-box" style="flex: 1.5;"><span class="field-label">Naturalidade</span></div>
     </div>
     <div class="field-row">
-        <div class="field-box"><span class="field-label">E-mail para Contato</span></div>
+        <div class="field-box" style="flex: 2.5;"><span class="field-label">Profissão</span></div>
+        <div class="field-box" style="flex: 1.5;">
+            <span class="field-label">Dizimista?</span>
+            <div class="check-group">
+                <span><div class="square"></div> Sim</span>
+                <span><div class="square"></div> Não</span>
+            </div>
+        </div>
+    </div>
+    <div class="field-row">
+        <div class="field-box" style="flex: 2.5;"><span class="field-label">Celular / WhatsApp</span><div class="field-content">(___) _________-________</div></div>
+        <div class="field-box" style="flex: 2.5;"><span class="field-label">E-mail para Contato</span></div>
     </div>
 
     <div class="section-title">02. Vida Eclesiástica</div>
     <div class="field-row" style="border-top: 1.5px solid #000;">
         <div class="field-box" style="flex: 1;"><span class="field-label">Data de Batismo</span><div class="field-content">____/____/________</div></div>
-        <div class="field-box" style="flex: 1;"><span class="field-label">Profissão de Fé</span><div class="field-content">____/____/________</div></div>
+        <div class="field-box" style="flex: 1;"><span class="field-label">Data de Profissão de Fé</span><div class="field-content">____/____/________</div></div>
         <div class="field-box" style="flex: 1;"><span class="field-label">Data de Casamento</span><div class="field-content">____/____/________</div></div>
     </div>
     <div class="field-row">
-        <div class="field-box"><span class="field-label">Cargo ou Função Atual na Igreja</span></div>
+        <div class="field-box" style="flex: 2;"><span class="field-label">Cargo ou Função Atual na Igreja</span></div>
+        <div class="field-box" style="flex: 2;"><span class="field-label">Procedência Religiosa (Fé ou denominação anterior)</span></div>
     </div>
 
     <div class="section-title">03. Localização Residencial</div>
@@ -153,18 +168,29 @@
         <div class="field-box" style="flex: 1;"><span class="field-label">UF</span></div>
     </div>
 
-    <div class="section-title" style="margin-bottom: 0;">04. Família e Dependentes (Filhos / Cônjuge)</div>
+    <div class="section-title" style="margin-bottom: 0;">04. Dependentes que Frequentam a Igreja (Filhos / Enteados, etc)</div>
     <table class="dep-table">
         <thead>
             <tr>
-                <th width="50%">Nome Completo</th>
-                <th width="20%">Parentesco</th>
-                <th width="30%">Data de Nascimento</th>
+                <th width="40%">Nome Completo</th>
+                <th width="15%">Parentesco</th>
+                <th width="18%">Data Nasc.</th>
+                <th width="12%" style="text-align: center;">Batizado? <span style="font-size: 0.45rem; font-weight: normal; block-size: auto; display: block; text-transform: none; color: #666;">(Filhos menores 12 anos)</span></th>
+                <th width="15%">Data do Batismo</th>
             </tr>
         </thead>
         <tbody>
             <?php for($i=0; $i<6; $i++): ?>
-            <tr><td></td><td></td><td></td></tr>
+            <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td style="vertical-align: middle; text-align: center;">
+                    <span style="font-size: 0.6rem; margin-right: 6px;"><div class="square" style="margin-bottom: 2px;"></div> S</span>
+                    <span style="font-size: 0.6rem;"><div class="square" style="margin-bottom: 2px;"></div> N</span>
+                </td>
+                <td style="font-family: 'Courier New', monospace; font-size: 0.8rem; vertical-align: middle; color: #888;">___/___/_____</td>
+            </tr>
             <?php endfor; ?>
         </tbody>
     </table>

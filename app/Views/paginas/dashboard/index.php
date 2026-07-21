@@ -9,12 +9,35 @@
     <div class="card border-0 shadow-sm mb-4 overflow-hidden">
         <div class="card-body p-0">
             <div class="row g-0 align-items-center">
-                <div class="col-md-4 col-12 text-center bg-light p-3 border-end d-flex align-items-center justify-content-center" style="min-height: 200px;">
-                    <img src="<?= url('assets/img/Igreja.jpg') ?>"
-                         class="img-fluid rounded shadow-sm"
-                         alt="Projeto da Igreja"
-                         style="object-fit: contain; max-height: 180px; width: auto; display: block;">
-                </div>
+<!-- Adicionar no elemento da imagem da igreja para abrir o modal ao clicar -->
+<?php
+    // 1. Corrigido para buscar 'igreja_id' da tabela
+    $idIgreja = $igreja['igreja_id'] ?? ($_SESSION['usuario_igreja_id'] ?? null);
+    $fotoNome = $igreja['igreja_foto'] ?? null;
+
+    // 2. Corrigido para subir 3 níveis até a raiz do projeto e acessar /public/
+    $caminhoFisico = dirname(__DIR__, 2) . "/public/assets/uploads/{$idIgreja}/foto_igreja/{$fotoNome}";
+
+    $srcFoto = url("assets/uploads/{$idIgreja}/foto_igreja/{$fotoNome}");
+
+?>
+
+<div class="col-md-4 col-12 text-center bg-light p-3 border-end d-flex align-items-center justify-content-center position-relative" style="min-height: 200px;">
+    <img src="<?= $srcFoto ?>"
+         class="img-fluid rounded shadow-sm"
+         alt="Foto da Igreja"
+         style="object-fit: contain; max-height: 180px; width: auto; display: block;">
+
+    <!-- Botão para abrir o modal -->
+    <button type="button"
+            class="btn btn-sm btn-dark position-absolute bottom-0 end-0 m-2 rounded-circle shadow opacity-75 hover-opacity-100"
+            data-bs-toggle="modal"
+            data-bs-target="#modalAlterarFotoIgreja"
+            title="Alterar Foto da Igreja"
+            style="width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-camera"></i>
+    </button>
+</div>
 
                 <div class="col-md col-12 p-4">
                     <span class="badge bg-primary mb-2 shadow-sm"><i class="fas fa-laptop-code me-1"></i> Dashboard EKKLESIA</span>
@@ -198,3 +221,28 @@
         .col-md-2 { width: 50%; } /* Em mobile vira 2 por linha */
     }
 </style>
+
+
+<!-- Modal para Alterar Foto da Igreja -->
+<div class="modal fade" id="modalAlterarFotoIgreja" tabindex="-1" aria-labelledby="modalAlterarFotoIgrejaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAlterarFotoIgrejaLabel">Alterar Foto da Igreja</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+<form action="<?= url('dashboard/alterarFotoIgreja') ?>" method="POST" enctype="multipart/form-data">
+    <div class="modal-body">
+        <div class="mb-3">
+            <label for="foto_igreja" class="form-label">Selecione a nova imagem (JPG, PNG ou WEBP)</label>
+            <input type="file" class="form-control" id="foto_igreja" name="foto_igreja" accept="image/*" required>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+    </div>
+</form>
+        </div>
+    </div>
+</div>
