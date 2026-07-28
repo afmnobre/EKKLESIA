@@ -376,4 +376,11 @@ class PesquisaMembro
 		}
 	}
 
+    // Exclui o vínculo de parentesco pelo ID
+    public function removerVinculoParente($parentescoId) {
+        $sql = "DELETE FROM membros_responsaveis WHERE parentesco_id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':id' => $parentescoId]);
+    }
+
 }

@@ -263,7 +263,7 @@ class Igreja
     }
 
 
-public function atualizarFotoIgreja($idIgreja, $novoNome)
+    public function atualizarFotoIgreja($idIgreja, $novoNome)
 	{
 		// 1. Busca o nome da foto antiga usando a chave correta 'igreja_id'
 		$sqlBusca = "SELECT igreja_foto FROM igrejas WHERE igreja_id = :id";

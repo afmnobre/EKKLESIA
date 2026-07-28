@@ -192,114 +192,294 @@ class DizimoOferta
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-    // No seu App/Models/DizimoOferta.php, altere o final do método para:
+	// Arquivo: App/Models/DizimoOferta.php
+	// Linha: Localize o método salvarLancamentoCompleto (ou inclua-o na classe DizimoOferta)
+
 	public function salvarLancamentoCompleto($data) {
 		try {
 			if (!$this->db->inTransaction()) {
 				$this->db->beginTransaction();
 			}
 
-			// --- 0. FUNÇÃO INTERNA PARA LIMPEZA DE VALORES MONETÁRIOS ---
+			// Função auxiliar interna para converter string '1.234,56' ou número para float
 			$limparValor = function($valor) {
 				if (empty($valor)) return 0.00;
-				// Se o valor contiver vírgula, tratamos como formato brasileiro
+				if (is_numeric($valor)) return (float) $valor;
 				if (strpos($valor, ',') !== false) {
-					$valor = str_replace('.', '', $valor); // Remove ponto de milhar
-					$valor = str_replace(',', '.', $valor); // Troca vírgula por ponto decimal
+					$valor = str_replace('.', '', $valor);
+					$valor = str_replace(',', '.', $valor);
 				}
 				return (float) $valor;
 			};
 
-			// --- 1. PREPARAÇÃO DOS DADOS ---
+			$valorTotal = $limparValor($data['valor']);
 			$data_pagamento_completa = $data['data_pagamento'] . ' ' . date('H:i:s');
-			$valorPrincipal = $limparValor($data['valor']);
 
-			// --- 2. INSERT NA financeiro_contas ---
-			$sql1 = "INSERT INTO financeiro_contas (
-						financeiro_conta_igreja_id,
-						financeiro_conta_financeiro_categoria_id,
-						financeiro_conta_descricao,
-						financeiro_conta_valor,
-						financeiro_conta_tipo,
-						financeiro_conta_data_vencimento,
-						financeiro_conta_pago,
-						financeiro_conta_data_pagamento,
-						conferido_por_1,
-						conferido_por_2
-					) VALUES (?, ?, ?, ?, 'entrada', ?, 1, ?, ?, ?)";
+			// --- 1. INSERIR CONTA FINANCEIRA (PAGAMENTO) ---
+			$sqlConta = "INSERT INTO financeiro_contas (
+							financeiro_conta_igreja_id,
+							financeiro_conta_financeiro_categoria_id,
+							financeiro_conta_descricao,
+							financeiro_conta_valor,
+							financeiro_conta_tipo,
+							financeiro_conta_data_vencimento,
+							financeiro_conta_pago,
+							financeiro_conta_data_pagamento,
+							conferido_por_1,
+							conferido_por_2
+						) VALUES (?, ?, ?, ?, 'entrada', ?, 1, ?, ?, ?)";
 
-			$stmt1 = $this->db->prepare($sql1);
-			$stmt1->execute([
+			$stmt = $this->db->prepare($sqlConta);
+			$stmt->execute([
 				$data['igreja_id'],
-				$data['categoria_id'], // ID da Subcategoria para o Admin ler corretamente
-				$data['descricao'],
-				$valorPrincipal,
-				$data['data_pagamento'], // vencimento
-				$data['data_pagamento'], // pagamento
+				$data['subcategoria_id'] ?? $data['categoria_id'],
+				$data['descricao'] ?? 'Lançamento em Lote',
+				$valorTotal,
+				$data['data_pagamento'],
+				$data['data_pagamento'],
 				$data['diacono_1'],
 				$data['diacono_2']
 			]);
 
 			$contaId = $this->db->lastInsertId();
 
-			// --- 3. ATUALIZA SALDO BANCÁRIO ---
-			$sql2 = "UPDATE financeiro_contas_financeiras
-					 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + ?
-					 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
-			$this->db->prepare($sql2)->execute([$valorPrincipal, $data['conta_financeira_id'], $data['igreja_id']]);
+			// --- 2. ATUALIZAR SALDO DA CONTA BANCÁRIA / CAIXA ---
+			if (!empty($data['conta_financeira_id'])) {
+				$sqlSaldo = "UPDATE financeiro_contas_financeiras
+							 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + ?
+							 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
+				$this->db->prepare($sqlSaldo)->execute([
+					$valorTotal,
+					$data['conta_financeira_id'],
+					$data['igreja_id']
+				]);
 
-			// --- 4. MOVIMENTAÇÃO NO EXTRATO (financeiro_movimentacoes) ---
-			$desc = "Receita (Conferência): " . $data['descricao'];
-			$sql3 = "INSERT INTO financeiro_movimentacoes (
-						financeiro_movimentacao_igreja_id,
-						financeiro_movimentacao_financeiro_conta_id,
-						financeiro_movimentacao_financeiro_categoria_id,
-						financeiro_movimentacao_financeiro_conta_financeira_id,
-						financeiro_movimentacao_tipo,
-						financeiro_movimentacao_valor,
-						financeiro_movimentacao_data,
-						financeiro_movimentacao_descricao,
-						financeiro_movimentacao_origem
-					) VALUES (?, ?, ?, ?, 'entrada', ?, ?, ?, 'pagamento')";
+				// --- 3. INSERIR MOVIMENTAÇÃO FINANCEIRA ---
+				$sqlMov = "INSERT INTO financeiro_movimentacoes (
+							financeiro_movimentacao_igreja_id,
+							financeiro_movimentacao_financeiro_conta_id,
+							financeiro_movimentacao_financeiro_conta_financeira_id,
+							financeiro_movimentacao_tipo,
+							financeiro_movimentacao_valor,
+							financeiro_movimentacao_data,
+							financeiro_movimentacao_descricao,
+							financeiro_movimentacao_origem
+						) VALUES (?, ?, ?, 'entrada', ?, ?, ?, 'pagamento')";
 
-			$this->db->prepare($sql3)->execute([
-				$data['igreja_id'],
-				$contaId,
-				$data['categoria_id'],
-				$data['conta_financeira_id'],
-				$valorPrincipal,
-				$data_pagamento_completa,
-				$desc
-			]);
+				$this->db->prepare($sqlMov)->execute([
+					$data['igreja_id'],
+					$contaId,
+					$data['conta_financeira_id'],
+					$valorTotal,
+					$data_pagamento_completa,
+					$data['descricao'] ?? 'Lançamento em Lote'
+				]);
+			}
 
-			// --- 5. RATEIO DE MEMBROS ---
-			if (!empty($data['rateio_membros'])) {
-				$sql4 = "INSERT INTO financeiro_receita_membros (
-							receita_membro_conta_id,
-							receita_membro_categoria_id,
-							receita_membro_subcategoria_id,
-							receita_membro_usuario_id,
-							receita_membro_valor,
-							receita_membro_data
-						) VALUES (?, ?, ?, ?, ?, ?)";
-				$stmt4 = $this->db->prepare($sql4);
+			// --- 4. INSERIR O RATEIO DOS MEMBROS ---
+			if (!empty($data['rateio_membros']) && is_array($data['rateio_membros'])) {
+				$sqlMembro = "INSERT INTO financeiro_receita_membros (
+								receita_membro_conta_id,
+								receita_membro_subcategoria_id,
+								receita_membro_usuario_id,
+								receita_membro_valor,
+								receita_membro_data
+							) VALUES (?, ?, ?, ?, ?)";
+
+				$stmtMembro = $this->db->prepare($sqlMembro);
 
 				foreach ($data['rateio_membros'] as $index => $membroId) {
 					if (empty($membroId)) continue;
 
-					$valorMembro = $limparValor($data['rateio_valores'][$index] ?? 0);
+					$valMembro = isset($data['rateio_valores'][$index]) ? $limparValor($data['rateio_valores'][$index]) : 0;
 
-					if ($valorMembro > 0) {
-						$stmt4->execute([
+					if ($valMembro > 0) {
+						$stmtMembro->execute([
 							$contaId,
-							$data['categoria_pai_id'], // Categoria Pai (Ex: 18)
-							$data['subcategoria_id'],  // Subcategoria (Ex: 13)
+							$data['subcategoria_id'] ?? $data['categoria_id'],
 							$membroId,
-							$valorMembro,
+							$valMembro,
 							$data_pagamento_completa
 						]);
 					}
 				}
+			}
+
+			// Se tudo ocorreu bem, confirma as alterações no banco de dados
+			$this->db->commit();
+			return true;
+
+		} catch (\Exception $e) {
+			// Se houver qualquer falha, cancela todas as inserções da transação
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			error_log("ERRO SALVAR LANÇAMENTO EM LOTE: " . $e->getMessage());
+			return false;
+		}
+	}
+
+	// Arquivo: App/Models/DizimoOferta.php
+	// Método para Lançamento Individual (Insere Dízimo e/ou Oferta para um único membro)
+
+	public function salvarLancamentoIndividualCompleto($data) {
+		try {
+			if (!$this->db->inTransaction()) {
+				$this->db->beginTransaction();
+			}
+
+			$limparValor = function($valor) {
+				if (empty($valor)) return 0.00;
+				if (strpos($valor, ',') !== false) {
+					$valor = str_replace('.', '', $valor);
+					$valor = str_replace(',', '.', $valor);
+				}
+				return (float) $valor;
+			};
+
+			$data_pagamento_completa = $data['data_pagamento'] . ' ' . date('H:i:s');
+			$membroId = $data['membro_id'];
+
+			// --- 1. PROCESSAR DÍZIMO (SE INFORMADO) ---
+			$dizimoValor = $limparValor($data['dizimo_valor']);
+			if ($dizimoValor > 0 && !empty($data['dizimo_conta_id'])) {
+				// Insere Conta
+				$sqlConta = "INSERT INTO financeiro_contas (
+								financeiro_conta_igreja_id,
+								financeiro_conta_financeiro_categoria_id,
+								financeiro_conta_descricao,
+								financeiro_conta_valor,
+								financeiro_conta_tipo,
+								financeiro_conta_data_vencimento,
+								financeiro_conta_pago,
+								financeiro_conta_data_pagamento,
+								conferido_por_1,
+								conferido_por_2
+							) VALUES (?, ?, ?, ?, 'entrada', ?, 1, ?, ?, ?)";
+
+				// Assume subcategoria/categoria referente a Dízimo
+				$stmt = $this->db->prepare($sqlConta);
+				$stmt->execute([
+					$data['igreja_id'],
+					$data['dizimo_subcategoria_id'] ?? $data['categoria_dizimo_id'] ?? null,
+					"Dízimo - Individual",
+					$dizimoValor,
+					$data['data_pagamento'],
+					$data['data_pagamento'],
+					$data['diacono_1'],
+					$data['diacono_2']
+				]);
+				$contaIdDizimo = $this->db->lastInsertId();
+
+				// Atualiza Saldo Conta Financeira
+				$sqlSaldo = "UPDATE financeiro_contas_financeiras
+							 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + ?
+							 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
+				$this->db->prepare($sqlSaldo)->execute([$dizimoValor, $data['dizimo_conta_id'], $data['igreja_id']]);
+
+				// Insere Movimentação
+				$sqlMov = "INSERT INTO financeiro_movimentacoes (
+							financeiro_movimentacao_igreja_id,
+							financeiro_movimentacao_financeiro_conta_id,
+							financeiro_movimentacao_financeiro_conta_financeira_id,
+							financeiro_movimentacao_tipo,
+							financeiro_movimentacao_valor,
+							financeiro_movimentacao_data,
+							financeiro_movimentacao_descricao,
+							financeiro_movimentacao_origem
+						) VALUES (?, ?, ?, 'entrada', ?, ?, 'Dízimo Individual', 'pagamento')";
+				$this->db->prepare($sqlMov)->execute([
+					$data['igreja_id'],
+					$contaIdDizimo,
+					$data['dizimo_conta_id'],
+					$dizimoValor,
+					$data_pagamento_completa
+				]);
+
+				// Vínculo com o Membro
+				$sqlMembro = "INSERT INTO financeiro_receita_membros (
+								receita_membro_conta_id,
+								receita_membro_usuario_id,
+								receita_membro_valor,
+								receita_membro_data
+							) VALUES (?, ?, ?, ?)";
+				$this->db->prepare($sqlMembro)->execute([
+					$contaIdDizimo,
+					$membroId,
+					$dizimoValor,
+					$data_pagamento_completa
+				]);
+			}
+
+			// --- 2. PROCESSAR OFERTA (SE INFORMADA) ---
+			$ofertaValor = $limparValor($data['oferta_valor']);
+			if ($ofertaValor > 0 && !empty($data['oferta_conta_id'])) {
+				$sqlConta = "INSERT INTO financeiro_contas (
+								financeiro_conta_igreja_id,
+								financeiro_conta_financeiro_categoria_id,
+								financeiro_conta_descricao,
+								financeiro_conta_valor,
+								financeiro_conta_tipo,
+								financeiro_conta_data_vencimento,
+								financeiro_conta_pago,
+								financeiro_conta_data_pagamento,
+								conferido_por_1,
+								conferido_por_2
+							) VALUES (?, ?, ?, ?, 'entrada', ?, 1, ?, ?, ?)";
+
+				$stmt = $this->db->prepare($sqlConta);
+				$stmt->execute([
+					$data['igreja_id'],
+					$data['oferta_subcategoria_id'],
+					"Oferta - Individual",
+					$ofertaValor,
+					$data['data_pagamento'],
+					$data['data_pagamento'],
+					$data['diacono_1'],
+					$data['diacono_2']
+				]);
+				$contaIdOferta = $this->db->lastInsertId();
+
+				// Atualiza Saldo Conta Financeira
+				$sqlSaldo = "UPDATE financeiro_contas_financeiras
+							 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + ?
+							 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
+				$this->db->prepare($sqlSaldo)->execute([$ofertaValor, $data['oferta_conta_id'], $data['igreja_id']]);
+
+				// Insere Movimentação
+				$sqlMov = "INSERT INTO financeiro_movimentacoes (
+							financeiro_movimentacao_igreja_id,
+							financeiro_movimentacao_financeiro_conta_id,
+							financeiro_movimentacao_financeiro_conta_financeira_id,
+							financeiro_movimentacao_tipo,
+							financeiro_movimentacao_valor,
+							financeiro_movimentacao_data,
+							financeiro_movimentacao_descricao,
+							financeiro_movimentacao_origem
+						) VALUES (?, ?, ?, 'entrada', ?, ?, 'Oferta Individual', 'pagamento')";
+				$this->db->prepare($sqlMov)->execute([
+					$data['igreja_id'],
+					$contaIdOferta,
+					$data['oferta_conta_id'],
+					$ofertaValor,
+					$data_pagamento_completa
+				]);
+
+				// Vínculo com o Membro
+				$sqlMembro = "INSERT INTO financeiro_receita_membros (
+								receita_membro_conta_id,
+								receita_membro_subcategoria_id,
+								receita_membro_usuario_id,
+								receita_membro_valor,
+								receita_membro_data
+							) VALUES (?, ?, ?, ?, ?)";
+				$this->db->prepare($sqlMembro)->execute([
+					$contaIdOferta,
+					$data['oferta_subcategoria_id'],
+					$membroId,
+					$ofertaValor,
+					$data_pagamento_completa
+				]);
 			}
 
 			$this->db->commit();
@@ -309,7 +489,7 @@ class DizimoOferta
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
 			}
-			error_log("ERRO SQL DIZIMO/OFERTA: " . $e->getMessage());
+			error_log("ERRO SALVAR INDIVIDUAL: " . $e->getMessage());
 			return false;
 		}
 	}

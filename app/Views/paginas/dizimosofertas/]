@@ -183,82 +183,72 @@ class DizimoOfertaController extends Controller
 		exit;
 	}
 
-	// Arquivo: App/Controllers/DizimoOfertaController.php
+    public function salvar()
+    {
+        // Garante que o método seja POST
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header("Location: " . url('dizimoOferta'));
+            exit;
+        }
 
-	public function salvar()
-	{
-		header('Content-Type: application/json');
+        // Validação da sessão dos conferentes
+        if (!isset($_SESSION['conf_diacono_1']) || !isset($_SESSION['conf_diacono_2'])) {
+            header("Location: " . url('dizimoOferta/login'));
+            exit;
+        }
 
-		if (!isset($_POST['categoria_sub_id']) || empty($_POST['categoria_sub_id'])) {
-			echo json_encode(['success' => false, 'message' => 'Selecione a categoria/subcategoria.']);
-			exit;
-		}
+        $igrejaId = $_SESSION['usuario_igreja_id'] ?? null;
 
-		$ids = explode('-', $_POST['categoria_sub_id']);
+        // Trata upload do comprovante (se fornecido)
+        $comprovanteNome = null;
+        if (isset($_FILES['comprovante']) && $_FILES['comprovante']['error'] === UPLOAD_ERR_OK) {
+            $extensao = strtolower(pathinfo($_FILES['comprovante']['name'], PATHINFO_EXTENSION));
+            $extensoesPermitidas = ['jpg', 'jpeg', 'png', 'pdf'];
 
-		$data = [
-			'igreja_id'           => $_SESSION['usuario_igreja_id'],
-			'categoria_id'        => $ids[1],
-			'subcategoria_id'     => $ids[1],
-			'categoria_pai_id'    => $ids[0],
-			'conta_financeira_id' => $_POST['conta_financeira_id'] ?? null,
-			'descricao'           => $_POST['descricao'] ?? '',
-			'valor'               => $_POST['valor'] ?? 0,
-			'data_pagamento'      => $_POST['data_pagamento'] ?? date('Y-m-d'),
-			'diacono_1'           => $_SESSION['conf_diacono_1']['id'],
-			'diacono_2'           => $_SESSION['conf_diacono_2']['id'],
-			'rateio_membros'      => $_POST['rateio_membro'] ?? [],
-			'rateio_valores'      => $_POST['rateio_valor'] ?? []
-		];
+            if (in_array($extensao, $extensoesPermitidas)) {
+                $novoNome = md5(uniqid(rand(), true)) . '.' . $extensao;
+                $destino = 'uploads/comprovantes/' . $novoNome;
 
-		$sucesso = $this->model->salvarLancamentoCompleto($data);
+                if (!is_dir('uploads/comprovantes')) {
+                    mkdir('uploads/comprovantes', 0777, true);
+                }
 
-		if ($sucesso) {
-			echo json_encode(['success' => true, 'message' => 'Lançamento em lote salvo com sucesso!']);
-		} else {
-			echo json_encode(['success' => false, 'message' => 'Falha ao salvar lançamento em lote.']);
-		}
-		exit;
-	}
+                if (move_uploaded_file($_FILES['comprovante']['tmp_name'], $destino)) {
+                    $comprovanteNome = $novoNome;
+                }
+            }
+        }
 
-	public function salvarIndividual()
-	{
-		header('Content-Type: application/json');
+        // Prepara os dados vindo do form do modal
+        $dados = [
+            'igreja_id'             => $igrejaId,
+            'conta_financeira_id'   => $_POST['conta_financeira_id'] ?? null,
+            'membro_id'             => $_POST['membro_id'] ?? null,
+            'data_pagamento'        => $_POST['data_pagamento'] ?? date('Y-m-d'),
+            'metodo_pagamento'      => $_POST['metodo_pagamento'] ?? 'dinheiro',
+            'valor_dizimo'          => $_POST['valor_dizimo'] ?? 0,
+            'categoria_dizimo_id'   => $_POST['categoria_dizimo_id'] ?? null,
+            'subcategoria_dizimo_id'=> $_POST['subcategoria_dizimo_id'] ?? null,
+            'valor_oferta'          => $_POST['valor_oferta'] ?? 0,
+            'categoria_oferta_id'   => $_POST['categoria_oferta_id'] ?? null,
+            'subcategoria_oferta_id'=> $_POST['subcategoria_oferta_id'] ?? null,
+            'descricao_extra'       => $_POST['descricao_extra'] ?? '',
+            'comprovante'           => $comprovanteNome,
+            'diacono_1'             => $_SESSION['conf_diacono_1']['membro_id'],
+            'diacono_2'             => $_SESSION['conf_diacono_2']['membro_id']
+        ];
 
-		$membroId = $_POST['membro_id'] ?? null;
-		if (!$membroId) {
-			echo json_encode(['success' => false, 'message' => 'Selecione um membro.']);
-			exit;
-		}
+        $resultado = $this->model->salvarLancamentoCompleto($dados);
 
-		$ofertaSubCat = null;
-		if (!empty($_POST['oferta_categoria_sub_id'])) {
-			$partes = explode('-', $_POST['oferta_categoria_sub_id']);
-			$ofertaSubCat = $partes[1] ?? null;
-		}
+        if ($resultado['status']) {
+            $_SESSION['mensagem_sucesso'] = $resultado['message'];
+        } else {
+            $_SESSION['mensagem_erro'] = $resultado['message'];
+        }
 
-		$data = [
-			'igreja_id'             => $_SESSION['usuario_igreja_id'],
-			'membro_id'             => $membroId,
-			'data_pagamento'        => $_POST['data_pagamento'] ?? date('Y-m-d'),
-			'dizimo_valor'          => $_POST['dizimo_valor'] ?? 0,
-			'dizimo_conta_id'       => $_POST['dizimo_conta_id'] ?? null,
-			'oferta_valor'          => $_POST['oferta_valor'] ?? 0,
-			'oferta_conta_id'       => $_POST['oferta_conta_id'] ?? null,
-			'oferta_subcategoria_id' => $ofertaSubCat,
-			'diacono_1'             => $_SESSION['conf_diacono_1']['id'],
-			'diacono_2'             => $_SESSION['conf_diacono_2']['id']
-		];
-
-		$sucesso = $this->model->salvarLancamentoIndividualCompleto($data);
-
-		if ($sucesso) {
-			echo json_encode(['success' => true, 'message' => 'Lançamento individual realizado com sucesso!']);
-		} else {
-			echo json_encode(['success' => false, 'message' => 'Erro ao salvar o lançamento individual.']);
-		}
-		exit;
-	}
+        header("Location: " . url('dizimoOferta'));
+        exit;
+    }
 
     public function sair()
     {

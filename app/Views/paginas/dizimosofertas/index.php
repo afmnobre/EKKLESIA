@@ -84,7 +84,6 @@
             <div class="d-flex gap-3 mt-2">
                 <?php
                 $getFoto = function($diacono, $igrejaId) {
-                    // Seguindo sua estrutura: assets/uploads/{id}/membros/{registro}/{foto}
                     if (!empty($diacono['foto'])) {
                         return url("assets/uploads/{$igrejaId}/membros/{$diacono['registro']}/{$diacono['foto']}");
                     }
@@ -114,8 +113,13 @@
             <button class="btn btn-outline-dark shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRelatorioConferencia">
                 <i class="bi bi-printer"></i> Imprimir
             </button>
+            <!-- Botão do Novo Lançamento Individual por Membro -->
+            <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalLancamentoIndividual">
+                <i class="bi bi-person-heart"></i> Lançamento Individual
+            </button>
+            <!-- Botão antigo renomeado para Lançamento em Lote -->
             <button class="btn btn-dark shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNovoLancamento">
-                <i class="bi bi-plus-lg"></i> Novo Lançamento
+                <i class="bi bi-layers"></i> Lançamento em Lote
             </button>
             <a href="<?= url('dizimoOferta/sair') ?>" class="btn btn-outline-danger shadow-sm">
                 <i class="bi bi-box-arrow-right"></i> Sair
@@ -218,6 +222,117 @@
 	</div>
 </div>
 
+<!-- MODAL LANÇAMENTO INDIVIDUAL (DUPLO DÍZIMO/OFERTA) -->
+<div class="modal fade" id="modalLancamentoIndividual" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-check me-2"></i>Lançamento Individual Por Membro</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formLancamentoIndividual" action="<?= url('dizimoOferta/salvarIndividual') ?>" method="POST">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted text-uppercase d-block mb-1">Membro Doador/Dizimista</label>
+                        <select name="membro_id" id="select-membro-individual" class="form-select" required>
+                            <option value="">Digite para pesquisar o membro...</option>
+                            <?php foreach($membros as $m): ?>
+                                <option value="<?= $m['membro_id'] ?>"><?= htmlspecialchars($m['membro_nome']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted text-uppercase d-block mb-1">Data do Recebimento</label>
+                        <input type="date" name="data_pagamento" class="form-control bg-light border-0 fw-bold" value="<?= date('Y-m-d') ?>" required>
+                    </div>
+
+                    <!-- BLROCO DÍZIMO -->
+                    <div class="card bg-light border-0 mb-3">
+                        <div class="card-body p-3">
+                            <h6 class="fw-bold text-success mb-3"><i class="bi bi-wallet2 me-1"></i> Dízimo</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="small fw-bold text-muted text-uppercase mb-1">Valor (R$)</label>
+                                    <input type="text" name="dizimo_valor" class="form-control campo-moeda bg-white fw-bold" placeholder="0,00">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold text-muted text-uppercase mb-1">Conta Destino Dízimo</label>
+                                    <select name="dizimo_conta_id" class="form-select bg-white fw-bold">
+                                        <option value="">Selecione a conta...</option>
+                                        <?php foreach($contas_bancarias as $conta): ?>
+                                            <option value="<?= $conta['id'] ?>">
+                                                <?= htmlspecialchars($conta['nome']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BLOCO OFERTA -->
+                    <div class="card bg-light border-0 mb-3">
+                        <div class="card-body p-3">
+                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-gift me-1"></i> Oferta</h6>
+                            <div class="row g-2">
+                                <div class="col-md-12 mb-2">
+                                    <label class="small fw-bold text-muted text-uppercase mb-1">Tipo de Oferta</label>
+                                    <select name="oferta_categoria_sub_id" class="form-select bg-white fw-bold">
+                                        <?php
+                                        $lastCat = '';
+                                        foreach($categorias as $cat):
+                                            if($lastCat != $cat['financeiro_categoria_nome']):
+                                                if($lastCat != '') echo '</optgroup>';
+                                                echo '<optgroup label="'. htmlspecialchars($cat['financeiro_categoria_nome']) .'">';
+                                                $lastCat = $cat['financeiro_categoria_nome'];
+                                            endif;
+
+                                            // Seleciona por padrão a Oferta do Culto de Domingo
+                                            $isPadrao = (mb_stripos($cat['subcategoria_nome'], 'Oferta') !== false && mb_stripos($cat['subcategoria_nome'], 'Domingo') !== false);
+                                        ?>
+                                            <option value="<?= $cat['financeiro_categoria_id'] ?>-<?= $cat['subcategoria_id'] ?>" <?= $isPadrao ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($cat['subcategoria_nome']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                        <?php if($lastCat != '') echo '</optgroup>'; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold text-muted text-uppercase mb-1">Valor Oferta (R$)</label>
+                                    <input type="text" name="oferta_valor" class="form-control campo-moeda bg-white fw-bold" placeholder="0,00">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold text-muted text-uppercase mb-1">Conta Destino Oferta</label>
+                                    <select name="oferta_conta_id" class="form-select bg-white fw-bold">
+                                        <option value="">Selecione a conta...</option>
+                                        <?php foreach($contas_bancarias as $conta): ?>
+                                            <option value="<?= $conta['id'] ?>">
+                                                <?= htmlspecialchars($conta['nome']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-secondary border-0 small mb-0">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Insira pelo menos um dos valores (Dízimo e/ou Oferta). Ambos serão vinculados ao membro selecionado.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success px-4 fw-bold shadow">
+                        <i class="bi bi-check-lg me-1"></i> Salvar Lançamento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modalGerenciarAnexos" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -298,10 +413,10 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Nova Receita</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Nova Receita (Lote)</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="<?= url('dizimoOferta/salvar') ?>" method="POST">
+            <form id="formLancamentoLote" action="<?= url('dizimoOferta/salvar') ?>" method="POST">
                 <div class="modal-body p-4">
 
 					<div class="mb-3">
@@ -311,7 +426,6 @@
 							<?php
 							$lastCat = '';
 							foreach($categorias as $cat):
-								// Criar separadores visuais (Optgroup) para organizar por Categoria Pai
 								if($lastCat != $cat['financeiro_categoria_nome']):
 									if($lastCat != '') echo '</optgroup>';
 									echo '<optgroup label="'. htmlspecialchars($cat['financeiro_categoria_nome']) .'">';
@@ -346,7 +460,7 @@
                     <div class="row">
 						<div class="col-md-6 mb-3">
 							<label class="small fw-bold text-muted text-uppercase d-block mb-1">Valor (R$)</label>
-							<input type="text" name="valor" class="form-control bg-light border-0 fw-bold" placeholder="0,00" required>
+							<input type="text" name="valor" class="form-control campo-moeda bg-light border-0 fw-bold" placeholder="0,00" required>
 						</div>
                         <div class="col-md-6 mb-3">
                             <label class="small fw-bold text-muted text-uppercase d-block mb-1">Data do Recebimento</label>
@@ -387,7 +501,7 @@
 							<div class="col-4">
 								<div class="input-group input-group-sm">
 									<span class="input-group-text">R$</span>
-									<input type="text" name="rateio_valor[]" class="form-control valor-rateio" placeholder="0,00">
+									<input type="text" name="rateio_valor[]" class="form-control valor-rateio campo-moeda" placeholder="0,00">
 								</div>
 							</div>
 							<div class="col-1 text-end">
@@ -404,7 +518,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="button" class="btn btn-light fw-bold" data-bs-toggle="modal">Cancelar</button>
+                    <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-dark px-4 fw-bold shadow">
                         <i class="bi bi-check-lg me-1"></i> Salvar Lançamento
                     </button>
@@ -418,6 +532,8 @@
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 <script>
+    let choicesMembroIndividual = null;
+
     document.addEventListener('DOMContentLoaded', function() {
         const elements = document.querySelectorAll('.choices-select');
         elements.forEach(el => {
@@ -426,6 +542,21 @@
                 itemSelectText: 'Selecionar',
                 noResultsText: 'Nenhuma categoria encontrada',
             });
+        });
+
+        // Inicializa o Choices.js no Select do Membro no Modal Individual quando o modal for aberto
+        const modalIndividualEl = document.getElementById('modalLancamentoIndividual');
+        modalIndividualEl.addEventListener('shown.bs.modal', function () {
+            if (!choicesMembroIndividual) {
+                const elem = document.getElementById('select-membro-individual');
+                choicesMembroIndividual = new Choices(elem, {
+                    searchEnabled: true,
+                    itemSelectText: '',
+                    noResultsText: 'Nenhum membro encontrado',
+                    placeholder: true,
+                    placeholderValue: 'Digite o nome do membro...'
+                });
+            }
         });
     });
 
@@ -449,7 +580,6 @@ function adicionarLinhaRateio() {
 
 function parseBRFloat(valor) {
     if (!valor) return 0;
-    // Se for string, limpa formatação brasileira (1.235,44 -> 1235.44)
     if (typeof valor === 'string') {
         let limpo = valor.replace(/\./g, '').replace(',', '.');
         return parseFloat(limpo) || 0;
@@ -458,61 +588,50 @@ function parseBRFloat(valor) {
 }
 
 function calcularRateio() {
-    // 1. Pega o valor total da receita usando o parser brasileiro
-    const inputPrincipal = document.querySelector('input[name="valor"]');
+    const inputPrincipal = document.querySelector('#modalNovoLancamento input[name="valor"]');
+    if (!inputPrincipal) return;
+
     const totalReceita = parseBRFloat(inputPrincipal.value);
 
-    // 2. Soma todos os inputs de rateio usando o parser brasileiro
     let somaRateio = 0;
     document.querySelectorAll('.valor-rateio').forEach(input => {
         somaRateio += parseBRFloat(input.value);
     });
 
-    // 3. Calcula o saldo com precisão de 2 casas decimais para evitar erros de float do JS
     const saldo = parseFloat((totalReceita - somaRateio).toFixed(2));
 
     const badgeSaldo = document.getElementById('badge-saldo');
-    const btnSalvar = document.querySelector('button[type="submit"]');
+    const btnSalvar = document.querySelector('#modalNovoLancamento button[type="submit"]');
 
-    // 4. Atualiza o visual do Badge formatado para Real
     badgeSaldo.innerHTML = `Saldo: R$ ${saldo.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     })}`;
 
-    // Lógica de cores e bloqueio do botão
     if (saldo < 0) {
-        // Se negativo, erro (estourou o valor principal)
         badgeSaldo.className = 'badge bg-danger';
         btnSalvar.disabled = true;
     } else if (saldo === 0 && totalReceita > 0) {
-        // Se zerado e valor preenchido, sucesso
         badgeSaldo.className = 'badge bg-success';
         btnSalvar.disabled = false;
     } else {
-        // Se ainda tem saldo sobrando
         badgeSaldo.className = 'badge bg-secondary';
         btnSalvar.disabled = false;
     }
 }
 
-// Ouvintes de evento para disparar o cálculo
 document.addEventListener('input', function(e) {
-    // Se mudar o valor principal ou qualquer valor de rateio, recalcula
     if (e.target.name === 'valor' || e.target.classList.contains('valor-rateio')) {
         calcularRateio();
     }
 });
 
-// Ajuste na função de remover linha para recalcular após excluir
 function removerLinha(btn) {
     btn.closest('.linha-rateio').remove();
     calcularRateio();
 }
 
-// Opcional: Validação básica se a soma do rateio bate com o total
-document.querySelector('form').addEventListener('submit', function(e) {
-    // Agora usamos parseBRFloat para ler corretamente o valor com vírgula
+document.querySelector('#modalNovoLancamento form')?.addEventListener('submit', function(e) {
     const valorTotal = parseBRFloat(document.querySelector('input[name="valor"]').value);
     let somaRateio = 0;
 
@@ -520,7 +639,6 @@ document.querySelector('form').addEventListener('submit', function(e) {
         somaRateio += parseBRFloat(input.value);
     });
 
-    // Usamos toFixed para evitar dízimas infinitas do JS na comparação
     if (parseFloat(somaRateio.toFixed(2)) > parseFloat(valorTotal.toFixed(2))) {
         e.preventDefault();
         document.getElementById('aviso-valor').classList.remove('d-none');
@@ -528,26 +646,33 @@ document.querySelector('form').addEventListener('submit', function(e) {
     }
 });
 
-// Adicione isso ao seu script para formatar enquanto digita
+// Validação simples para o formulário individual (Garante que ao menos Dízimo ou Oferta foi preenchido)
+document.querySelector('#modalLancamentoIndividual form')?.addEventListener('submit', function(e) {
+    const dizimoValor = parseBRFloat(this.querySelector('input[name="dizimo_valor"]').value);
+    const ofertaValor = parseBRFloat(this.querySelector('input[name="oferta_valor"]').value);
+
+    if (dizimoValor <= 0 && ofertaValor <= 0) {
+        e.preventDefault();
+        alert('Por favor, informe ao menos o valor do Dízimo ou da Oferta.');
+    }
+});
+
+// Mascara de moeda para campos com a classe .campo-moeda
 document.addEventListener('input', function(e) {
-    if (e.target.name === 'valor' || e.target.classList.contains('valor-rateio')) {
-        // 1. Pega apenas os números
+    if (e.target.classList.contains('campo-moeda') || e.target.name === 'valor' || e.target.classList.contains('valor-rateio')) {
         let v = e.target.value.replace(/\D/g, '');
 
-        // 2. Se estiver vazio, não faz nada
         if (v === '') {
+            e.target.value = '';
             calcularRateio();
             return;
         }
 
-        // 3. Formata como moeda (centavos, vírgula e milhar)
         v = (v / 100).toFixed(2).replace('.', ',');
         v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
 
-        // 4. Atribui o valor formatado de volta ao campo
         e.target.value = v;
 
-        // 5. Atualiza o saldo do rateio
         calcularRateio();
     }
 });
@@ -562,7 +687,6 @@ function abrirGerenciadorAnexos(receita) {
 
         container.innerHTML = '';
 
-        // Formatação de data
         let dataFormatada = "";
         if(receita.financeiro_conta_data_pagamento) {
             const partes = receita.financeiro_conta_data_pagamento.split('-');
@@ -647,16 +771,10 @@ function abrirGerenciadorAnexos(receita) {
     }
 }
 
-/**
- * @param contaId ID da conta principal
- * @param tipo 'comprovante' ou 'nota_fiscal'
- * @param membroId ID do rateio (opcional)
- */
 function anexarDocumento(contaId, tipo, membroId = null) {
     document.getElementById('anexo_conta_id').value = contaId;
     document.getElementById('anexo_tipo').value = tipo;
 
-    // Campo que criamos no Modal para o ID do Membro
     const inputMembro = document.getElementById('anexo_receita_membro_id');
     if(inputMembro) {
         inputMembro.value = membroId || '';
@@ -676,53 +794,103 @@ function executarUploadAsync(botao) {
     const btnText = botao.querySelector('.btn-text');
     const spinner = botao.querySelector('.spinner-border');
     const previewArea = form.querySelector('.preview-anexo-existente');
+}
 
-    // Feedback visual de carregamento
-    botao.disabled = true;
-    btnText.classList.add('d-none');
-    spinner.classList.remove('d-none');
 
-    fetch(form.action, {
+
+
+// Arquivo: dizimosofertas/index.php (Script ao final da página)
+
+// 1. SUBMISSÃO AJAX - LANÇAMENTO EM LOTE
+document.getElementById('formLancamentoLote')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const form = this;
+    const btnSubmit = form.querySelector('button[type="submit"]');
+    const valorTotal = parseBRFloat(form.querySelector('input[name="valor"]').value);
+
+    let somaRateio = 0;
+    form.querySelectorAll('.valor-rateio').forEach(input => {
+        somaRateio += parseBRFloat(input.value);
+    });
+
+    if (parseFloat(somaRateio.toFixed(2)) > parseFloat(valorTotal.toFixed(2))) {
+        document.getElementById('aviso-valor')?.classList.remove('d-none');
+        alert('Atenção: A soma dos rateios é maior que o valor total!');
+        return;
+    }
+
+    // Trava o botão para evitar clique duplo/duplicidade
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Salvando...';
+
+    const formData = new FormData(form);
+
+    fetch('<?= url("dizimoOferta/salvar") ?>', {
         method: 'POST',
         body: formData
     })
-    .then(response => {
-        if (response.ok) {
-            // Sucesso! Atualiza o visual da linha sem fechar o modal
-            previewArea.classList.remove('d-none');
-            previewArea.innerHTML = `
-                <div class="d-flex align-items-center gap-2 mt-1 p-2 bg-success-subtle rounded border border-success-subtle animate__animated animate__fadeIn">
-                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
-                    <div class="flex-grow-1">
-                        <small class="d-block fw-bold text-success" style="font-size: 10px;">ENVIADO COM SUCESSO!</small>
-                        <span class="text-muted" style="font-size: 11px;">O arquivo foi salvo.</span>
-                    </div>
-                </div>`;
-
-            // Limpa o campo de arquivo para um novo upload se necessário
-            form.querySelector('input[type="file"]').value = '';
-
-            // Opcional: Você pode adicionar um link para ver o arquivo se o seu PHP retornar o caminho
-            // Mas para dízimos, o feedback visual de "Enviado" geralmente já basta para o fluxo.
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
         } else {
-            alert("Erro ao enviar o arquivo. Verifique o tamanho ou formato.");
+            alert(data.message || 'Erro ao processar requisição.');
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="bi bi-check-lg me-1"></i> Salvar Lançamento';
         }
     })
-    .catch(error => {
-        console.error("Erro:", error);
-        alert("Erro de conexão ao tentar subir o arquivo.");
-    })
-    .finally(() => {
-        // Restaura o botão
-        botao.disabled = false;
-        btnText.classList.remove('d-none');
-        spinner.classList.add('d-none');
+    .catch(err => {
+        console.error(err);
+        alert('Ocorreu um erro no servidor.');
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<i class="bi bi-check-lg me-1"></i> Salvar Lançamento';
     });
-}
-
-document.getElementById('modalGerenciarAnexos').addEventListener('hidden.bs.modal', function () {
-    // Recarrega a página para que o PHP busque os dados atualizados do banco
-    location.reload();
 });
+
+// 2. SUBMISSÃO AJAX - LANÇAMENTO INDIVIDUAL
+document.getElementById('formLancamentoIndividual')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const form = this;
+    const btnSubmit = form.querySelector('button[type="submit"]');
+    const dizimoValor = parseBRFloat(form.querySelector('input[name="dizimo_valor"]').value);
+    const ofertaValor = parseBRFloat(form.querySelector('input[name="oferta_valor"]').value);
+
+    if (dizimoValor <= 0 && ofertaValor <= 0) {
+        alert('Por favor, informe ao menos o valor do Dízimo ou da Oferta.');
+        return;
+    }
+
+    // Trava o botão para evitar clique duplo/duplicidade
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Salvando...';
+
+    const formData = new FormData(form);
+
+    fetch('<?= url("dizimoOferta/salvarIndividual") ?>', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert(data.message || 'Erro ao processar requisição.');
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="bi bi-check-lg me-1"></i> Salvar Lançamento';
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Ocorreu um erro no servidor.');
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<i class="bi bi-check-lg me-1"></i> Salvar Lançamento';
+    });
+});
+
 
 </script>

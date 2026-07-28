@@ -232,34 +232,43 @@
 								</button>
 							</div>
 
-							<div class="row g-3">
-								<?php if(!empty($familia)): foreach($familia as $f): ?>
-									<div class="col-md-6 mb-3">
-										<div class="p-3 border rounded-3 bg-white shadow-sm d-flex align-items-center justify-content-between">
-											<div class="d-flex align-items-center text-truncate">
-												<div class="me-3">
-													<div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-														<i class="bi bi-person text-secondary fs-4"></i>
-													</div>
-												</div>
-												<div class="text-truncate">
-													<small class="text-primary d-block fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
-														<?= $f['parentesco_nome'] ?> </small>
-													<strong class="text-dark d-block text-truncate"><?= $f['membro_nome'] ?></strong>
-												</div>
-											</div>
-											<a href="<?= url('PesquisaMembro/perfil/'.$f['id_parente']) ?>" class="btn btn-sm btn-outline-secondary border-0">
-												<i class="bi bi-arrow-right-short fs-4"></i>
-											</a>
-										</div>
-									</div>
-								<?php endforeach; else: ?>
-									<div class="col-12 text-center py-4 text-muted">
-										<i class="bi bi-people d-block fs-2 opacity-25"></i>
-										Nenhum familiar vinculado.
-									</div>
-								<?php endif; ?>
-							</div>
+<div class="row g-3">
+    <?php if(!empty($familia)): foreach($familia as $f): ?>
+        <div class="col-md-6 mb-3">
+            <div class="p-3 border rounded-3 bg-white shadow-sm d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center text-truncate me-2">
+                    <div class="me-3">
+                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                            <i class="bi bi-person text-secondary fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="text-truncate">
+                        <small class="text-primary d-block fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                            <?= $f['parentesco_nome'] ?>
+                        </small>
+                        <strong class="text-dark d-block text-truncate"><?= $f['membro_nome'] ?></strong>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <a href="<?= url('PesquisaMembro/perfil/'.$f['id_parente']) ?>" class="btn btn-sm btn-outline-secondary border-0" title="Ver Perfil">
+                        <i class="bi bi-arrow-right-short fs-4"></i>
+                    </a>
+                    <a href="<?= url('PesquisaMembro/removerParente/'.$f['parentesco_id']) ?>"
+                       class="btn btn-sm btn-outline-danger border-0"
+                       title="Remover Vínculo"
+                       onclick="return confirm('Tem certeza que deseja remover este vínculo de parentesco?');">
+                        <i class="bi bi-trash fs-6"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; else: ?>
+        <div class="col-12 text-center py-4 text-muted">
+            <i class="bi bi-people d-block fs-2 opacity-25"></i>
+            Nenhum familiar vinculado.
+        </div>
+    <?php endif; ?>
+</div>
 						</div>
 
                     </div>
@@ -281,7 +290,8 @@
 
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Parente</label>
-                    <select name="dependente_id" class="form-select select2" required style="width: 100%">
+                    <!-- Substituída a classe .select2 pela id/classe do Choices.js -->
+                    <select name="dependente_id" id="select_parente_choices" class="form-select choice-select" required>
                         <option value="">Selecione um membro...</option>
                         <?php foreach($todos_membros as $tm): ?>
                             <option value="<?= $tm['membro_id'] ?>"><?= $tm['membro_nome'] ?></option>
@@ -310,6 +320,29 @@
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modalParente = document.getElementById('modalParente');
+    const selectParente = document.getElementById('select_parente_choices');
+    let choicesInstance = null;
+
+    if (modalParente && selectParente) {
+        // Inicializa o Choices apenas quando o modal for exibido na tela
+        modalParente.addEventListener('shown.bs.modal', function () {
+            if (!choicesInstance) {
+                choicesInstance = new Choices(selectParente, {
+                    searchEnabled: true,
+                    searchPlaceholderValue: 'Digite para buscar...',
+                    noResultsText: 'Nenhum membro encontrado',
+                    itemSelectText: 'Clique para selecionar',
+                    removeItemButton: false,
+                    shouldSort: false
+                });
+            }
+        });
+    }
+});
+</script>
 
 <style>
 /* Estilos visuais para a tela */

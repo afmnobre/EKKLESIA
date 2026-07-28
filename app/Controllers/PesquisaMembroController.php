@@ -161,6 +161,15 @@ class PesquisaMembroController extends Controller
 			$this->model->vincularParente($dados);
 			header("Location: " . $_SERVER['HTTP_REFERER']);
 		}
-	}
+    }
+
+    public function removerParente($parentescoId) {
+        if ($parentescoId) {
+            $this->model->removerVinculoParente($parentescoId);
+        }
+        header("Location: " . $_SERVER['HTTP_REFERER']);
+        exit;
+    }
+
 
 }
