@@ -208,6 +208,23 @@
 										<?php endif; ?>
 									</button>
 
+									<?php
+										// Usa financeiro_conta_created_at se existir; senão usa financeiro_conta_data_pagamento como fallback seguro
+										$dataReferenciaStr = $l['financeiro_conta_created_at'] ?? $l['created_at'] ?? $l['financeiro_conta_data_pagamento'] ?? date('Y-m-d H:i:s');
+
+										$dataCriacao = new DateTime($dataReferenciaStr);
+										$agora = new DateTime();
+										$diferencaHoras = ($agora->getTimestamp() - $dataCriacao->getTimestamp()) / 3600;
+
+										if ($diferencaHoras <= 24):
+									?>
+										<button class="btn btn-sm btn-outline-danger shadow-sm border-0"
+												onclick="excluirLancamento(<?= $l['financeiro_conta_id'] ?>)"
+												title="Excluir Lançamento (Disponível até 24h)">
+											<i class="bi bi-trash fs-6"></i>
+										</button>
+									<?php endif; ?>
+
 									<span class="text-muted" style="font-size: 10px;">
 										<i class="bi bi-fingerprint"></i> <?= $l['financeiro_conta_id'] ?>
 									</span>
@@ -892,5 +909,36 @@ document.getElementById('formLancamentoIndividual')?.addEventListener('submit', 
     });
 });
 
+
+
+// Arquivo: App/Views/dizimooferta/index.php
+// Linha: Adicione ao final do arquivo dentro da tag <script>
+
+function excluirLancamento(id) {
+    if (!confirm('Deseja realmente excluir este lançamento? Esta ação irá desfazer todas as movimentações e estornar o saldo!')) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('id', id);
+
+    fetch('<?= url("dizimoOferta/excluirLancamento") ?>', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao processar a requisição.');
+    });
+}
 
 </script>

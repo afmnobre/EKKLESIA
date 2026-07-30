@@ -221,8 +221,10 @@ class DizimoOfertaController extends Controller
 		exit;
 	}
 
-	public function salvarIndividual()
-	{
+	// Arquivo: App/Controllers/DizimoOfertaController.php
+	// Linha: Localize o método salvarIndividual
+
+	public function salvarIndividual(){
 		header('Content-Type: application/json');
 
 		$membroId = $_POST['membro_id'] ?? null;
@@ -238,16 +240,18 @@ class DizimoOfertaController extends Controller
 		}
 
 		$data = [
-			'igreja_id'             => $_SESSION['usuario_igreja_id'],
-			'membro_id'             => $membroId,
-			'data_pagamento'        => $_POST['data_pagamento'] ?? date('Y-m-d'),
-			'dizimo_valor'          => $_POST['dizimo_valor'] ?? 0,
-			'dizimo_conta_id'       => $_POST['dizimo_conta_id'] ?? null,
-			'oferta_valor'          => $_POST['oferta_valor'] ?? 0,
-			'oferta_conta_id'       => $_POST['oferta_conta_id'] ?? null,
+			'igreja_id'              => $_SESSION['usuario_igreja_id'],
+			'membro_id'              => $membroId,
+			'data_pagamento'         => $_POST['data_pagamento'] ?? date('Y-m-d'),
+			'dizimo_valor'           => $_POST['dizimo_valor'] ?? 0,
+			'dizimo_conta_id'        => $_POST['dizimo_conta_id'] ?? null,
+			'dizimo_categoria_id'    => 18, // ID da categoria "Culto - Dizimo e Ofertas"
+			'dizimo_subcategoria_id' => 14, // ID da subcategoria "Dizimo"
+			'oferta_valor'           => $_POST['oferta_valor'] ?? 0,
+			'oferta_conta_id'        => $_POST['oferta_conta_id'] ?? null,
 			'oferta_subcategoria_id' => $ofertaSubCat,
-			'diacono_1'             => $_SESSION['conf_diacono_1']['id'],
-			'diacono_2'             => $_SESSION['conf_diacono_2']['id']
+			'diacono_1'              => $_SESSION['conf_diacono_1']['id'],
+			'diacono_2'              => $_SESSION['conf_diacono_2']['id']
 		];
 
 		$sucesso = $this->model->salvarLancamentoIndividualCompleto($data);
@@ -257,6 +261,25 @@ class DizimoOfertaController extends Controller
 		} else {
 			echo json_encode(['success' => false, 'message' => 'Erro ao salvar o lançamento individual.']);
 		}
+		exit;
+	}
+
+	// Arquivo: App/Controllers/DizimoOfertaController.php
+	// Linha: Adicione o método abaixo dentro do Controller DizimoOfertaController
+
+	public function excluirLancamento() {
+		header('Content-Type: application/json');
+
+		$contaId = $_POST['id'] ?? null;
+		$igrejaId = $_SESSION['usuario_igreja_id'] ?? null;
+
+		if (!$contaId || !$igrejaId) {
+			echo json_encode(['success' => false, 'message' => 'Parâmetros inválidos.']);
+			exit;
+		}
+
+		$resultado = $this->model->excluirLancamento($contaId, $igrejaId);
+		echo json_encode($resultado);
 		exit;
 	}
 

@@ -84,7 +84,8 @@ class DizimoOferta
 		$stmt = $this->db->prepare("
 			SELECT
 				fc.*,
-				COALESCE(sub.subcategoria_nome, cat.financeiro_categoria_nome) AS financeiro_categoria_nome
+				COALESCE(sub.subcategoria_nome, cat.financeiro_categoria_nome) AS financeiro_categoria_nome,
+				fm.financeiro_movimentacao_data
 			FROM financeiro_contas fc
 			-- Tenta buscar na tabela de categorias (comportamento antigo)
 			LEFT JOIN financeiro_categorias cat
@@ -92,11 +93,19 @@ class DizimoOferta
 			-- Tenta buscar na tabela de subcategorias (comportamento novo)
 			LEFT JOIN financeiro_subcategorias sub
 				ON fc.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
+			-- Busca a data/hora exata em que o lançamento foi realizado
+			LEFT JOIN (
+				SELECT
+					financeiro_movimentacao_financeiro_conta_id,
+					MIN(financeiro_movimentacao_data) AS financeiro_movimentacao_data
+				FROM financeiro_movimentacoes
+				GROUP BY financeiro_movimentacao_financeiro_conta_id
+			) fm ON fc.financeiro_conta_id = fm.financeiro_movimentacao_financeiro_conta_id
 			WHERE fc.financeiro_conta_igreja_id = ?
 			AND fc.financeiro_conta_tipo = 'entrada'
 			AND MONTH(fc.financeiro_conta_data_pagamento) = ?
 			AND YEAR(fc.financeiro_conta_data_pagamento) = ?
-			ORDER BY fc.financeiro_conta_data_pagamento DESC
+			ORDER BY fc.financeiro_conta_data_pagamento DESC, fc.financeiro_conta_id DESC
 		");
 		$stmt->execute([$igrejaId, $mes, $ano]);
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -320,7 +329,7 @@ class DizimoOferta
 	}
 
 	// Arquivo: App/Models/DizimoOferta.php
-	// Método para Lançamento Individual (Insere Dízimo e/ou Oferta para um único membro)
+	// Linha: Localize o método salvarLancamentoIndividualCompleto
 
 	public function salvarLancamentoIndividualCompleto($data) {
 		try {
@@ -330,6 +339,7 @@ class DizimoOferta
 
 			$limparValor = function($valor) {
 				if (empty($valor)) return 0.00;
+				if (is_numeric($valor)) return (float) $valor;
 				if (strpos($valor, ',') !== false) {
 					$valor = str_replace('.', '', $valor);
 					$valor = str_replace(',', '.', $valor);
@@ -343,7 +353,7 @@ class DizimoOferta
 			// --- 1. PROCESSAR DÍZIMO (SE INFORMADO) ---
 			$dizimoValor = $limparValor($data['dizimo_valor']);
 			if ($dizimoValor > 0 && !empty($data['dizimo_conta_id'])) {
-				// Insere Conta
+				// Insere Conta Financeira (Dízimo = Subcategoria ID 14)
 				$sqlConta = "INSERT INTO financeiro_contas (
 								financeiro_conta_igreja_id,
 								financeiro_conta_financeiro_categoria_id,
@@ -357,11 +367,10 @@ class DizimoOferta
 								conferido_por_2
 							) VALUES (?, ?, ?, ?, 'entrada', ?, 1, ?, ?, ?)";
 
-				// Assume subcategoria/categoria referente a Dízimo
 				$stmt = $this->db->prepare($sqlConta);
 				$stmt->execute([
 					$data['igreja_id'],
-					$data['dizimo_subcategoria_id'] ?? $data['categoria_dizimo_id'] ?? null,
+					$data['dizimo_subcategoria_id'], // Valor fixado em 14
 					"Dízimo - Individual",
 					$dizimoValor,
 					$data['data_pagamento'],
@@ -371,7 +380,7 @@ class DizimoOferta
 				]);
 				$contaIdDizimo = $this->db->lastInsertId();
 
-				// Atualiza Saldo Conta Financeira
+				// Atualiza Saldo da Conta Bancária / Caixa
 				$sqlSaldo = "UPDATE financeiro_contas_financeiras
 							 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + ?
 							 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
@@ -396,15 +405,17 @@ class DizimoOferta
 					$data_pagamento_completa
 				]);
 
-				// Vínculo com o Membro
+				// Vínculo com o Membro (Dízimo)
 				$sqlMembro = "INSERT INTO financeiro_receita_membros (
 								receita_membro_conta_id,
+								receita_membro_subcategoria_id,
 								receita_membro_usuario_id,
 								receita_membro_valor,
 								receita_membro_data
-							) VALUES (?, ?, ?, ?)";
+							) VALUES (?, ?, ?, ?, ?)";
 				$this->db->prepare($sqlMembro)->execute([
 					$contaIdDizimo,
+					$data['dizimo_subcategoria_id'], // Valor fixado em 14
 					$membroId,
 					$dizimoValor,
 					$data_pagamento_completa
@@ -440,7 +451,7 @@ class DizimoOferta
 				]);
 				$contaIdOferta = $this->db->lastInsertId();
 
-				// Atualiza Saldo Conta Financeira
+				// Atualiza Saldo da Conta Bancária / Caixa
 				$sqlSaldo = "UPDATE financeiro_contas_financeiras
 							 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + ?
 							 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
@@ -465,7 +476,7 @@ class DizimoOferta
 					$data_pagamento_completa
 				]);
 
-				// Vínculo com o Membro
+				// Vínculo com o Membro (Oferta)
 				$sqlMembro = "INSERT INTO financeiro_receita_membros (
 								receita_membro_conta_id,
 								receita_membro_subcategoria_id,
@@ -491,6 +502,90 @@ class DizimoOferta
 			}
 			error_log("ERRO SALVAR INDIVIDUAL: " . $e->getMessage());
 			return false;
+		}
+	}
+
+	// Arquivo: App/Models/DizimoOferta.php
+	// Linha: Localize o método excluirLancamento
+
+	public function excluirLancamento($contaId, $igrejaId) {
+		try {
+			if (!$this->db->inTransaction()) {
+				$this->db->beginTransaction();
+			}
+
+			// 1. Buscar os dados do lançamento e a data/hora exata da movimentação
+			$sql = "SELECT c.financeiro_conta_id,
+						   m.financeiro_movimentacao_data
+					FROM financeiro_contas c
+					LEFT JOIN financeiro_movimentacoes m
+						   ON m.financeiro_movimentacao_financeiro_conta_id = c.financeiro_conta_id
+					WHERE c.financeiro_conta_id = ? AND c.financeiro_conta_igreja_id = ?";
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([$contaId, $igrejaId]);
+			$conta = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+			if (!$conta) {
+				$this->db->rollBack();
+				return ['success' => false, 'message' => 'Lançamento não encontrado.'];
+			}
+
+			// Validação das 24 horas usando financeiro_movimentacao_data
+			$dataHoraLancamento = !empty($conta['financeiro_movimentacao_data']) ? $conta['financeiro_movimentacao_data'] : null;
+
+			if ($dataHoraLancamento) {
+				$dataCriacao = new \DateTime($dataHoraLancamento);
+				$agora = new \DateTime();
+				$diferencaHoras = ($agora->getTimestamp() - $dataCriacao->getTimestamp()) / 3600;
+
+				if ($diferencaHoras > 24) {
+					$this->db->rollBack();
+					return ['success' => false, 'message' => 'Este lançamento tem mais de 24h e não pode ser excluído.'];
+				}
+			}
+
+			// 2. Desfazer os saldos das contas bancárias
+			$sqlMov = "SELECT financeiro_movimentacao_financeiro_conta_financeira_id, financeiro_movimentacao_valor
+					   FROM financeiro_movimentacoes
+					   WHERE financeiro_movimentacao_financeiro_conta_id = ? AND financeiro_movimentacao_igreja_id = ?";
+			$stmtMov = $this->db->prepare($sqlMov);
+			$stmtMov->execute([$contaId, $igrejaId]);
+			$movimentacoes = $stmtMov->fetchAll(\PDO::FETCH_ASSOC);
+
+			foreach ($movimentacoes as $mov) {
+				if (!empty($mov['financeiro_movimentacao_financeiro_conta_financeira_id'])) {
+					$sqlSaldo = "UPDATE financeiro_contas_financeiras
+								 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo - ?
+								 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
+					$this->db->prepare($sqlSaldo)->execute([
+						$mov['financeiro_movimentacao_valor'],
+						$mov['financeiro_movimentacao_financeiro_conta_financeira_id'],
+						$igrejaId
+					]);
+				}
+			}
+
+			// 3. Excluir rateio de membros
+			$sqlDelMembros = "DELETE FROM financeiro_receita_membros WHERE receita_membro_conta_id = ?";
+			$this->db->prepare($sqlDelMembros)->execute([$contaId]);
+
+			// 4. Excluir movimentações
+			$sqlDelMov = "DELETE FROM financeiro_movimentacoes WHERE financeiro_movimentacao_financeiro_conta_id = ? AND financeiro_movimentacao_igreja_id = ?";
+			$this->db->prepare($sqlDelMov)->execute([$contaId, $igrejaId]);
+
+			// 5. Excluir registro da conta
+			$sqlDelConta = "DELETE FROM financeiro_contas WHERE financeiro_conta_id = ? AND financeiro_conta_igreja_id = ?";
+			$this->db->prepare($sqlDelConta)->execute([$contaId, $igrejaId]);
+
+			$this->db->commit();
+			return ['success' => true, 'message' => 'Lançamento excluído e saldo estornado com sucesso!'];
+
+		} catch (\Exception $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			error_log("ERRO EXCLUIR LANÇAMENTO: " . $e->getMessage());
+			return ['success' => false, 'message' => 'Erro ao tentar excluir o lançamento.'];
 		}
 	}
 
