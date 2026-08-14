@@ -109,9 +109,13 @@
             </div>
         </div>
 
-        <div class="d-flex gap-2">
+		<div class="d-flex gap-2">
             <button class="btn btn-outline-dark shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRelatorioConferencia">
                 <i class="bi bi-printer"></i> Imprimir
+            </button>
+            <!-- NOVO BOTÃO: RELATÓRIO CONTÁBIL -->
+            <button class="btn btn-outline-secondary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRelatorioContabil">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Relatório Contábil
             </button>
             <!-- Botão do Novo Lançamento Individual por Membro -->
             <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalLancamentoIndividual">
@@ -295,25 +299,26 @@
                             <div class="row g-2">
                                 <div class="col-md-12 mb-2">
                                     <label class="small fw-bold text-muted text-uppercase mb-1">Tipo de Oferta</label>
-                                    <select name="oferta_categoria_sub_id" class="form-select bg-white fw-bold">
-                                        <?php
-                                        $lastCat = '';
-                                        foreach($categorias as $cat):
-                                            if($lastCat != $cat['financeiro_categoria_nome']):
-                                                if($lastCat != '') echo '</optgroup>';
-                                                echo '<optgroup label="'. htmlspecialchars($cat['financeiro_categoria_nome']) .'">';
-                                                $lastCat = $cat['financeiro_categoria_nome'];
-                                            endif;
+									<select name="oferta_categoria_sub_id" class="form-select bg-white fw-bold">
+										<?php
+										$lastCat = '';
+										foreach($categorias as $cat):
+											if($lastCat != $cat['financeiro_categoria_nome']):
+												if($lastCat != '') echo '</optgroup>';
+												echo '<optgroup label="'. htmlspecialchars($cat['financeiro_categoria_nome']) .'">';
+												$lastCat = $cat['financeiro_categoria_nome'];
+											endif;
 
-                                            // Seleciona por padrão a Oferta do Culto de Domingo
-                                            $isPadrao = (mb_stripos($cat['subcategoria_nome'], 'Oferta') !== false && mb_stripos($cat['subcategoria_nome'], 'Domingo') !== false);
-                                        ?>
-                                            <option value="<?= $cat['financeiro_categoria_id'] ?>-<?= $cat['subcategoria_id'] ?>" <?= $isPadrao ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($cat['subcategoria_nome']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                        <?php if($lastCat != '') echo '</optgroup>'; ?>
-                                    </select>
+											// Seleciona por padrão a Oferta de Culto (Subcategoria 13 ou nome exato "Oferta" na categoria "Culto - Dizimo e Ofertas")
+											$isPadrao = ($cat['subcategoria_id'] == 13 ||
+														(mb_stripos($cat['financeiro_categoria_nome'], 'Culto') !== false && trim($cat['subcategoria_nome']) === 'Oferta'));
+										?>
+											<option value="<?= $cat['financeiro_categoria_id'] ?>-<?= $cat['subcategoria_id'] ?>" <?= $isPadrao ? 'selected' : '' ?>>
+												<?= htmlspecialchars($cat['subcategoria_nome']) ?>
+											</option>
+										<?php endforeach; ?>
+										<?php if($lastCat != '') echo '</optgroup>'; ?>
+									</select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="small fw-bold text-muted text-uppercase mb-1">Valor Oferta (R$)</label>
@@ -544,6 +549,37 @@
         </div>
     </div>
 </div>
+
+<!-- MODAL RELATÓRIO CONTÁBIL (PARÂMETRO DE DATA) -->
+<div class="modal fade" id="modalRelatorioContabil" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title small fw-bold"><i class="bi bi-file-earmark-text me-1"></i> RELATÓRIO CONTÁBIL</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="<?= url('dizimoOferta/relatorioContabil') ?>" method="GET" target="_blank">
+                <div class="modal-body p-4">
+					<div class="col-md-6 mb-3">
+						<label for="data_inicio" class="form-label fw-bold">Data Início</label>
+						<input type="date" name="data_inicio" id="data_inicio" class="form-control" value="<?= date('Y-m-d') ?>" required>
+					</div>
+
+					<div class="col-md-6 mb-3">
+						<label for="data_fim" class="form-label fw-bold">Data Fim</label>
+						<input type="date" name="data_fim" id="data_fim" class="form-control" value="<?= date('Y-m-d') ?>" required>
+					</div>
+                </div>
+                <div class="modal-footer border-0 p-3 pt-0">
+                    <button type="submit" class="btn btn-secondary w-100 fw-bold shadow-sm">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Gerar Relatório
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
@@ -939,6 +975,30 @@ function excluirLancamento(id) {
         console.error('Erro:', error);
         alert('Erro ao processar a requisição.');
     });
+}
+
+
+// FORMA CORRETA (Garante que o objeto de opções do Bootstrap seja inicializado):
+const modalElement = document.getElementById('modalRelatorioContabil');
+
+if (modalElement) {
+    // Escuta o evento de abertura do modal do Bootstrap para preencher as datas
+    modalElement.addEventListener('show.bs.modal', function () {
+        const hoje = new Date().toISOString().split('T')[0];
+
+        const inputInicio = document.getElementById('data_inicio');
+        const inputFim = document.getElementById('data_fim');
+
+        if (inputInicio) inputInicio.value = hoje;
+        if (inputFim) inputFim.value = hoje;
+    });
+
+    // Instancia e exibe o modal
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement, {
+        backdrop: true,
+        keyboard: true
+    });
+    modal.show();
 }
 
 </script>

@@ -48,7 +48,7 @@
                 <div class="mb-3">
                     <label class="small fw-bold">Tipo</label>
                     <select name="tipo" id="conta_tipo" class="form-select">
-                        <option value="caixa">Caixa (Espécie)</option>
+                        <option value="caixa">Caixa, Dinheiro (Espécie)</option>
                         <option value="banco">Banco (Conta Corrente/Poupança)</option>
                         <option value="carteira">Carteira Digital (Pix, etc)</option>
                     </select>

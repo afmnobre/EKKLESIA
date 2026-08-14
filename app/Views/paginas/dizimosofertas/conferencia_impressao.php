@@ -5,35 +5,28 @@
     <title>Relatório de Conferência - <?= date('d/m/Y', strtotime($data)) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: white; font-size: 12px; }
-        .folha { width: 210mm; margin: 0 auto; padding: 20px; }
-        .header-rel { border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        table th { background: #f2f2f2 !important; border: 1px solid #ddd; padding: 8px; text-transform: uppercase; font-size: 10px; }
-        table td { border: 1px solid #ddd; padding: 8px; }
-        .assinatura { border-top: 1px solid #000; margin-top: 50px; text-align: center; padding-top: 5px; }
-        .bg-avulso { background-color: #f8f9fa; border: 1px dashed #ddd; padding: 15px; border-radius: 5px; }
-        @media print {
-            .btn-print { display: none; }
-            body { margin: 0; }
-            .folha { padding: 10px; }
-        }
-		/* ... seus estilos anteriores ... */
-		.header-top { border-bottom: 2px solid #000; padding-bottom: 15px; }
-		.logo-box { width: 150px; } /* Define um tamanho fixo para as caixas de logo */
-		.igreja-nome { font-size: 18px; margin-bottom: 2px; }
-		.igreja-endereco { font-size: 10px; color: #666; display: block; }
-		.titulo-relatorio {
-			margin-top: 10px;
-			font-size: 14px;
-			letter-spacing: 1px;
-			font-weight: bold;
-		}
+        body { background: white; font-size: 11px; }
+        .folha { width: 210mm; margin: 0 auto; padding: 15px; }
+        .header-top { border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .logo-box { width: 130px; }
+        .igreja-nome { font-size: 16px; margin-bottom: 2px; }
+        .igreja-endereco { font-size: 10px; color: #666; display: block; }
+        .titulo-relatorio { margin-top: 5px; font-size: 13px; letter-spacing: 1px; font-weight: bold; }
 
-		@media print {
-			.no-print { display: none; }
-		}
-	</style>
+        table.tabela-relatorio { width: 100%; border-collapse: collapse; margin-bottom: 15px; border: 2px solid #000; }
+        table.tabela-relatorio th, table.tabela-relatorio td { border: 1px solid #000; padding: 4px 6px; }
+
+        .header-red { color: #d32f2f; font-weight: bold; }
+        .header-blue { color: #1976d2; font-weight: bold; }
+        .bg-avulsa { background-color: #ffff00 !important; font-weight: bold; color: #d32f2f; }
+        .assinatura { border-top: 1px solid #000; margin-top: 40px; text-align: center; padding-top: 5px; }
+
+        @media print {
+            .no-print { display: none; }
+            body { margin: 0; }
+            .folha { padding: 5px; }
+        }
+    </style>
 </head>
 <body onload="window.print()">
 
@@ -42,9 +35,9 @@
 </div>
 
 <div class="folha">
-    <div class="header-top d-flex justify-content-between align-items-center mb-4">
+    <div class="header-top d-flex justify-content-between align-items-center mb-3">
         <div class="logo-box">
-            <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" alt="IPB" style="height: 70px;">
+            <img src="<?= url('assets/img/logo_ipb_completo.png') ?>" alt="IPB" style="height: 60px;">
         </div>
 
         <div class="text-center flex-grow-1 px-3">
@@ -57,7 +50,7 @@
             <div class="titulo-relatorio text-uppercase">
                 Relatório de Conferência de Valores
             </div>
-            <div class="fw-bold">
+            <div class="fw-bold header-red">
                 DATA: <?= date('d/m/Y', strtotime($data)) ?>
             </div>
         </div>
@@ -67,115 +60,114 @@
                 $caminhoLogo = "assets/uploads/{$igreja['igreja_id']}/logo/{$igreja['igreja_logo']}";
                 if(!empty($igreja['igreja_logo'])):
             ?>
-                <img src="<?= url($caminhoLogo) ?>" alt="Logo Igreja" style="max-height: 70px;">
+                <img src="<?= url($caminhoLogo) ?>" alt="Logo Igreja" style="max-height: 60px;">
             <?php else: ?>
-                <img src="<?= url('assets/img/logo_ipb.png') ?>" alt="IPB" style="height: 70px;">
+                <img src="<?= url('assets/img/logo_ipb.png') ?>" alt="IPB" style="height: 60px;">
             <?php endif; ?>
         </div>
     </div>
 
-    <h6 class="fw-bold text-uppercase mt-4">1. Resumo de Entradas (Totais por Subcategoria)</h6>
-    <table>
+    <!-- TABELA EM FORMATO MATRIZ DA FOLHA DE CONFERÊNCIA -->
+    <table class="tabela-relatorio">
         <thead>
             <tr>
-                <th>Descrição / Subcategoria</th>
-                <th class="text-end">Valor Total Lançado</th>
+                <th rowspan="2" class="text-center align-middle header-red fs-6" style="width: 45%;">NOME</th>
+                <th colspan="2" class="text-center header-red fs-6">DÍZIMO</th>
+                <th colspan="2" class="text-center header-red fs-6">OFERTA</th>
+            </tr>
+            <tr>
+                <th class="text-center header-blue" style="width: 13.75%;">$ (Espécie)</th>
+                <th class="text-center header-blue" style="width: 13.75%;">Conta</th>
+                <th class="text-center header-blue" style="width: 13.75%;">$ (Espécie)</th>
+                <th class="text-center header-blue" style="width: 13.75%;">Conta</th>
             </tr>
         </thead>
-		<tbody>
-			<?php
-				// Remova a linha $totalGeral = 0; daqui de dentro se ela existir,
-				// pois o Controller já enviou essa variável pronta.
-				foreach($resumo as $r):
-			?>
-				<tr>
-					<td><?= htmlspecialchars($r['nome']) ?></td>
-					<td class="text-end">R$ <?= number_format($r['total'], 2, ',', '.') ?></td>
-				</tr>
-			<?php endforeach; ?>
-		</tbody>
+        <tbody>
+            <?php if (!empty($membrosMatriz)): ?>
+                <?php foreach ($membrosMatriz as $nome => $valores): ?>
+                    <tr>
+                        <td class="fw-bold"><?= htmlspecialchars($nome) ?></td>
+                        <td class="text-end"><?= $valores['dizimo_especie'] > 0 ? number_format($valores['dizimo_especie'], 2, ',', '.') : '' ?></td>
+                        <td class="text-end"><?= $valores['dizimo_conta'] > 0 ? number_format($valores['dizimo_conta'], 2, ',', '.') : '' ?></td>
+                        <td class="text-end"><?= $valores['oferta_especie'] > 0 ? number_format($valores['oferta_especie'], 2, ',', '.') : '' ?></td>
+                        <td class="text-end"><?= $valores['oferta_conta'] > 0 ? number_format($valores['oferta_conta'], 2, ',', '.') : '' ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="5" class="text-center py-3">Nenhum lançamento registrado nesta data.</td>
+                </tr>
+            <?php endif; ?>
+        </tbody>
+        <tfoot>
+            <!-- TOTAL PARCIAL -->
+            <tr>
+                <td class="fw-bold text-center header-red fs-6">TOTAL PARCIAL</td>
+                <td class="text-end fw-bold"><?= number_format($totalDizimoEspecie, 2, ',', '.') ?></td>
+                <td class="text-end fw-bold"><?= number_format($totalDizimoConta, 2, ',', '.') ?></td>
+                <td class="text-end fw-bold"><?= number_format($totalOfertaEspecie, 2, ',', '.') ?></td>
+                <td class="text-end fw-bold"><?= number_format($totalOfertaConta, 2, ',', '.') ?></td>
+            </tr>
+
+            <!-- DÍZIMO (A) / OFERTA (B) -->
+            <tr>
+                <td colspan="1" class="border-0"></td>
+                <td colspan="2" class="text-center fw-bold fs-6">
+                    <span class="header-red">DÍZIMO</span>:
+                    R$ <?= number_format($totalDizimoA, 2, ',', '.') ?>
+                </td>
+                <td colspan="2" class="text-center fw-bold fs-6">
+                    <span class="header-red">OFERTA</span>:
+                    R$ <?= number_format($totalOfertaB, 2, ',', '.') ?>
+                </td>
+            </tr>
+
+            <!-- OFERTAS AVULSAS (C) -->
+            <tr>
+                <td class="bg-avulsa text-uppercase text-center">
+                    OFERTAS AVULSAS &rarr;
+                </td>
+                <td colspan="4" class="text-center fw-bold fs-6">
+                    R$ <?= number_format($ofertasAvulsas, 2, ',', '.') ?>
+                </td>
+            </tr>
+
+            <!-- TOTAL GERAL (A+B+C) -->
+            <tr>
+                <td class="text-center header-red fw-bold fs-4">
+                    TOTAL GERAL
+                </td>
+                <td colspan="4" class="text-center header-red fw-bold fs-4">
+                    R$ <?= number_format($totalGeral, 2, ',', '.') ?>
+                </td>
+            </tr>
+        </tfoot>
     </table>
 
-    <div class="row g-4">
-        <div class="col-8">
-            <h6 class="fw-bold text-uppercase">2. Detalhamento de Contribuições (Envelopes Identificados)</h6>
-            <?php if(!empty($rateio)): ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nome do Membro</th>
-                        <th>Tipo</th>
-                        <th class="text-end">Valor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                        $somaRateio = 0;
-                        foreach($rateio as $m):
-                        $somaRateio += $m['valor'];
-                    ?>
-                        <tr>
-                            <td><?= $m['membro_nome'] ?></td>
-                            <td><?= $m['subcategoria_nome'] ?></td>
-                            <td class="text-end">R$ <?= number_format($m['valor'], 2, ',', '.') ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-                <tfoot>
-                    <tr class="fw-bold">
-                        <td colspan="2" class="text-end text-uppercase">Total Identificado:</td>
-                        <td class="text-end">R$ <?= number_format($somaRateio, 2, ',', '.') ?></td>
-                    </tr>
-                </tfoot>
-            </table>
-            <?php else: ?>
-                <div class="alert alert-light border text-center">Nenhuma contribuição identificada (rateio) nesta data.</div>
-                <?php $somaRateio = 0; ?>
-            <?php endif; ?>
-        </div>
-
-        <div class="col-4">
-            <h6 class="fw-bold text-uppercase">3. Conciliação de Caixa</h6>
-            <div class="bg-avulso">
-                <div class="mb-3">
-                    <small class="text-muted d-block text-uppercase" style="font-size: 9px;">Ofertas Não Rateadas:</small>
-                    <?php $valorAvulso = $totalGeral - $somaRateio; ?>
-                    <h5 class="fw-bold mb-0">R$ <?= number_format($valorAvulso, 2, ',', '.') ?></h5>
-                    <small class="text-muted" style="font-size: 10px;">(Salvas / Envelopes sem nome)</small>
-                </div>
-                <hr>
-                <div>
-                    <small class="text-muted d-block text-uppercase" style="font-size: 9px;">Total Geral Conferido:</small>
-                    <h4 class="fw-bold text-success mb-0">R$ <?= number_format($totalGeral, 2, ',', '.') ?></h4>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- ASSINATURAS -->
     <div class="row mt-5">
         <div class="col-4">
             <div class="assinatura">
-                <small><?= $oficiais['d1'] ?></small><br>
+                <small><?= htmlspecialchars($oficiais['d1']) ?></small><br>
                 <strong>Oficial de Conferência 1</strong>
             </div>
         </div>
         <div class="col-4">
             <div class="assinatura">
-                <small><?= $oficiais['d2'] ?></small><br>
+                <small><?= htmlspecialchars($oficiais['d2']) ?></small><br>
                 <strong>Oficial de Conferência 2</strong>
             </div>
         </div>
         <div class="col-4">
             <div class="assinatura">
-                <small><?= $tesoureiro ?></small><br>
+                <small><?= htmlspecialchars($tesoureiro) ?></small><br>
                 <strong>Tesoureiro (Visto/Recebido)</strong>
             </div>
         </div>
     </div>
 
-    <div class="text-center mt-5 pt-4">
-        <p class="small text-muted mb-0">Documento gerado em <?= date('d/m/Y H:i:s') ?> por Módulo de Conferência Ekklesia.</p>
-        <p style="font-size: 9px;" class="text-uppercase text-muted">A conferência física deve bater com o Total Geral Conferido acima.</p>
+    <div class="text-center mt-4 pt-2">
+        <p class="small text-muted mb-0">Documento gerado em <?= date('d/m/Y H:i:s') ?> pelo Módulo de Conferência Ekklesia.</p>
     </div>
 </div>
 

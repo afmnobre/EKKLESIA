@@ -659,4 +659,105 @@ class DizimoOferta
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 	}
 
+	// Arquivo: App/Models/DizimoOferta.php
+
+	/**
+	 * Busca todas as movimentações e lançamentos do dia especificamente para a conferência
+	 */
+	public function getDetalhamentoRelatorioConferencia($igrejaId, $data)
+	{
+		$sql = "SELECT
+					fc.financeiro_conta_id,
+					fc.financeiro_conta_descricao,
+					fc.financeiro_conta_valor,
+					COALESCE(sub.subcategoria_nome, cat.financeiro_categoria_nome, 'Outros') AS tipo_receita,
+					COALESCE(cf.financeiro_conta_financeira_nome, 'Em Espécie') AS conta_nome,
+					cf.financeiro_conta_financeira_id,
+					cf.financeiro_conta_financeira_tipo,
+					rm.receita_membro_valor,
+					COALESCE(m.membro_nome, 'Não Identificado / Avulso') AS contribuinte_nome
+				FROM financeiro_contas fc
+				LEFT JOIN financeiro_categorias cat ON fc.financeiro_conta_financeiro_categoria_id = cat.financeiro_categoria_id
+				LEFT JOIN financeiro_receita_membros rm ON fc.financeiro_conta_id = rm.receita_membro_conta_id
+				LEFT JOIN financeiro_subcategorias sub ON rm.receita_membro_subcategoria_id = sub.subcategoria_id
+				LEFT JOIN financeiro_movimentacoes fm ON fc.financeiro_conta_id = fm.financeiro_movimentacao_financeiro_conta_id
+				LEFT JOIN financeiro_contas_financeiras cf ON fm.financeiro_movimentacao_financeiro_conta_financeira_id = cf.financeiro_conta_financeira_id
+				LEFT JOIN membros m ON rm.receita_membro_usuario_id = m.membro_id
+				WHERE fc.financeiro_conta_igreja_id = ?
+				  AND fc.financeiro_conta_data_pagamento = ?
+				  AND fc.financeiro_conta_tipo = 'entrada'
+				ORDER BY tipo_receita ASC, contribuinte_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId, $data]);
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+
+    /**
+	 * Busca o resumo contábil de entradas por modalidade/subcategoria em uma determinada data
+	 */
+    public function getResumoContabilModalidades($igrejaId, $dataInicio, $dataFim)
+    {
+        $sql = "SELECT
+                    s.subcategoria_id AS id,
+                    c.financeiro_categoria_nome,
+                    s.subcategoria_nome,
+                    CONCAT(c.financeiro_categoria_nome, ' - ', s.subcategoria_nome) AS nome,
+                    SUM(fc.financeiro_conta_valor) AS valor
+                FROM financeiro_contas fc
+                INNER JOIN financeiro_subcategorias s
+                    ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
+                INNER JOIN financeiro_categorias c
+                    ON c.financeiro_categoria_id = s.subcategoria_categoria_id
+                WHERE fc.financeiro_conta_igreja_id = :igreja_id
+                  AND fc.financeiro_conta_tipo = 'entrada'
+                  AND fc.financeiro_conta_pago = 1
+                  AND fc.financeiro_conta_data_pagamento BETWEEN :data_inicio AND :data_fim
+                GROUP BY s.subcategoria_id, c.financeiro_categoria_id
+                ORDER BY c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            ':igreja_id'   => $igrejaId,
+            ':data_inicio' => $dataInicio,
+            ':data_fim'    => $dataFim
+        ]);
+
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+	public function getRelatorioContabil($dataInicio, $dataFim)
+	{
+		$igrejaId = $_SESSION['igreja_id'] ?? null;
+
+		$sql = "SELECT
+					c.financeiro_categoria_nome AS categoria,
+					m.financeiro_movimentacao_tipo AS tipo,
+					cf.financeiro_conta_financeira_nome AS conta_financeira,
+					COALESCE(SUM(m.financeiro_movimentacao_valor), 0) AS total
+				FROM financeiro_movimentacoes m
+				INNER JOIN financeiro_categorias c
+					ON c.financeiro_categoria_id = m.financeiro_movimentacao_categoria_id
+				LEFT JOIN financeiro_contas_financeiras cf
+					ON cf.financeiro_conta_financeira_id = m.financeiro_movimentacao_financeiro_conta_financeira_id
+				WHERE m.financeiro_movimentacao_igreja_id = :igreja_id
+				  AND m.financeiro_movimentacao_data BETWEEN :data_inicio AND :data_fim
+				GROUP BY
+					c.financeiro_categoria_nome,
+					m.financeiro_movimentacao_tipo,
+					cf.financeiro_conta_financeira_nome
+				ORDER BY c.financeiro_categoria_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->bindValue(':igreja_id', $igrejaId);
+		$stmt->bindValue(':data_inicio', $dataInicio);
+		$stmt->bindValue(':data_fim', $dataFim);
+		$stmt->execute();
+
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+
 }

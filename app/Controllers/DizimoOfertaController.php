@@ -289,53 +289,91 @@ class DizimoOfertaController extends Controller
         header("Location: " . url('dizimoOferta/login'));
     }
 
+    // Arquivo: App/Controllers/DizimoOfertaController.php
+    // Linha: Método imprimir()
+
 	public function imprimir() {
 		$data = $_GET['data'] ?? date('Y-m-d');
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 
-		// 1. Dados da Igreja para o cabeçalho (Nome, Logo, Endereço)
 		$igreja = $this->model->getIgrejaDetalhes($igrejaId);
-
-		// 2. Resumo total por subcategoria (Dízimos, Ofertas, etc)
-		$resumo = $this->model->getResumoConferencia($igrejaId, $data);
-
-		// 3. Detalhes de quem deu (Rateio)
-		$rateio = $this->model->getRateioConferencia($igrejaId, $data);
-
-		// 4. Busca o nome do tesoureiro da igreja
+		$lancamentos = $this->model->getDetalhamentoRelatorioConferencia($igrejaId, $data);
 		$tesoureiro = $this->model->getTesoureiroIgreja($igrejaId);
 
-		// 5. Oficiais que realizaram a conferência (dados da sessão)
 		$oficiais = [
 			'd1' => $_SESSION['conf_diacono_1']['nome'] ?? 'Não informado',
 			'd2' => $_SESSION['conf_diacono_2']['nome'] ?? 'Não informado'
 		];
 
-		// 6. Cálculo para o Relatório (Diferença entre total lançado e identificado)
-		$somaIdentificada = 0;
-		foreach($rateio as $item) {
-			$somaIdentificada += (float)$item['valor'];
+		$membrosMatriz = [];
+		$ofertasAvulsas = 0;
+
+		$totalDizimoEspecie = 0;
+		$totalDizimoConta   = 0;
+		$totalOfertaEspecie = 0;
+		$totalOfertaConta   = 0;
+
+		foreach ($lancamentos as $l) {
+			$valor = !empty($l['receita_membro_valor']) ? (float)$l['receita_membro_valor'] : (float)$l['financeiro_conta_valor'];
+			$tipoConta = $l['financeiro_conta_financeira_tipo'] ?? '';
+			$eEspecie = empty($l['financeiro_conta_financeira_id']) || $tipoConta === 'caixa';
+
+			$tipoReceita = mb_strtolower($l['tipo_receita'] ?? '');
+			$eDizimo = (strpos($tipoReceita, 'dízimo') !== false || strpos($tipoReceita, 'dizimo') !== false);
+			$nomeContribuinte = trim($l['contribuinte_nome'] ?? 'Não Identificado / Avulso');
+
+			// Ofertas sem nome/membro atribuído (Avulsas)
+			if ($nomeContribuinte === 'Não Identificado / Avulso' || empty($nomeContribuinte)) {
+				$ofertasAvulsas += $valor;
+				continue;
+			}
+
+			if (!isset($membrosMatriz[$nomeContribuinte])) {
+				$membrosMatriz[$nomeContribuinte] = [
+					'dizimo_especie' => 0,
+					'dizimo_conta'   => 0,
+					'oferta_especie' => 0,
+					'oferta_conta'   => 0
+				];
+			}
+
+			if ($eDizimo) {
+				if ($eEspecie) {
+					$membrosMatriz[$nomeContribuinte]['dizimo_especie'] += $valor;
+					$totalDizimoEspecie += $valor;
+				} else {
+					$membrosMatriz[$nomeContribuinte]['dizimo_conta'] += $valor;
+					$totalDizimoConta += $valor;
+				}
+			} else {
+				if ($eEspecie) {
+					$membrosMatriz[$nomeContribuinte]['oferta_especie'] += $valor;
+					$totalOfertaEspecie += $valor;
+				} else {
+					$membrosMatriz[$nomeContribuinte]['oferta_conta'] += $valor;
+					$totalOfertaConta += $valor;
+				}
+			}
 		}
 
-		$totalGeral = 0;
-		foreach($resumo as $r) {
-			$totalGeral += (float)$r['total'];
-		}
+		$totalDizimoA = $totalDizimoEspecie + $totalDizimoConta;
+		$totalOfertaB = $totalOfertaEspecie + $totalOfertaConta;
+		$totalGeral   = $totalDizimoA + $totalOfertaB + $ofertasAvulsas;
 
-		// Valor que entrou mas não foi atrelado a nenhum membro (ex: salva/envelope sem nome)
-		$valorAvulso = $totalGeral - $somaIdentificada;
-
-		// 7. Renderização da View de Impressão (passando a variável $igreja)
 		$this->rawview('dizimosofertas/conferencia_impressao', [
-			'data'             => $data,
-			'igreja'           => $igreja, // Novos dados aqui
-			'resumo'           => $resumo,
-			'rateio'           => $rateio,
-			'oficiais'         => $oficiais,
-			'tesoureiro'       => $tesoureiro,
-			'totalGeral'       => $totalGeral,
-			'valorAvulso'      => $valorAvulso,
-			'somaIdentificada' => $somaIdentificada
+			'data'               => $data,
+			'igreja'             => $igreja,
+			'membrosMatriz'      => $membrosMatriz,
+			'ofertasAvulsas'     => $ofertasAvulsas,
+			'totalDizimoEspecie' => $totalDizimoEspecie,
+			'totalDizimoConta'   => $totalDizimoConta,
+			'totalOfertaEspecie' => $totalOfertaEspecie,
+			'totalOfertaConta'   => $totalOfertaConta,
+			'totalDizimoA'       => $totalDizimoA,
+			'totalOfertaB'       => $totalOfertaB,
+			'totalGeral'         => $totalGeral,
+			'oficiais'           => $oficiais,
+			'tesoureiro'         => $tesoureiro
 		]);
 	}
 
@@ -410,5 +448,55 @@ class DizimoOfertaController extends Controller
 		header("Location: " . url("dizimoOferta/index?erro=1"));
 		exit;
 	}
+
+
+    // Arquivo: App/Controllers/DizimoOfertaController.php
+    // Linha: Adicionar novo método relatorioContabil()
+
+    public function relatorioContabil()
+	{
+		// Captura os valores do formulário para o filtro do banco
+		$dataInicio = is_string($_GET['data_inicio'] ?? null) ? $_GET['data_inicio'] : date('Y-m-01');
+		$dataFim    = is_string($_GET['data_fim'] ?? null) ? $_GET['data_fim'] : date('Y-m-t');
+
+		// Data de geração do documento (Hoje)
+		$dataGeracao = date('Y-m-d');
+
+		// Converte para formato DATETIME completo para filtrar no banco
+		$dataInicioFormatada = $dataInicio . ' 00:00:00';
+		$dataFimFormatada    = $dataFim . ' 23:59:59';
+
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+
+		$igreja = $this->model->getIgrejaDetalhes($igrejaId);
+
+		// Busca o resumo contábil com o intervalo
+		$modalidades = $this->model->getResumoContabilModalidades($igrejaId, $dataInicioFormatada, $dataFimFormatada);
+		$tesoureiro = $this->model->getTesoureiroIgreja($igrejaId);
+
+		$oficiais = [
+			'd1' => $_SESSION['conf_diacono_1']['nome'] ?? 'Diácono Conferente 1',
+			'd2' => $_SESSION['conf_diacono_2']['nome'] ?? 'Diácono Conferente 2'
+		];
+
+		// Calcula o Total Geral
+		$totalGeral = 0;
+		foreach ($modalidades as $m) {
+			$totalGeral += $m['valor'];
+		}
+
+		$this->rawview('dizimosofertas/relatorio_contabil_impressao', [
+			'data'        => $dataGeracao, // Passa a data de HOJE para a variável $data usada no título
+			'dataGeracao' => $dataGeracao,
+			'dataInicio'  => $dataInicio,
+			'dataFim'     => $dataFim,
+			'igreja'      => $igreja,
+			'modalidades' => $modalidades,
+			'totalGeral'  => $totalGeral,
+			'oficiais'    => $oficiais,
+			'tesoureiro'  => $tesoureiro
+		]);
+	}
+
 
 }

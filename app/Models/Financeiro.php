@@ -312,15 +312,19 @@ class Financeiro {
 		}
 	}
 
-	public function atualizarLancamentoCompleto($data) {
+public function atualizarLancamentoCompleto($data) {
 		try {
 			$this->db->beginTransaction();
 
-			// 1. BUSCAR DADOS ATUAIS (Importante para saber o que estornar)
-			$sqlBusca = "SELECT fc.*, fp.financeiro_pagamento_conta_financeira_id, fp.financeiro_pagamento_valor
+			// 1. BUSCAR DADOS ATUAIS (Buscando a conta financeira também da tabela de movimentações caso o pagamento esteja nulo)
+			$sqlBusca = "SELECT fc.*,
+								COALESCE(fp.financeiro_pagamento_conta_financeira_id, fm.financeiro_movimentacao_financeiro_conta_financeira_id) AS financeiro_pagamento_conta_financeira_id,
+								fp.financeiro_pagamento_valor
 						 FROM financeiro_contas fc
 						 LEFT JOIN financeiro_pagamentos fp ON fp.financeiro_pagamento_financeiro_conta_id = fc.financeiro_conta_id
-						 WHERE fc.financeiro_conta_id = ? AND fc.financeiro_conta_igreja_id = ?";
+						 LEFT JOIN financeiro_movimentacoes fm ON fm.financeiro_movimentacao_financeiro_conta_id = fc.financeiro_conta_id AND fm.financeiro_movimentacao_origem = 'pagamento'
+						 WHERE fc.financeiro_conta_id = ? AND fc.financeiro_conta_igreja_id = ?
+						 LIMIT 1";
 			$stmt = $this->db->prepare($sqlBusca);
 			$stmt->execute([$data['id'], $data['igreja_id']]);
 			$antigo = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -345,7 +349,6 @@ class Financeiro {
 
 			// 3. ATUALIZAÇÃO DO RATEIO DE MEMBROS (Se for Entrada/Receita)
 			if ($tipo == 'entrada') {
-					// ... dentro do if ($tipo == 'entrada')
 					$this->db->prepare("DELETE FROM financeiro_receita_membros WHERE receita_membro_conta_id = ?")
 							 ->execute([$data['id']]);
 
@@ -357,13 +360,12 @@ class Financeiro {
 						$stmtMembro = $this->db->prepare($sqlMembro);
 
 						foreach ($data['membros'] as $index => $membro_id) {
-							// Ponto Crítico: Verifica se o membro_id não está vazio e se o valor existe
 							if (empty($membro_id)) continue;
 
 							$valorRaw = $data['membros_valores'][$index] ?? 0;
 							$valorMembro = str_replace(',', '.', $valorRaw);
 
-							if ($valorMembro <= 0) continue; // Não insere se o valor for zero
+							if ($valorMembro <= 0) continue;
 
 							$stmtMembro->execute([
 								$data['id'],
@@ -377,27 +379,51 @@ class Financeiro {
 					}
 			}
 
-			// 4. SE ESTIVER PAGO, SINCRONIZA SALDO, PAGAMENTO E EXTRATO (MOVIMENTAÇÕES)
+			// 4. SE ESTIVER PAGO, AJUSTA O SALDO DA CONTA FINANCEIRA
 			if ($foiPago) {
-				$contaFinanceiraAntiga = $antigo['financeiro_pagamento_conta_financeira_id'];
+				$contaFinanceiraNova = !empty($data['financeiro_conta_financeira_id']) ? $data['financeiro_conta_financeira_id'] : null;
+				$contaFinanceiraAntiga = !empty($antigo['financeiro_pagamento_conta_financeira_id']) ? $antigo['financeiro_pagamento_conta_financeira_id'] : $contaFinanceiraNova;
 
-				// AJUSTE: Pegando o nome correto do campo vindo do <select>
-				$contaFinanceiraNova = $data['financeiro_conta_financeira_id'];
+				$valorAntigo = (float) $antigo['financeiro_conta_valor'];
+				$valorNovo   = (float) $data['valor'];
 
-				$valorAntigo = $antigo['financeiro_conta_valor'];
-				$valorNovo = $data['valor'];
+				// Só realiza alterações no saldo se a conta financeira mudou OU se o valor mudou
+				if ($contaFinanceiraAntiga !== null && $contaFinanceiraNova !== null) {
 
-				// A) Estornar saldo na conta bancária antiga
-				$opEstorno = ($tipo == 'entrada') ? '-' : '+';
-				$this->db->prepare("UPDATE financeiro_contas_financeiras SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $opEstorno ?
-									WHERE financeiro_conta_financeira_id = ?")
-						 ->execute([$valorAntigo, $contaFinanceiraAntiga]);
+					// Caso A: A conta financeira MUDOU
+					if ((string)$contaFinanceiraAntiga !== (string)$contaFinanceiraNova) {
+						// Estorna o valor integral da conta antiga
+						$opEstorno = ($tipo == 'entrada') ? '-' : '+';
+						$this->db->prepare("UPDATE financeiro_contas_financeiras
+											SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $opEstorno ?
+											WHERE financeiro_conta_financeira_id = ?")
+								 ->execute([$valorAntigo, $contaFinanceiraAntiga]);
 
-				// B) Aplicar novo saldo na conta bancária nova
-				$opAplicar = ($tipo == 'entrada') ? '+' : '-';
-				$this->db->prepare("UPDATE financeiro_contas_financeiras SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $opAplicar ?
-									WHERE financeiro_conta_financeira_id = ?")
-						 ->execute([$valorNovo, $contaFinanceiraNova]);
+						// Aplica o valor integral na nova conta
+						$opAplicar = ($tipo == 'entrada') ? '+' : '-';
+						$this->db->prepare("UPDATE financeiro_contas_financeiras
+											SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $opAplicar ?
+											WHERE financeiro_conta_financeira_id = ?")
+								 ->execute([$valorNovo, $contaFinanceiraNova]);
+					}
+					// Caso B: A conta é a MESMA, mas o VALOR mudou
+					else if ($valorAntigo != $valorNovo) {
+						$diferenca = $valorNovo - $valorAntigo;
+
+						if ($tipo == 'entrada') {
+							$this->db->prepare("UPDATE financeiro_contas_financeiras
+												SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + ?
+												WHERE financeiro_conta_financeira_id = ?")
+									 ->execute([$diferenca, $contaFinanceiraNova]);
+						} else {
+							$this->db->prepare("UPDATE financeiro_contas_financeiras
+												SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo - ?
+												WHERE financeiro_conta_financeira_id = ?")
+									 ->execute([$diferenca, $contaFinanceiraNova]);
+						}
+					}
+					// Se a conta for a mesma e o valor não mudou, nada é alterado no saldo das contas financeiras.
+				}
 
 				// C) Atualizar a tabela de Pagamentos
 				$this->db->prepare("UPDATE financeiro_pagamentos SET
