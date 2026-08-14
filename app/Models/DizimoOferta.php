@@ -616,15 +616,18 @@ class DizimoOferta
 		return $stmt->fetch(\PDO::FETCH_ASSOC);
 	}
 
-	public function getMembrosRateio($contaId) {
+    public function getMembrosRateio($contaId)
+	{
 		$sql = "SELECT
-					rm.receita_membro_id,
-					rm.receita_membro_valor,
-					rm.receita_membro_comprovante, -- ESTA LINHA É ESSENCIAL
-					m.membro_nome
+					rm.*,
+					m.membro_nome,
+					m.membro_registro_interno,
+					f.membro_foto_arquivo
 				FROM financeiro_receita_membros rm
 				INNER JOIN membros m ON rm.receita_membro_usuario_id = m.membro_id
+				LEFT JOIN membros_fotos f ON m.membro_id = f.membro_foto_membro_id
 				WHERE rm.receita_membro_conta_id = ?";
+
 		$stmt = $this->db->prepare($sql);
 		$stmt->execute([$contaId]);
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);

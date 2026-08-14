@@ -58,7 +58,7 @@ class DizimoOfertaController extends Controller
         $contas_bancarias = $this->model->getContasFinanceiras($igrejaId);
 
         // 6. Buscar os rateiros dos lançamentos(se tiver)
-        $lancamentos = $this->model->getLancamentosPorPeriodo($igrejaId, $mesSelecionado, $anoSelecionado);
+        //$lancamentos = $this->model->getLancamentosPorPeriodo($igrejaId, $mesSelecionado, $anoSelecionado);
 		foreach ($lancamentos as &$l) {
 			// Busca se existem membros rateados para este lançamento
 			$l['membros'] = $this->model->getMembrosRateio($l['financeiro_conta_id']);

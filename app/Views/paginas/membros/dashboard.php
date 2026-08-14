@@ -33,6 +33,7 @@
         </div>
     </div>
 
+    <!-- PRIMEIRA LINHA DE GRÁFICOS -->
     <div class="row g-4 mb-4">
         <div class="col-md-4">
             <div class="card border-0 shadow-sm p-3 h-100">
@@ -72,6 +73,23 @@
         </div>
     </div>
 
+    <!-- SEGUNDA LINHA DE GRÁFICOS: ESCOLARIDADE E DIZIMISTAS -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <h6 class="fw-bold text-muted mb-3"><i class="bi bi-mortarboard-fill me-2"></i>Escolaridade</h6>
+                <canvas id="chartEscolaridade" style="max-height: 250px;"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <h6 class="fw-bold text-muted mb-3 text-center"><i class="bi bi-pie-chart-fill me-2"></i>Dizimistas (+18 Anos)</h6>
+                <canvas id="chartDizimistas" style="max-height: 250px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- RANKING DE BAIRROS -->
     <div class="row g-4 mb-4">
         <div class="col-md-12">
             <div class="card border-0 shadow-sm p-3">
@@ -81,6 +99,7 @@
         </div>
     </div>
 
+	<!-- TABELAS DE ANIVERSARIANTES -->
 	<div class="row g-4">
 		<div class="col-md-4">
 			<div class="card border-0 shadow-sm h-100">
@@ -217,7 +236,6 @@ if (ctxEstadoCivil) {
         }
     });
 
-    // Lógica do Filtro (Checkbox +18)
     const filtroMaiores = document.getElementById('filtroMaioresIdade');
     if (filtroMaiores) {
         filtroMaiores.addEventListener('change', function() {
@@ -238,7 +256,6 @@ if (ctxEtaria) {
             labels: ['Crianças', 'Jovens', 'Adultos', 'Idosos'],
             datasets: [{
                 label: 'Membros',
-                // Usando as chaves retornadas pelo seu Model (getDashboardStats)
                 data: [
                     <?= $faixa_etaria['criancas'] ?? 0 ?>,
                     <?= $faixa_etaria['jovens'] ?? 0 ?>,
@@ -263,7 +280,56 @@ if (ctxEtaria) {
     });
 }
 
-// 4. Gráfico de Bairros (Ranking)
+// 4. Gráfico de Escolaridade
+const dadosEscolaridade = <?= json_encode($escolaridade ?? ['labels' => [], 'valores' => []]) ?>;
+const ctxEscolaridade = document.getElementById('chartEscolaridade');
+if (ctxEscolaridade && dadosEscolaridade.labels.length > 0) {
+    new Chart(ctxEscolaridade, {
+        type: 'bar',
+        data: {
+            labels: dadosEscolaridade.labels,
+            datasets: [{
+                label: 'Membros',
+                data: dadosEscolaridade.valores,
+                backgroundColor: '#20c997',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
+            }
+        }
+    });
+}
+
+// 5. Gráfico de Dizimistas (+18 Anos)
+const dadosDizimistas = <?= json_encode($dizimistas_maiores ?? ['labels' => [], 'valores' => []]) ?>;
+const ctxDizimistas = document.getElementById('chartDizimistas');
+if (ctxDizimistas && dadosDizimistas.labels.length > 0) {
+    new Chart(ctxDizimistas, {
+        type: 'doughnut',
+        data: {
+            labels: dadosDizimistas.labels,
+            datasets: [{
+                data: dadosDizimistas.valores,
+                //backgroundColor: ['#198754', '#dc3545']
+                backgroundColor: ['#dc3545', '#198754']
+            }]
+        },
+        options: {
+            plugins: { legend: { position: 'bottom' } },
+            cutout: '65%',
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
+
+// 6. Gráfico de Bairros (Ranking)
 const dadosBairros = <?= json_encode($bairros ?? []) ?>;
 const ctxBairros = document.getElementById('chartBairros');
 

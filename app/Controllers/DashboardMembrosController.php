@@ -32,6 +32,8 @@ class DashboardMembrosController extends Controller
         // 4. Mescla os dados do gráfico de rosquinha no array principal
         $dadosDashboard['estado_civil_geral'] = $this->model->getEstatisticaEstadoCivil($idIgreja, false);
         $dadosDashboard['estado_civil_maiores'] = $this->model->getEstatisticaEstadoCivil($idIgreja, true);
+        $dadosDashboard['escolaridade'] = $this->model->getEstatisticaEscolaridade($idIgreja);
+        $dadosDashboard['dizimistas_maiores'] = $this->model->getEstatisticaDizimistasMaiores($idIgreja);
 
         // Envia tudo para a view 'membros/dashboard'
         // Na view, você acessará como $estado_civil['labels'] e $estado_civil['valores']

@@ -134,11 +134,12 @@
 	<div class="card border-0 shadow-sm">
 		<div class="card-body p-0">
 			<div class="table-responsive">
-				<table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0">
 					<thead class="bg-light">
 						<tr>
 							<th class="ps-4" style="width: 100px;">Data</th>
 							<th>Descrição / Categoria</th>
+							<th>Membro / Rateio</th>
 							<th>Valor</th>
 							<th class="text-center">Documentação</th>
 							<th class="text-center">Status</th>
@@ -148,7 +149,7 @@
 					<tbody>
 						<?php if(empty($lancamentos)): ?>
 							<tr>
-								<td colspan="6" class="text-center py-5 text-muted">
+								<td colspan="7" class="text-center py-5 text-muted">
 									<i class="bi bi-inbox fs-1 d-block mb-2"></i>
 									Nenhum lançamento conferido por esta dupla neste mês.
 								</td>
@@ -168,10 +169,43 @@
 							</td>
 
 							<td>
-								<span class="d-block fw-bold text-dark mb-1"><?= $l['financeiro_conta_descricao'] ?></span>
+								<span class="d-block fw-bold text-dark mb-1"><?= htmlspecialchars($l['financeiro_conta_descricao'] ?? '') ?></span>
 								<span class="badge rounded-pill bg-light text-secondary border" style="font-size: 0.7rem;">
-									<?= $l['financeiro_categoria_nome'] ?>
+									<?= htmlspecialchars($l['financeiro_categoria_nome'] ?? '') ?>
 								</span>
+							</td>
+
+                            <td>
+								<?php if($temRateio): ?>
+									<div class="d-flex flex-column gap-2">
+										<?php foreach($l['membros'] as $m):
+											$urlFoto = !empty($m['membro_foto_arquivo'])
+												? url("assets/uploads/{$igreja['igreja_id']}/membros/{$m['membro_registro_interno']}/{$m['membro_foto_arquivo']}")
+												: url("assets/img/default-avatar.png");
+										?>
+											<div class="d-flex align-items-center gap-2">
+												<img src="<?= $urlFoto ?>"
+													 alt="<?= htmlspecialchars($m['membro_nome'] ?? '') ?>"
+													 class="rounded-circle border shadow-sm flex-shrink-0"
+													 style="width: 52px; height: 52px; object-fit: cover;">
+												<div class="d-flex flex-column justify-content-center">
+													<span class="fw-semibold text-dark" style="font-size: 0.85rem;">
+														<?= htmlspecialchars($m['membro_nome'] ?? '') ?>
+													</span>
+													<?php if(isset($m['receita_membro_valor'])): ?>
+														<span class="badge bg-light text-dark border align-self-start mt-1" style="font-size: 0.65rem;">
+															R$ <?= number_format($m['receita_membro_valor'], 2, ',', '.') ?>
+														</span>
+													<?php endif; ?>
+												</div>
+											</div>
+										<?php endforeach; ?>
+									</div>
+								<?php else: ?>
+									<span class="text-muted small" style="font-size: 0.75rem;">
+										<i class="bi bi-person-x me-1"></i>Anônimo / Não informado
+									</span>
+								<?php endif; ?>
 							</td>
 
 							<td class="fw-bold text-primary">

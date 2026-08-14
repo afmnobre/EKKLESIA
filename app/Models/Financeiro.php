@@ -717,32 +717,32 @@ public function atualizarLancamentoCompleto($data) {
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-	public function getComparativoReceitasAnual($igrejaId, $ano) {
+    public function getComparativoReceitasAnual($igrejaId, $ano) {
 		$anoAnterior = $ano - 1;
 
 		// Criamos as colunas de SUM(CASE...) para cada mês dinamicamente
 		$mesesSql = "";
 		for ($i = 1; $i <= 12; $i++) {
-			$mesesSql .= "SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano AND MONTH(m.financeiro_movimentacao_data) = $i THEN m.financeiro_movimentacao_valor ELSE 0 END) as mes_$i, ";
+			$mesesSql .= "SUM(CASE WHEN YEAR(rm.receita_membro_data) = $ano AND MONTH(rm.receita_membro_data) = $i THEN rm.receita_membro_valor ELSE 0 END) as mes_$i, ";
 		}
 
 		$sql = "SELECT
+					s.subcategoria_id,
 					s.subcategoria_nome,
 					c.financeiro_categoria_nome,
 					$mesesSql
-					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_atual,
-					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $anoAnterior THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_anterior
+					SUM(CASE WHEN YEAR(rm.receita_membro_data) = $ano THEN rm.receita_membro_valor ELSE 0 END) as total_atual,
+					SUM(CASE WHEN YEAR(rm.receita_membro_data) = $anoAnterior THEN rm.receita_membro_valor ELSE 0 END) as total_anterior
 				FROM financeiro_subcategorias s
 				JOIN financeiro_categorias c ON s.subcategoria_categoria_id = c.financeiro_categoria_id
-				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_categoria_id = s.subcategoria_id
-					AND m.financeiro_movimentacao_igreja_id = ?
+				LEFT JOIN financeiro_receita_membros rm ON rm.receita_membro_subcategoria_id = s.subcategoria_id
 				WHERE s.subcategoria_igreja_id = ?
 				  AND c.financeiro_categoria_tipo = 'entrada'
 				GROUP BY s.subcategoria_id, s.subcategoria_nome, c.financeiro_categoria_nome
 				ORDER BY c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$igrejaId, $igrejaId]);
+		$stmt->execute([$igrejaId]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 

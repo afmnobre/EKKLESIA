@@ -679,5 +679,54 @@ class Membro
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 	}
 
+    // ... Métodos anteriores ...
+	public function getEstatisticaEscolaridade($igreja_id)
+	{
+		$sql = "SELECT IFNULL(NULLIF(membro_escolaridade, ''), 'Não Informado') as escolaridade, COUNT(*) as total
+				FROM membros
+				WHERE membro_igreja_id = :igreja_id
+				GROUP BY escolaridade
+				ORDER BY total DESC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute(['igreja_id' => $igreja_id]);
+		$dadosBD = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+		$labels = [];
+		$valores = [];
+		foreach ($dadosBD as $item) {
+			$labels[] = $item['escolaridade'];
+			$valores[] = (int)$item['total'];
+		}
+
+		return ['labels' => $labels, 'valores' => $valores];
+	}
+
+	public function getEstatisticaDizimistasMaiores($igreja_id)
+	{
+		$sql = "SELECT
+					CASE
+						WHEN membro_dizimista = 1 THEN 'Dizimistas'
+						ELSE 'Não Dizimistas'
+					END as status_dizimista,
+					COUNT(*) as total
+				FROM membros
+				WHERE membro_igreja_id = :igreja_id
+				AND TIMESTAMPDIFF(YEAR, membro_data_nascimento, CURDATE()) >= 18
+				GROUP BY membro_dizimista";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute(['igreja_id' => $igreja_id]);
+		$dadosBD = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+		$labels = [];
+		$valores = [];
+		foreach ($dadosBD as $item) {
+			$labels[] = $item['status_dizimista'];
+			$valores[] = (int)$item['total'];
+		}
+
+		return ['labels' => $labels, 'valores' => $valores];
+	}
 
 }
