@@ -139,16 +139,31 @@
 										// Usamos json_encode para que o JS receba a string limpa e segura
 										$arqComp = json_encode($c['financeiro_conta_comprovante'] ?? '');
 										$arqNF = json_encode($c['financeiro_conta_nota_fiscal'] ?? '');
+
+										// 1. Verifica comprovante no lançamento principal
+										$temComprovante = !empty($c['financeiro_conta_comprovante']);
+
+										// 2. Se não tem no principal, verifica se algum membro do rateio tem comprovante anexado
+										if (!$temComprovante && !empty($c['membros']) && is_array($c['membros'])) {
+											foreach ($c['membros'] as $membro) {
+												if (!empty($membro['receita_membro_comprovante'])) {
+													$temComprovante = true;
+													break;
+												}
+											}
+										}
+
+										$temNotaFiscal = !empty($c['financeiro_conta_nota_fiscal']);
 									?>
 									<button type="button"
-											class="btn btn-sm <?= (!empty($c['financeiro_conta_comprovante']) || !empty($c['membros'])) ? 'btn-success' : 'btn-outline-secondary' ?>"
+											class="btn btn-sm <?= $temComprovante ? 'btn-success text-white' : 'btn-outline-secondary text-secondary' ?>"
 											onclick='abrirModalAnexo(<?= json_encode($c) ?>, "comprovante")'
 											title="Comprovante">
 										<i class="bi bi-receipt"></i>
 									</button>
 
 									<button type="button"
-											class="btn btn-sm <?= !empty($c['financeiro_conta_nota_fiscal']) ? 'btn-info' : 'btn-outline-secondary' ?>"
+											class="btn btn-sm <?= $temNotaFiscal ? 'btn-info text-white' : 'btn-outline-secondary text-secondary' ?>"
 											onclick='abrirModalAnexo(<?= json_encode($c) ?>, "notafiscal")'
 											title="Nota Fiscal">
 										<i class="bi bi-file-earmark-text"></i>
@@ -158,7 +173,7 @@
 										onclick="abrirModalQR('<?= $c['financeiro_conta_id'] ?>', 'comprovante')"
 										title="Upload via Celular">
 										<i class="bi bi-qr-code-scan"></i>
-                                    </button>
+									</button>
 
 									<button type="button"
 											class="btn btn-sm btn-outline-primary"
@@ -166,8 +181,8 @@
 											title="Editar Lançamento">
 										<i class="bi bi-pencil"></i>
 									</button>
-                                </div>
-                            <?php endif; ?>
+								</div>
+							<?php endif; ?>
 
 
                                 <div class="btn-group">
