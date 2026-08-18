@@ -80,7 +80,7 @@
 		</div>
 	</div>
 
-	<div class="card border-0 shadow-sm">
+<div class="card border-0 shadow-sm">
 		<div class="card-body p-0">
 			<div class="table-responsive">
 				<table class="table table-hover align-middle mb-0">
@@ -110,6 +110,12 @@
 							</td>
 							<td>
 								<span class="d-block fw-bold text-dark"><?= $c['financeiro_conta_descricao'] ?></span>
+								<?php if (!empty($c['membros']) && is_array($c['membros'])): ?>
+									<small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+										<i class="bi bi-person-fill text-primary me-1"></i>
+										<?= implode(', ', array_column($c['membros'], 'membro_nome')) ?>
+									</small>
+								<?php endif; ?>
 							</td>
 							<td>
 								<small class="text-muted d-block" style="font-size: 0.7rem;"><?= $c['financeiro_categoria_nome'] ?></small>
@@ -185,7 +191,7 @@
 							<?php endif; ?>
 
 
-                                <div class="btn-group">
+								<div class="btn-group">
 									<?php if($c['financeiro_conta_tipo'] == 'saida' && isset($c['financeiro_conta_reembolso']) && $c['financeiro_conta_reembolso'] == 1): ?>
 										<a href="<?= url('financeiro/gerar_recibo_reembolso/'.$c['financeiro_conta_id']) ?>"
 										   target="_blank"
@@ -212,7 +218,7 @@
 											</button>
 										<?php endif; ?>
 
-                                        <button class="btn btn-sm btn-outline-primary" title="Editar Lançamento"
+										<button class="btn btn-sm btn-outline-primary" title="Editar Lançamento"
 												onclick="editarLancamento(<?= htmlspecialchars(json_encode($c)) ?>)">
 											<i class="bi bi-pencil"></i>
 										</button>

@@ -114,6 +114,48 @@
             max-height: 380px;
             overflow-y: auto;
         }
+
+		/* Estilização do Modal no Tema Lousa / Quadro Negro */
+        .modal-lousa {
+            background-color: #24372c;
+            background-image: radial-gradient(rgba(255,255,255,0.04) 15%, transparent 15%);
+            background-size: 4px 4px;
+            border: 8px solid #5c4033;
+            border-radius: 12px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 10px 25px rgba(0,0,0,0.5);
+            color: #f8f9fa;
+        }
+
+        .modal-lousa .card-recado-giz {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px dashed rgba(255, 255, 255, 0.2) !important;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-lousa .form-control-giz,
+        .modal-lousa .form-select-giz {
+            background-color: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            color: #ffffff !important;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+        }
+
+        .modal-lousa .form-control-giz::placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+
+        .modal-lousa .form-control-giz:focus,
+        .modal-lousa .form-select-giz:focus {
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            border-color: rgba(255, 255, 255, 0.7) !important;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-lousa select option {
+            background-color: #1e293b;
+            color: #ffffff;
+        }
+
     </style>
 </head>
 <body>
@@ -226,49 +268,51 @@
     </div>
 </div>
 
-<!-- Modal de Detalhes e Envio de Mensagens -->
+<!-- Modal de Detalhes e Envio de Mensagens (Tema Lousa) -->
 <div class="modal fade" id="modalMural" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content modal-lousa border-0">
 
-            <div class="modal-header bg-dark text-white border-0">
+            <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
                 <div class="d-flex align-items-center">
-                    <div class="me-3" id="modal_avatar_container" style="width: 45px; height: 45px;"></div>
+                    <div class="me-3" id="modal_avatar_container" style="width: 50px; height: 50px;"></div>
                     <div>
-                        <h6 class="modal-title fw-bold mb-0" id="modal_nome_membro">Nome do Membro</h6>
-                        <small class="text-white-50" style="font-size: 0.75rem;" id="modal_info_membro">Mural de Interações</small>
+                        <h5 class="modal-title titulo-giz fw-bold mb-0" id="modal_nome_membro">Nome do Membro</h5>
+                        <small class="text-white-50" style="font-size: 0.8rem;" id="modal_info_membro">Mural de Interações</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body p-4 bg-light modal-body-scroll" id="lista_recados_membro"></div>
+            <div class="modal-body p-4 modal-body-scroll" id="lista_recados_membro"></div>
 
-            <form action="<?= full_url('muralPublico/enviarMensagem') ?>" method="POST" class="modal-footer d-block border-0 bg-white p-4 shadow-sm">
+            <form action="<?= full_url('muralPublico/enviarMensagem') ?>" method="POST" class="modal-footer d-block border-top border-secondary border-opacity-25 p-4 bg-transparent">
                 <input type="hidden" name="membro_id" id="form_membro_id">
                 <input type="hidden" name="igreja_id" value="<?= htmlspecialchars($igreja_id) ?>">
 
-                <h6 class="fw-bold text-dark small mb-3 text-uppercase border-bottom pb-1">
-                    <i class="bi bg-light p-1 border rounded bi-pencil-square me-1 text-primary"></i> Deixe seu Recado / Oração
+                <h6 class="titulo-giz small mb-3 text-uppercase border-bottom border-white border-opacity-10 pb-2">
+                    <i class="bi bi-pencil-square me-1 text-warning"></i> Deixe seu Recado / Oração
                 </h6>
 
                 <div class="row g-2 mb-2">
                     <div class="col-7">
-                        <input type="text" name="autor" class="form-control form-control-sm text-dark" placeholder="Seu Nome / Família" required maxlength="100">
+                        <input type="text" name="autor" class="form-control form-control-sm form-control-giz" placeholder="Seu Nome / Família" required maxlength="100">
                     </div>
                     <div class="col-5">
-                        <select name="msg_tipo" class="form-select form-select-sm text-dark">
-                            <option value="Mensagem">💬 Apenas Recado</option>
+                        <select name="msg_tipo" class="form-select form-select-sm form-select-giz">
+                            <option value="Mensagem">💬 Recado</option>
                             <option value="Oracao">🙏 Pedido Oração</option>
                         </select>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <textarea name="texto" class="form-control form-control-sm text-dark" rows="2" placeholder="Escreva aqui uma mensagem edificante..." required maxlength="500"></textarea>
+                    <textarea name="texto" class="form-control form-control-sm form-control-giz" rows="2" placeholder="Escreva aqui uma mensagem edificante..." required maxlength="500"></textarea>
                 </div>
                 <div class="text-end">
-                    <button type="button" class="btn btn-sm btn-secondary rounded-pill me-1" data-bs-dismiss="modal">Fechar</button>
-                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">Enviar ao Mural</button>
+                    <button type="button" class="btn btn-sm btn-outline-light rounded-pill me-1" data-bs-dismiss="modal">Fechar</button>
+                    <button type="submit" class="btn btn-sm btn-warning rounded-pill px-3 fw-bold text-dark">
+                        <i class="bi bi-send-fill me-1"></i> Publicar na Lousa
+                    </button>
                 </div>
             </form>
         </div>
@@ -331,15 +375,15 @@ function abrirMuralMembro(membro, urlFoto) {
             `;
 
             const itemHtml = `
-                <div class="card border-0 shadow-sm p-3 mb-2 rounded-3 bg-white">
+                <div class="card card-recado-giz p-3 mb-2 rounded-3 text-white">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <div class="d-flex align-items-center">
-                            <strong class="text-dark small">${autorLimpo}</strong>
+                            <strong class="titulo-giz text-warning small">${autorLimpo}</strong>
                             ${botaoDeletar}
                         </div>
                         ${badge}
                     </div>
-                    <p class="mb-0 text-secondary small" style="white-space: pre-wrap;">${textoLimpo}</p>
+                    <p class="mb-0 text-light small opacity-90" style="white-space: pre-wrap; font-family: 'Comic Sans MS', cursive, sans-serif;">${textoLimpo}</p>
                 </div>`;
             containerRecados.insertAdjacentHTML('beforeend', itemHtml);
         });
