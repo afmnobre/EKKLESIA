@@ -179,37 +179,35 @@ $dataFimFormatada    = !empty($dataFim) ? date('d/m/Y', strtotime($dataFim)) : d
                         <th class="text-end header-red" style="width: 40%;">VALOR R$</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <?php if (!empty($modalidades)): ?>
-                        <?php foreach ($modalidades as $mod): ?>
-                            <tr>
-                                <td>
-                                    <?php if (!empty($mod['financeiro_categoria_nome']) && !empty($mod['subcategoria_nome'])): ?>
-                                        <div class="fw-bold text-dark"><?= htmlspecialchars($mod['financeiro_categoria_nome']) ?></div>
-                                        <div class="small text-muted" style="font-size: 10px; text-transform: uppercase;">
-                                            &rsaquo; <?= htmlspecialchars($mod['subcategoria_nome']) ?>
-                                        </div>
-                                    <?php else: ?>
-                                        <span class="fw-bold"><?= htmlspecialchars($mod['nome']) ?></span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-end fw-bold align-middle">
-                                    <?= $mod['valor'] > 0 ? number_format($mod['valor'], 2, ',', '.') : '0,00' ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="2" class="text-center py-3 text-muted">Nenhuma receita encontrada no período.</td>
-                        </tr>
-                    <?php endif; ?>
+				<tbody>
+					<?php if (!empty($modalidades)): ?>
+						<?php foreach ($modalidades as $mod): ?>
+							<tr>
+								<td>
+									<div class="fw-bold text-dark">
+										<?= htmlspecialchars($mod['categoria']) ?>
+									</div>
+									<div class="small text-muted" style="font-size: 10px; text-transform: uppercase;">
+										&rsaquo; <?= htmlspecialchars($mod['nome_exibicao']) ?>
+									</div>
+								</td>
+								<td class="text-end fw-bold align-middle">
+									<?= number_format($mod['valor'], 2, ',', '.') ?>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					<?php else: ?>
+						<tr>
+							<td colspan="2" class="text-center py-3 text-muted">Nenhuma receita encontrada no período.</td>
+						</tr>
+					<?php endif; ?>
 
-                    <!-- TOTAL GERAL -->
-                    <tr class="linha-total">
-                        <td class="text-uppercase header-red">TOTAL GERAL</td>
-                        <td class="text-end header-red"><?= number_format($totalGeral, 2, ',', '.') ?></td>
-                    </tr>
-                </tbody>
+					<!-- TOTAL GERAL -->
+					<tr class="linha-total">
+						<td class="text-uppercase header-red">TOTAL GERAL</td>
+						<td class="text-end header-red"><?= number_format($totalGeral, 2, ',', '.') ?></td>
+					</tr>
+				</tbody>
             </table>
         </div>
     </div>

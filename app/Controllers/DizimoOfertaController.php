@@ -479,7 +479,10 @@ class DizimoOfertaController extends Controller
 			'd2' => $_SESSION['conf_diacono_2']['nome'] ?? 'Diácono Conferente 2'
 		];
 
-		// Calcula o Total Geral
+		// Busca o resumo contábil atualizado com a separação de ofertas
+		$modalidades = $this->model->getResumoContabilModalidades($igrejaId, $dataInicioFormatada, $dataFimFormatada);
+
+		// Recomputa o Total Geral (continua somando todos os itens listados)
 		$totalGeral = 0;
 		foreach ($modalidades as $m) {
 			$totalGeral += $m['valor'];

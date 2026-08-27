@@ -700,63 +700,105 @@ class DizimoOferta
     /**
 	 * Busca o resumo contábil de entradas por modalidade/subcategoria em uma determinada data
 	 */
-    public function getResumoContabilModalidades($igrejaId, $dataInicio, $dataFim)
-    {
-        $sql = "SELECT
-                    s.subcategoria_id AS id,
-                    c.financeiro_categoria_nome,
-                    s.subcategoria_nome,
-                    CONCAT(c.financeiro_categoria_nome, ' - ', s.subcategoria_nome) AS nome,
-                    SUM(fc.financeiro_conta_valor) AS valor
-                FROM financeiro_contas fc
-                INNER JOIN financeiro_subcategorias s
-                    ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
-                INNER JOIN financeiro_categorias c
-                    ON c.financeiro_categoria_id = s.subcategoria_categoria_id
-                WHERE fc.financeiro_conta_igreja_id = :igreja_id
-                  AND fc.financeiro_conta_tipo = 'entrada'
-                  AND fc.financeiro_conta_pago = 1
-                  AND fc.financeiro_conta_data_pagamento BETWEEN :data_inicio AND :data_fim
-                GROUP BY s.subcategoria_id, c.financeiro_categoria_id
-                ORDER BY c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
 
-        $stmt = $this->db->prepare($sql);
+	public function getResumoContabilModalidades($igrejaId, $dataInicio, $dataFim)
+	{
+		$dataInicioFormatada = $dataInicio . ' 00:00:00';
+		$dataFimFormatada    = $dataFim . ' 23:59:59';
 
-        $stmt->execute([
-            ':igreja_id'   => $igrejaId,
-            ':data_inicio' => $dataInicio,
-            ':data_fim'    => $dataFim
-        ]);
+		$sql = "SELECT
+					sub.categoria,
+					sub.nome_exibicao,
+					SUM(sub.valor_calculado) AS valor
+				FROM (
+					SELECT
+						COALESCE(c.financeiro_categoria_nome, 'Receitas') AS categoria,
+						CASE
+							/* Oferta com membros rateados (subcategoria ID 13) */
+							WHEN s.subcategoria_id = 13 AND rm.receita_membro_id IS NOT NULL THEN 'Oferta Rateada (Com Identificação)'
 
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-    }
+							/* Oferta avulsa sem membro (subcategoria ID 13) */
+							WHEN s.subcategoria_id = 13 AND rm.receita_membro_id IS NULL THEN 'Oferta Avulsa (Sem Identificação)'
+
+							/* Dízimos (subcategoria ID 14 ou similar) e demais categorias */
+							ELSE COALESCE(s.subcategoria_nome, c.financeiro_categoria_nome, 'Dízimos / Ofertas')
+						END AS nome_exibicao,
+
+						/* Se for oferta com rateio, usa o valor do rateio; se for Dízimo/Lançamento direto, usa o valor da movimentação */
+						CASE
+							WHEN s.subcategoria_id = 13 AND rm.receita_membro_id IS NOT NULL THEN rm.receita_membro_valor
+							ELSE m.financeiro_movimentacao_valor
+						END AS valor_calculado
+
+					FROM financeiro_movimentacoes m
+					INNER JOIN financeiro_contas fc
+						ON fc.financeiro_conta_id = m.financeiro_movimentacao_financeiro_conta_id
+					LEFT JOIN financeiro_subcategorias s
+						ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
+					LEFT JOIN financeiro_categorias c
+						ON c.financeiro_categoria_id = s.subcategoria_categoria_id
+						OR c.financeiro_categoria_id = fc.financeiro_conta_financeiro_categoria_id
+					LEFT JOIN financeiro_receita_membros rm
+						ON rm.receita_membro_conta_id = fc.financeiro_conta_id
+					WHERE m.financeiro_movimentacao_igreja_id = :igreja_id
+					  AND m.financeiro_movimentacao_data BETWEEN :data_inicio AND :data_fim
+					  AND m.financeiro_movimentacao_tipo = 'entrada'
+				) AS sub
+				GROUP BY
+					sub.categoria,
+					sub.nome_exibicao
+				ORDER BY
+					sub.categoria ASC,
+					sub.nome_exibicao ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->bindValue(':igreja_id', $igrejaId);
+		$stmt->bindValue(':data_inicio', $dataInicioFormatada);
+		$stmt->bindValue(':data_fim', $dataFimFormatada);
+		$stmt->execute();
+
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+	// Arquivo: App/Models/DizimoOferta.php
+	// Método: getRelatorioContabil
 
 	public function getRelatorioContabil($dataInicio, $dataFim)
 	{
 		$igrejaId = $_SESSION['igreja_id'] ?? null;
 
+		// Garante que a data final pegue até o último segundo do dia (23:59:59)
+		$dataInicioFormatada = $dataInicio . ' 00:00:00';
+		$dataFimFormatada    = $dataFim . ' 23:59:59';
+
 		$sql = "SELECT
-					c.financeiro_categoria_nome AS categoria,
+					COALESCE(c.financeiro_categoria_nome, fc.financeiro_conta_descricao, 'Receitas') AS categoria,
 					m.financeiro_movimentacao_tipo AS tipo,
 					cf.financeiro_conta_financeira_nome AS conta_financeira,
 					COALESCE(SUM(m.financeiro_movimentacao_valor), 0) AS total
 				FROM financeiro_movimentacoes m
-				INNER JOIN financeiro_categorias c
-					ON c.financeiro_categoria_id = m.financeiro_movimentacao_categoria_id
+				INNER JOIN financeiro_contas fc
+					ON fc.financeiro_conta_id = m.financeiro_movimentacao_financeiro_conta_id
+				LEFT JOIN financeiro_subcategorias s
+					ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
+				LEFT JOIN financeiro_categorias c
+					ON c.financeiro_categoria_id = s.subcategoria_categoria_id
+					OR c.financeiro_categoria_id = fc.financeiro_conta_financeiro_categoria_id
 				LEFT JOIN financeiro_contas_financeiras cf
 					ON cf.financeiro_conta_financeira_id = m.financeiro_movimentacao_financeiro_conta_financeira_id
 				WHERE m.financeiro_movimentacao_igreja_id = :igreja_id
 				  AND m.financeiro_movimentacao_data BETWEEN :data_inicio AND :data_fim
 				GROUP BY
 					c.financeiro_categoria_nome,
+					fc.financeiro_conta_descricao,
 					m.financeiro_movimentacao_tipo,
 					cf.financeiro_conta_financeira_nome
-				ORDER BY c.financeiro_categoria_nome ASC";
+				ORDER BY categoria ASC";
 
 		$stmt = $this->db->prepare($sql);
 		$stmt->bindValue(':igreja_id', $igrejaId);
-		$stmt->bindValue(':data_inicio', $dataInicio);
-		$stmt->bindValue(':data_fim', $dataFim);
+		$stmt->bindValue(':data_inicio', $dataInicioFormatada);
+		$stmt->bindValue(':data_fim', $dataFimFormatada);
 		$stmt->execute();
 
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
