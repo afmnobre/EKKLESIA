@@ -701,104 +701,179 @@ class DizimoOferta
 	 * Busca o resumo contábil de entradas por modalidade/subcategoria em uma determinada data
 	 */
 
+	// Nome do arquivo: app/Models/DizimoOferta.php
+	// Método: getResumoContabilModalidades
+
+
+
 	public function getResumoContabilModalidades($igrejaId, $dataInicio, $dataFim)
 	{
-		$dataInicioFormatada = $dataInicio . ' 00:00:00';
-		$dataFimFormatada    = $dataFim . ' 23:59:59';
+		$dataInicioFormatada = (strlen($dataInicio) <= 10) ? $dataInicio . ' 00:00:00' : $dataInicio;
+		$dataFimFormatada    = (strlen($dataFim) <= 10) ? $dataFim . ' 23:59:59' : $dataFim;
 
 		$sql = "SELECT
-					sub.categoria,
+					'Culto - Dizimo e Ofertas' AS categoria,
+
 					sub.nome_exibicao,
+
 					SUM(sub.valor_calculado) AS valor
 				FROM (
+					/* 1. ITENS RATEADOS POR MEMBRO */
 					SELECT
-						COALESCE(c.financeiro_categoria_nome, 'Receitas') AS categoria,
 						CASE
-							/* Oferta com membros rateados (subcategoria ID 13) */
-							WHEN s.subcategoria_id = 13 AND rm.receita_membro_id IS NOT NULL THEN 'Oferta Rateada (Com Identificação)'
+							WHEN UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DIZIMO%'
+							  OR UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DÍZIMO%'
+							THEN 'DÍZIMO'
 
-							/* Oferta avulsa sem membro (subcategoria ID 13) */
-							WHEN s.subcategoria_id = 13 AND rm.receita_membro_id IS NULL THEN 'Oferta Avulsa (Sem Identificação)'
-
-							/* Dízimos (subcategoria ID 14 ou similar) e demais categorias */
-							ELSE COALESCE(s.subcategoria_nome, c.financeiro_categoria_nome, 'Dízimos / Ofertas')
+							ELSE 'OFERTA RATEADA (COM IDENTIFICAÇÃO)'
 						END AS nome_exibicao,
 
-						/* Se for oferta com rateio, usa o valor do rateio; se for Dízimo/Lançamento direto, usa o valor da movimentação */
+						rm.receita_membro_valor AS valor_calculado
+
+					FROM financeiro_receita_membros rm
+					INNER JOIN financeiro_contas fc
+						ON fc.financeiro_conta_id = rm.receita_membro_conta_id
+					INNER JOIN financeiro_movimentacoes m
+						ON m.financeiro_movimentacao_financeiro_conta_id = fc.financeiro_conta_id
+					LEFT JOIN financeiro_subcategorias s
+						ON s.subcategoria_id = COALESCE(rm.receita_membro_subcategoria_id, fc.financeiro_conta_financeiro_categoria_id)
+					WHERE m.financeiro_movimentacao_igreja_id = :igreja_id1
+					  AND m.financeiro_movimentacao_tipo = 'entrada'
+					  AND m.financeiro_movimentacao_data BETWEEN :data_inicio1 AND :data_fim1
+
+					UNION ALL
+
+					/* 2. ITENS AVULSOS (SEM MEMBRO) */
+					SELECT
 						CASE
-							WHEN s.subcategoria_id = 13 AND rm.receita_membro_id IS NOT NULL THEN rm.receita_membro_valor
-							ELSE m.financeiro_movimentacao_valor
-						END AS valor_calculado
+							WHEN UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DIZIMO%'
+							  OR UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DÍZIMO%'
+							THEN 'DÍZIMO'
+
+							ELSE 'OFERTA AVULSA'
+						END AS nome_exibicao,
+
+						m.financeiro_movimentacao_valor AS valor_calculado
 
 					FROM financeiro_movimentacoes m
 					INNER JOIN financeiro_contas fc
 						ON fc.financeiro_conta_id = m.financeiro_movimentacao_financeiro_conta_id
 					LEFT JOIN financeiro_subcategorias s
 						ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
-					LEFT JOIN financeiro_categorias c
-						ON c.financeiro_categoria_id = s.subcategoria_categoria_id
-						OR c.financeiro_categoria_id = fc.financeiro_conta_financeiro_categoria_id
-					LEFT JOIN financeiro_receita_membros rm
-						ON rm.receita_membro_conta_id = fc.financeiro_conta_id
-					WHERE m.financeiro_movimentacao_igreja_id = :igreja_id
-					  AND m.financeiro_movimentacao_data BETWEEN :data_inicio AND :data_fim
+					WHERE m.financeiro_movimentacao_igreja_id = :igreja_id2
 					  AND m.financeiro_movimentacao_tipo = 'entrada'
+					  AND m.financeiro_movimentacao_data BETWEEN :data_inicio2 AND :data_fim2
+					  AND NOT EXISTS (
+						  SELECT 1
+						  FROM financeiro_receita_membros rm_check
+						  WHERE rm_check.receita_membro_conta_id = fc.financeiro_conta_id
+					  )
 				) AS sub
 				GROUP BY
-					sub.categoria,
+					categoria,
 					sub.nome_exibicao
 				ORDER BY
-					sub.categoria ASC,
-					sub.nome_exibicao ASC";
+					CASE WHEN sub.nome_exibicao = 'DÍZIMO' THEN 1
+						 WHEN sub.nome_exibicao = 'OFERTA RATEADA (COM IDENTIFICAÇÃO)' THEN 2
+						 ELSE 3 END ASC";
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->bindValue(':igreja_id', $igrejaId);
-		$stmt->bindValue(':data_inicio', $dataInicioFormatada);
-		$stmt->bindValue(':data_fim', $dataFimFormatada);
+
+		$stmt->bindValue(':igreja_id1', $igrejaId);
+		$stmt->bindValue(':data_inicio1', $dataInicioFormatada);
+		$stmt->bindValue(':data_fim1', $dataFimFormatada);
+
+		$stmt->bindValue(':igreja_id2', $igrejaId);
+		$stmt->bindValue(':data_inicio2', $dataInicioFormatada);
+		$stmt->bindValue(':data_fim2', $dataFimFormatada);
+
 		$stmt->execute();
 
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-	// Arquivo: App/Models/DizimoOferta.php
+	// Nome do arquivo: app/Models/DizimoOferta.php
 	// Método: getRelatorioContabil
 
 	public function getRelatorioContabil($dataInicio, $dataFim)
 	{
 		$igrejaId = $_SESSION['igreja_id'] ?? null;
 
-		// Garante que a data final pegue até o último segundo do dia (23:59:59)
-		$dataInicioFormatada = $dataInicio . ' 00:00:00';
-		$dataFimFormatada    = $dataFim . ' 23:59:59';
+		$dataInicioFormatada = (strlen($dataInicio) <= 10) ? $dataInicio . ' 00:00:00' : $dataInicio;
+		$dataFimFormatada    = (strlen($dataFim) <= 10) ? $dataFim . ' 23:59:59' : $dataFim;
 
 		$sql = "SELECT
-					COALESCE(c.financeiro_categoria_nome, fc.financeiro_conta_descricao, 'Receitas') AS categoria,
-					m.financeiro_movimentacao_tipo AS tipo,
-					cf.financeiro_conta_financeira_nome AS conta_financeira,
-					COALESCE(SUM(m.financeiro_movimentacao_valor), 0) AS total
-				FROM financeiro_movimentacoes m
-				INNER JOIN financeiro_contas fc
-					ON fc.financeiro_conta_id = m.financeiro_movimentacao_financeiro_conta_id
-				LEFT JOIN financeiro_subcategorias s
-					ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
-				LEFT JOIN financeiro_categorias c
-					ON c.financeiro_categoria_id = s.subcategoria_categoria_id
-					OR c.financeiro_categoria_id = fc.financeiro_conta_financeiro_categoria_id
-				LEFT JOIN financeiro_contas_financeiras cf
-					ON cf.financeiro_conta_financeira_id = m.financeiro_movimentacao_financeiro_conta_financeira_id
-				WHERE m.financeiro_movimentacao_igreja_id = :igreja_id
-				  AND m.financeiro_movimentacao_data BETWEEN :data_inicio AND :data_fim
+					'Culto - Dizimo e Ofertas' AS categoria,
+
+					sub.nome_exibicao,
+
+					SUM(sub.valor_calculado) AS valor
+				FROM (
+					/* 1. RECEITAS RATEADAS POR MEMBRO */
+					SELECT
+						CASE
+							WHEN UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DIZIMO%'
+							  OR UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DÍZIMO%'
+							THEN 'DÍZIMO'
+
+							ELSE 'OFERTA RATEADA (COM IDENTIFICAÇÃO)'
+						END AS nome_exibicao,
+
+						rm.receita_membro_valor AS valor_calculado
+
+					FROM financeiro_receita_membros rm
+					INNER JOIN financeiro_contas fc
+						ON fc.financeiro_conta_id = rm.receita_membro_conta_id
+					LEFT JOIN financeiro_subcategorias s
+						ON s.subcategoria_id = COALESCE(rm.receita_membro_subcategoria_id, fc.financeiro_conta_financeiro_categoria_id)
+					WHERE fc.financeiro_conta_igreja_id = :igreja_id1
+					  AND fc.financeiro_conta_tipo = 'entrada'
+					  AND fc.financeiro_conta_data_pagamento BETWEEN :data_inicio1 AND :data_fim1
+
+					UNION ALL
+
+					/* 2. RECEITAS AVULSAS */
+					SELECT
+						CASE
+							WHEN UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DIZIMO%'
+							  OR UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DÍZIMO%'
+							THEN 'DÍZIMO'
+
+							ELSE 'OFERTA AVULSA'
+						END AS nome_exibicao,
+
+						fc.financeiro_conta_valor AS valor_calculado
+
+					FROM financeiro_contas fc
+					LEFT JOIN financeiro_subcategorias s
+						ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
+					WHERE fc.financeiro_conta_igreja_id = :igreja_id2
+					  AND fc.financeiro_conta_tipo = 'entrada'
+					  AND fc.financeiro_conta_data_pagamento BETWEEN :data_inicio2 AND :data_fim2
+					  AND NOT EXISTS (
+						  SELECT 1
+						  FROM financeiro_receita_membros rm_check
+						  WHERE rm_check.receita_membro_conta_id = fc.financeiro_conta_id
+					  )
+				) AS sub
 				GROUP BY
-					c.financeiro_categoria_nome,
-					fc.financeiro_conta_descricao,
-					m.financeiro_movimentacao_tipo,
-					cf.financeiro_conta_financeira_nome
-				ORDER BY categoria ASC";
+					categoria,
+					sub.nome_exibicao
+				ORDER BY
+					CASE WHEN sub.nome_exibicao = 'DÍZIMO' THEN 1
+						 WHEN sub.nome_exibicao = 'OFERTA RATEADA (COM IDENTIFICAÇÃO)' THEN 2
+						 ELSE 3 END ASC";
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->bindValue(':igreja_id', $igrejaId);
-		$stmt->bindValue(':data_inicio', $dataInicioFormatada);
-		$stmt->bindValue(':data_fim', $dataFimFormatada);
+
+		$stmt->bindValue(':igreja_id1', $igrejaId);
+		$stmt->bindValue(':data_inicio1', $dataInicioFormatada);
+		$stmt->bindValue(':data_fim1', $dataFimFormatada);
+
+		$stmt->bindValue(':igreja_id2', $igrejaId);
+		$stmt->bindValue(':data_inicio2', $dataInicioFormatada);
+		$stmt->bindValue(':data_fim2', $dataFimFormatada);
+
 		$stmt->execute();
 
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);

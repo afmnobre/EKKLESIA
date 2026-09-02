@@ -1,7 +1,13 @@
+<!-- Nome do arquivo: app/Views/financeiro/index.php -->
+
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold"><i class="bi bi-piggy-bank-fill me-2 text-success"></i>Tesouraria</h3>
         <div>
+            <!-- Botão para abrir o modal do Relatório -->
+            <button class="btn btn-outline-secondary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#modalRelatorioExtrato">
+                <i class="bi bi-file-earmark-text"></i> Relatório Mensal
+            </button>
             <button class="btn btn-outline-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#modalTransferencia">
                 <i class="bi bi-arrow-left-right"></i> Transferir entre Contas
             </button>
@@ -34,39 +40,39 @@
         <?php endforeach; ?>
     </div>
 
-	<div class="card border-0 shadow-sm mb-4">
-		<div class="card-body">
-			<form method="GET" action="<?= url('financeiro/index') ?>" class="row g-2 align-items-end">
-				<div class="col-md-3">
-					<label class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Data Inicial</label>
-					<input type="date" name="data_inicio" class="form-control form-control-sm" value="<?= $dataInicio ?>">
-				</div>
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" action="<?= url('financeiro/index') ?>" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Data Inicial</label>
+                    <input type="date" name="data_inicio" class="form-control form-control-sm" value="<?= $dataInicio ?>">
+                </div>
 
-				<div class="col-md-3">
-					<label class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Data Final</label>
-					<input type="date" name="data_fim" class="form-control form-control-sm" value="<?= $dataFim ?>">
-				</div>
+                <div class="col-md-3">
+                    <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Data Final</label>
+                    <input type="date" name="data_fim" class="form-control form-control-sm" value="<?= $dataFim ?>">
+                </div>
 
-				<div class="col-md-2">
-					<button type="submit" class="btn btn-dark btn-sm w-100 fw-bold">
-						<i class="bi bi-filter"></i> Filtrar
-					</button>
-				</div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-dark btn-sm w-100 fw-bold">
+                        <i class="bi bi-filter"></i> Filtrar
+                    </button>
+                </div>
 
-				<div class="col-md-2">
-					<a href="<?= url('financeiro/index') ?>" class="btn btn-outline-secondary btn-sm w-100">
-						Limpar
-					</a>
-				</div>
+                <div class="col-md-2">
+                    <a href="<?= url('financeiro/index') ?>" class="btn btn-outline-secondary btn-sm w-100">
+                        Limpar
+                    </a>
+                </div>
 
-				<div class="col-md-2">
-					<button type="button" onclick="exportarExcel()" class="btn btn-success btn-sm w-100 text-nowrap">
-						<i class="bi bi-file-earmark-excel"></i> Excel
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
+                <div class="col-md-2">
+                    <button type="button" onclick="exportarExcel()" class="btn btn-success btn-sm w-100 text-nowrap">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div class="col-md-12">
         <div class="card border-0 shadow-sm">
@@ -128,6 +134,60 @@
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Seleção de Mês e Ano do Relatório Extrato -->
+<div class="modal fade" id="modalRelatorioExtrato" tabindex="-1" aria-labelledby="modalRelatorioExtratoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalRelatorioExtratoLabel">
+                    <i class="bi bi-file-earmark-text text-primary me-2"></i>Gerar Relatório de Receitas e Despesas
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form method="GET" action="<?= url('financeiro/relatorioExtrato') ?>" target="_blank">
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">Selecione o mês e o ano desejados para gerar o relatório consolidado com dízimos e ofertas aglutinados.</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Mês</label>
+                            <select name="mes" class="form-select" required>
+                                <?php
+                                $meses = [
+                                    1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
+                                    5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
+                                    9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
+                                ];
+                                $mesAtual = date('n');
+                                foreach ($meses as $num => $nome):
+                                ?>
+                                    <option value="<?= $num ?>" <?= $num == $mesAtual ? 'selected' : '' ?>><?= $nome ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Ano</label>
+                            <select name="ano" class="form-select" required>
+                                <?php
+                                $anoAtual = date('Y');
+                                for ($i = $anoAtual; $i >= $anoAtual - 5; $i--):
+                                ?>
+                                    <option value="<?= $i ?>" <?= $i == $anoAtual ? 'selected' : '' ?>><?= $i ?></option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-printer me-1"></i> Gerar Relatório
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

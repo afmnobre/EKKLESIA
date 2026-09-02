@@ -265,23 +265,57 @@ class EscolaDominicalController extends Controller
 			exit;
 		}
 
-		// Busca dados da classe (nome e professor)
 		$classe = $this->model->getClasseById($classeId);
 
-		// Validação de segurança: a classe pertence a esta igreja?
 		if (!$classe || $classe['classe_igreja_id'] != $igrejaId) {
 			header("Location: " . url('escolaDominical'));
 			exit;
 		}
 
-		// Busca os alunos matriculados
 		$alunos = $this->model->getAlunosByClasse($classeId);
 
-		// Renderiza a view da grade mensal
+		// Define ano e trimestre (pode ser ajustado via $_GET['trimestre'] se desejado)
+		$ano = $_GET['ano'] ?? date('Y');
+		$trimestre = $_GET['trimestre'] ?? ceil(date('n') / 3); // 1, 2, 3 ou 4
+
+		// Meses correspondentes a cada trimestre
+		$mesesTrimestre = [
+			1 => [1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março'],
+			2 => [4 => 'Abril', 5 => 'Maio', 6 => 'Junho'],
+			3 => [7 => 'Julho', 8 => 'Agosto', 9 => 'Setembro'],
+			4 => [10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro']
+		];
+
+		$mesesDoTrimestre = $mesesTrimestre[$trimestre] ?? $mesesTrimestre[1];
+
+		// Mapeia todos os domingos para cada mês do trimestre escolhido
+		$domingosPorMes = [];
+		$totalDomingos = 0;
+
+		foreach ($mesesDoTrimestre as $numMes => $nomeMes) {
+			$domingosPorMes[$numMes] = [
+				'nome' => $nomeMes,
+				'domingos' => []
+			];
+
+			$diasNoMes = cal_days_in_month(CAL_GREGORIAN, $numMes, $ano);
+			for ($dia = 1; $dia <= $diasNoMes; $dia++) {
+				$dataStr = sprintf('%04d-%02d-%02d', $ano, $numMes, $dia);
+				if (date('N', strtotime($dataStr)) == 7) { // 7 = Domingo
+					$domingosPorMes[$numMes]['domingos'][] = str_pad($dia, 2, '0', STR_PAD_LEFT);
+					$totalDomingos++;
+				}
+			}
+		}
+
 		$this->rawview('escoladominical/chamada_sala', [
-			'classe' => $classe,
-			'alunos' => $alunos,
-			'titulo' => 'Diário de Classe - ' . $classe['classe_nome']
+			'classe'          => $classe,
+			'alunos'          => $alunos,
+			'trimestre'       => $trimestre,
+			'ano'             => $ano,
+			'domingosPorMes'  => $domingosPorMes,
+			'totalDomingos'   => $totalDomingos,
+			'titulo'          => 'Diário de Classe - ' . $classe['classe_nome']
 		]);
 	}
 

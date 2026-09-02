@@ -172,13 +172,13 @@ $dataFimFormatada    = !empty($dataFim) ? date('d/m/Y', strtotime($dataFim)) : d
 
         <!-- Lado Direito: Tabela de Modalidades -->
         <div class="coluna-tabela">
-            <table class="tabela-modalidades">
-                <thead>
-                    <tr>
-                        <th class="text-start header-red">CATEGORIA / SUBCATEGORIA</th>
-                        <th class="text-end header-red" style="width: 40%;">VALOR R$</th>
-                    </tr>
-                </thead>
+			<table class="tabela-modalidades">
+				<thead>
+					<tr>
+						<th class="text-start header-red">CATEGORIA / MODALIDADE</th>
+						<th class="text-end header-red" style="width: 40%;">VALOR R$</th>
+					</tr>
+				</thead>
 				<tbody>
 					<?php if (!empty($modalidades)): ?>
 						<?php foreach ($modalidades as $mod): ?>
@@ -208,7 +208,7 @@ $dataFimFormatada    = !empty($dataFim) ? date('d/m/Y', strtotime($dataFim)) : d
 						<td class="text-end header-red"><?= number_format($totalGeral, 2, ',', '.') ?></td>
 					</tr>
 				</tbody>
-            </table>
+			</table>
         </div>
     </div>
 

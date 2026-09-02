@@ -950,7 +950,53 @@ class FinanceiroController extends Controller {
 		exit;
 	}
 
+	// Nome do arquivo: app/Controllers/DizimoOfertaController.php
 
+	public function relatorioExtrato()
+	{
+		if (session_status() === PHP_SESSION_NONE) {
+			session_start();
+		}
+
+		$igrejaId = $_SESSION['igreja_id'] ?? $_SESSION['user_igreja_id'] ?? 1;
+
+		$mes = $_GET['mes'] ?? date('m');
+		$ano = $_GET['ano'] ?? date('Y');
+
+		$dataInicio = "{$ano}-" . str_pad($mes, 2, '0', STR_PAD_LEFT) . "-01";
+		$dataFim    = date('Y-m-t', strtotime($dataInicio));
+
+		$model = new \App\Models\Financeiro();
+		$lancamentos = $model->getRelatorioExtratoAglutinado($igrejaId, $dataInicio, $dataFim);
+
+		// Busca dados da igreja para o cabeçalho padronizado
+		$igreja = $model->db->query("SELECT * FROM igrejas WHERE igreja_id = " . (int)$igrejaId)->fetch(\PDO::FETCH_ASSOC);
+
+		$totalReceitas = 0;
+		$totalDespesas = 0;
+
+		foreach ($lancamentos as $item) {
+			if ($item['tipo'] === 'entrada') {
+				$totalReceitas += $item['valor'];
+			} else {
+				$totalDespesas += $item['valor'];
+			}
+		}
+
+		$saldoPeriodo = $totalReceitas - $totalDespesas;
+
+		$this->rawview('financeiro/relatorio_extrato', [
+			'igreja'        => $igreja,
+			'lancamentos'   => $lancamentos,
+			'mes'           => $mes,
+			'ano'           => $ano,
+			'dataInicio'    => $dataInicio,
+			'dataFim'       => $dataFim,
+			'totalReceitas' => $totalReceitas,
+			'totalDespesas' => $totalDespesas,
+			'saldoPeriodo'  => $saldoPeriodo
+		]);
+	}
 
 
 
