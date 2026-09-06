@@ -1171,4 +1171,83 @@ public function atualizarLancamentoCompleto($data) {
 	}
 
 
+	// Nome do arquivo: app/Models/Financeiro.php
+	// Método: getSaldosContasPorTipo
+
+	/**
+	 * Retorna os saldos atuais acumulados separados por Tipo de Conta (banco vs caixa)
+	 */
+	public function getSaldosContasPorTipo($igrejaId)
+	{
+		// Consulta buscando diretamente na tabela financeiro_contas_financeiras
+		$sql = "SELECT
+					cf.financeiro_conta_financeira_tipo AS tipo_conta,
+					cf.financeiro_conta_financeira_saldo AS saldo_inicial,
+					COALESCE(SUM(
+						CASE
+							WHEN m.financeiro_movimentacao_tipo = 'entrada' THEN m.financeiro_movimentacao_valor
+							WHEN m.financeiro_movimentacao_tipo = 'saida' THEN -m.financeiro_movimentacao_valor
+							ELSE 0
+						END
+					), 0) AS saldo_movimentacoes
+				FROM financeiro_contas_financeiras cf
+				LEFT JOIN financeiro_movimentacoes m
+					ON m.financeiro_movimentacao_financeiro_conta_id = cf.financeiro_conta_financeira_id
+				WHERE cf.financeiro_conta_financeira_igreja_id = ?
+				  AND cf.financeiro_conta_financeira_status = 'ativo'
+				GROUP BY
+					cf.financeiro_conta_financeira_id,
+					cf.financeiro_conta_financeira_tipo,
+					cf.financeiro_conta_financeira_saldo";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		$resultados = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+		$saldos = [
+			'banco' => 0.00,
+			'caixa' => 0.00
+		];
+
+		foreach ($resultados as $row) {
+			$tipo = strtolower(trim($row['tipo_conta']));
+			// Se o saldo já é a foto atual cadastrada na conta_financeira:
+			$saldoCalculado = (float)$row['saldo_inicial'] + (float)$row['saldo_movimentacoes'];
+
+			if (in_array($tipo, ['banco', 'bancaria', 'conta_corrente', 'poupanca', 'pix'])) {
+				$saldos['banco'] += $saldoCalculado;
+			} else {
+				$saldos['caixa'] += $saldoCalculado;
+			}
+		}
+
+		return $saldos;
+	}
+
+	/**
+	 * Retorna o saldo total acumulado de movimentações antes da data de início informada
+	 */
+	public function getSaldoAnterior($igrejaId, $dataInicio)
+	{
+		$sql = "SELECT
+					COALESCE(SUM(
+						CASE
+							WHEN financeiro_movimentacao_tipo = 'entrada' THEN financeiro_movimentacao_valor
+							WHEN financeiro_movimentacao_tipo = 'saida' THEN -financeiro_movimentacao_valor
+							ELSE 0
+						END
+					), 0) AS saldo_anterior
+				FROM financeiro_movimentacoes
+				WHERE financeiro_movimentacao_igreja_id = ?
+				  AND financeiro_movimentacao_data < ?";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId, $dataInicio . ' 00:00:00']);
+		$result = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+		return (float)($result['saldo_anterior'] ?? 0);
+	}
+
+
+
 }

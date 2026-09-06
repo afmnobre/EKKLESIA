@@ -41,13 +41,20 @@ $dataFimFormatada    = !empty($dataFim) ? date('d/m/Y', strtotime($dataFim)) : d
             font-weight: bold;
             background-color: #f9f9f9;
         }
-        .linha-total {
-            font-weight: bold;
-            font-size: 12px;
-            background-color: #f2f2f2;
+
+        /* Resumos e Totais */
+        .tabela-resumo {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            margin-bottom: 15px;
+        }
+        .tabela-resumo td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #ddd;
         }
 
-        .assinatura { border-top: 1px solid #000; margin-top: 50px; text-align: center; padding-top: 5px; }
+        .assinatura { border-top: 1px solid #000; margin-top: 40px; text-align: center; padding-top: 5px; }
 
         @media print {
             .no-print { display: none; }
@@ -137,26 +144,77 @@ $dataFimFormatada    = !empty($dataFim) ? date('d/m/Y', strtotime($dataFim)) : d
                 </tr>
             <?php endif; ?>
         </tbody>
-        <tfoot>
-            <tr class="linha-total">
-                <td colspan="4" class="text-end text-uppercase header-blue">TOTAL RECEITAS:</td>
-                <td class="text-end text-success">R$ <?= number_format($totalReceitas, 2, ',', '.') ?></td>
-            </tr>
-            <tr class="linha-total">
-                <td colspan="4" class="text-end text-uppercase header-red">TOTAL DESPESAS:</td>
-                <td class="text-end text-danger">R$ <?= number_format($totalDespesas, 2, ',', '.') ?></td>
-            </tr>
-            <tr class="linha-total" style="border-top: 2px solid #000;">
-                <td colspan="4" class="text-end text-uppercase">SALDO DO PERÍODO:</td>
-                <td class="text-end <?= $saldoPeriodo >= 0 ? 'text-success' : 'text-danger' ?>">
-                    R$ <?= number_format($saldoPeriodo, 2, ',', '.') ?>
-                </td>
-            </tr>
-        </tfoot>
     </table>
 
+    <!-- BLOCO DE AGRUPAMENTOS DE TOTAIS NO FINAL DO RELATÓRIO -->
+    <div class="row g-2 mb-3">
+        <!-- Coluna 1: Execução do Mês e Saldo Anterior -->
+        <div class="col-6">
+            <table class="tabela-resumo">
+                <thead>
+                    <tr class="bg-light fw-bold">
+                        <td colspan="2" class="text-uppercase border-bottom">Demostrativo de Movimentação do Mês</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>(+) Total de Receitas do Mês:</td>
+                        <td class="text-end text-success fw-bold">R$ <?= number_format($totalReceitas, 2, ',', '.') ?></td>
+                    </tr>
+                    <tr>
+                        <td>(-) Total de Despesas do Mês:</td>
+                        <td class="text-end text-danger fw-bold">R$ <?= number_format($totalDespesas, 2, ',', '.') ?></td>
+                    </tr>
+                    <tr class="fw-bold bg-light">
+                        <td>TOTAL DO MÊS (Resultado):</td>
+                        <td class="text-end <?= $saldoMes >= 0 ? 'text-success' : 'text-danger' ?>">
+                            R$ <?= number_format($saldoMes, 2, ',', '.') ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>(+) SALDO ANTERIOR (Contas + Caixa):</td>
+                        <td class="text-end fw-bold">R$ <?= number_format($saldoAnterior, 2, ',', '.') ?></td>
+                    </tr>
+                    <tr class="fw-bold text-uppercase" style="background-color: #e9ecef; border-top: 2px solid #000;">
+                        <td>SALDO TOTAL DO PERÍODO:</td>
+                        <td class="text-end <?= $saldoTotalExecutado >= 0 ? 'text-primary' : 'text-danger' ?>">
+                            R$ <?= number_format($saldoTotalExecutado, 2, ',', '.') ?>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Coluna 2: Posições das Contas Atuais -->
+        <div class="col-6">
+            <table class="tabela-resumo">
+                <thead>
+                    <tr class="bg-light fw-bold">
+                        <td colspan="2" class="text-uppercase border-bottom">Posição Atual das Contas e Caixas</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>SALDO BANCÁRIO ATUAL:</td>
+                        <td class="text-end fw-bold">R$ <?= number_format($saldoBancarioAtual, 2, ',', '.') ?></td>
+                    </tr>
+                    <tr>
+                        <td>SALDO EM CAIXA (Dinheiro Físico):</td>
+                        <td class="text-end fw-bold">R$ <?= number_format($saldoCaixaAtual, 2, ',', '.') ?></td>
+                    </tr>
+                    <tr class="fw-bold text-uppercase" style="background-color: #e9ecef; border-top: 2px solid #000; height: 50px;">
+                        <td>SALDO TOTAL (Bancos + Caixa):</td>
+                        <td class="text-end <?= $saldoTotalAtualConsolidado >= 0 ? 'text-success' : 'text-danger' ?>">
+                            R$ <?= number_format($saldoTotalAtualConsolidado, 2, ',', '.') ?>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- ASSINATURAS PADRONIZADAS -->
-    <div class="row mt-5">
+    <div class="row mt-4">
         <div class="col-6">
             <div class="assinatura">
                 <strong>Tesoureiro / Responsável Financeiro</strong>

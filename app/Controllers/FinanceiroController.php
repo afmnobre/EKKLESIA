@@ -952,6 +952,9 @@ class FinanceiroController extends Controller {
 
 	// Nome do arquivo: app/Controllers/DizimoOfertaController.php
 
+	// Nome do arquivo: app/Controllers/DizimoOfertaController.php
+	// Método: relatorioExtrato
+
 	public function relatorioExtrato()
 	{
 		if (session_status() === PHP_SESSION_NONE) {
@@ -966,12 +969,16 @@ class FinanceiroController extends Controller {
 		$dataInicio = "{$ano}-" . str_pad($mes, 2, '0', STR_PAD_LEFT) . "-01";
 		$dataFim    = date('Y-m-t', strtotime($dataInicio));
 
+		// Nome do arquivo: app/Controllers/FinanceiroController.php
+		// Linha aproximada: 976 (método relatorioExtrato)
+
 		$model = new \App\Models\Financeiro();
 		$lancamentos = $model->getRelatorioExtratoAglutinado($igrejaId, $dataInicio, $dataFim);
 
-		// Busca dados da igreja para o cabeçalho padronizado
-		$igreja = $model->db->query("SELECT * FROM igrejas WHERE igreja_id = " . (int)$igrejaId)->fetch(\PDO::FETCH_ASSOC);
-
+		// ALTERADO AQUI (Linha 976): substituído $model->db por \App\Core\Database::getInstance() ou busca via PDO da aplicação
+		$stmtIgreja = \App\Core\Database::getInstance()->prepare("SELECT * FROM igrejas WHERE igreja_id = ?");
+		$stmtIgreja->execute([(int)$igrejaId]);
+		$igreja = $stmtIgreja->fetch(\PDO::FETCH_ASSOC);
 		$totalReceitas = 0;
 		$totalDespesas = 0;
 
@@ -983,18 +990,38 @@ class FinanceiroController extends Controller {
 			}
 		}
 
-		$saldoPeriodo = $totalReceitas - $totalDespesas;
+		// 1. TOTAL DO MÊS
+		$saldoMes = $totalReceitas - $totalDespesas;
+
+		// 2. SALDO ANTERIOR (Todas as contas/caixa anteriores ao início do mês)
+		$saldoAnterior = $model->getSaldoAnterior($igrejaId, $dataInicio);
+
+		// 3. SALDO TOTAL (TOTAL DO MÊS + SALDO ANTERIOR)
+		$saldoTotalExecutado = $saldoMes + $saldoAnterior;
+
+		// 4 e 5. SALDOS ATUAIS POR CONTA E CAIXA
+		$saldosAtuais = $model->getSaldosContasPorTipo($igrejaId);
+		$saldoBancarioAtual = $saldosAtuais['banco'];
+		$saldoCaixaAtual    = $saldosAtuais['caixa'];
+
+		// 6. SALDO TOTAL CONSOLIDADO (Bancário + Caixa)
+		$saldoTotalAtualConsolidado = $saldoBancarioAtual + $saldoCaixaAtual;
 
 		$this->rawview('financeiro/relatorio_extrato', [
-			'igreja'        => $igreja,
-			'lancamentos'   => $lancamentos,
-			'mes'           => $mes,
-			'ano'           => $ano,
-			'dataInicio'    => $dataInicio,
-			'dataFim'       => $dataFim,
-			'totalReceitas' => $totalReceitas,
-			'totalDespesas' => $totalDespesas,
-			'saldoPeriodo'  => $saldoPeriodo
+			'igreja'                     => $igreja,
+			'lancamentos'                => $lancamentos,
+			'mes'                        => $mes,
+			'ano'                        => $ano,
+			'dataInicio'                 => $dataInicio,
+			'dataFim'                    => $dataFim,
+			'totalReceitas'              => $totalReceitas,
+			'totalDespesas'              => $totalDespesas,
+			'saldoMes'                   => $saldoMes,
+			'saldoAnterior'              => $saldoAnterior,
+			'saldoTotalExecutado'        => $saldoTotalExecutado,
+			'saldoBancarioAtual'         => $saldoBancarioAtual,
+			'saldoCaixaAtual'            => $saldoCaixaAtual,
+			'saldoTotalAtualConsolidado' => $saldoTotalAtualConsolidado
 		]);
 	}
 
