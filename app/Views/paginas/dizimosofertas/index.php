@@ -171,7 +171,7 @@
 							<td>
 								<span class="d-block fw-bold text-dark mb-1"><?= htmlspecialchars($l['financeiro_conta_descricao'] ?? '') ?></span>
 								<span class="badge rounded-pill bg-light text-secondary border" style="font-size: 0.7rem;">
-									<?= htmlspecialchars($l['financeiro_categoria_nome'] ?? '') ?>
+									<?= htmlspecialchars($l['subcategoria_nome'] ?? $l['financeiro_subcategoria_nome'] ?? $l['financeiro_categoria_nome'] ?? '') ?>
 								</span>
 							</td>
 
@@ -302,7 +302,7 @@
                         <input type="date" name="data_pagamento" class="form-control bg-light border-0 fw-bold" value="<?= date('Y-m-d') ?>" required>
                     </div>
 
-                    <!-- BLROCO DÍZIMO -->
+                    <!-- BLOCO DÍZIMO -->
                     <div class="card bg-light border-0 mb-3">
                         <div class="card-body p-3">
                             <h6 class="fw-bold text-success mb-3"><i class="bi bi-wallet2 me-1"></i> Dízimo</h6>
@@ -343,8 +343,8 @@
 												$lastCat = $cat['financeiro_categoria_nome'];
 											endif;
 
-											// Seleciona por padrão a Oferta de Culto (Subcategoria 13 ou nome exato "Oferta" na categoria "Culto - Dizimo e Ofertas")
-											$isPadrao = ($cat['subcategoria_id'] == 13 ||
+											// Seleciona por padrão a Oferta de Culto (Subcategoria 2 ou nome exato "Oferta" na categoria "Culto - Dizimo e Ofertas")
+                                                $isPadrao = ($cat['subcategoria_id'] == 2 ||
 														(mb_stripos($cat['financeiro_categoria_nome'], 'Culto') !== false && trim($cat['subcategoria_nome']) === 'Oferta'));
 										?>
 											<option value="<?= $cat['financeiro_categoria_id'] ?>-<?= $cat['subcategoria_id'] ?>" <?= $isPadrao ? 'selected' : '' ?>>
@@ -881,6 +881,37 @@ function executarUploadAsync(botao) {
     const btnText = botao.querySelector('.btn-text');
     const spinner = botao.querySelector('.spinner-border');
     const previewArea = form.querySelector('.preview-anexo-existente');
+    const inputFileInput = form.querySelector('input[type="file"]');
+
+    if (!inputFileInput || !inputFileInput.files.length) {
+        alert('Selecione um arquivo para enviar.');
+        return;
+    }
+
+    botao.disabled = true;
+    if (spinner) spinner.classList.remove('d-none');
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Arquivo enviado com sucesso!');
+            if (previewArea) previewArea.classList.remove('d-none');
+        } else {
+            alert(data.message || 'Erro ao enviar o arquivo.');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro de comunicação com o servidor.');
+    })
+    .finally(() => {
+        botao.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+    });
 }
 
 
@@ -889,6 +920,9 @@ function executarUploadAsync(botao) {
 // Arquivo: dizimosofertas/index.php (Script ao final da página)
 
 // 1. SUBMISSÃO AJAX - LANÇAMENTO EM LOTE
+// Arquivo: App/Views/dizimooferta/index.php
+// Linha: 689
+
 document.getElementById('formLancamentoLote')?.addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -904,10 +938,9 @@ document.getElementById('formLancamentoLote')?.addEventListener('submit', functi
     if (parseFloat(somaRateio.toFixed(2)) > parseFloat(valorTotal.toFixed(2))) {
         document.getElementById('aviso-valor')?.classList.remove('d-none');
         alert('Atenção: A soma dos rateios é maior que o valor total!');
-        return;
+        return; // Interrompe a execução antes de chamar o fetch
     }
 
-    // Trava o botão para evitar clique duplo/duplicidade
     btnSubmit.disabled = true;
     btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Salvando...';
 
@@ -937,6 +970,9 @@ document.getElementById('formLancamentoLote')?.addEventListener('submit', functi
 });
 
 // 2. SUBMISSÃO AJAX - LANÇAMENTO INDIVIDUAL
+// Arquivo: App/Views/dizimooferta/index.php
+// Linha: 727
+
 document.getElementById('formLancamentoIndividual')?.addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -947,10 +983,9 @@ document.getElementById('formLancamentoIndividual')?.addEventListener('submit', 
 
     if (dizimoValor <= 0 && ofertaValor <= 0) {
         alert('Por favor, informe ao menos o valor do Dízimo ou da Oferta.');
-        return;
+        return; // Interrompe a execução antes de chamar o fetch
     }
 
-    // Trava o botão para evitar clique duplo/duplicidade
     btnSubmit.disabled = true;
     btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Salvando...';
 
@@ -1012,11 +1047,10 @@ function excluirLancamento(id) {
 }
 
 
-// FORMA CORRETA (Garante que o objeto de opções do Bootstrap seja inicializado):
+// FORMA CORRETA: Apenas registra o ouvinte de evento sem forçar o modal.show() ao carregar a página
 const modalElement = document.getElementById('modalRelatorioContabil');
 
 if (modalElement) {
-    // Escuta o evento de abertura do modal do Bootstrap para preencher as datas
     modalElement.addEventListener('show.bs.modal', function () {
         const hoje = new Date().toISOString().split('T')[0];
 
@@ -1026,13 +1060,6 @@ if (modalElement) {
         if (inputInicio) inputInicio.value = hoje;
         if (inputFim) inputFim.value = hoje;
     });
-
-    // Instancia e exibe o modal
-    const modal = bootstrap.Modal.getOrCreateInstance(modalElement, {
-        backdrop: true,
-        keyboard: true
-    });
-    modal.show();
 }
 
 </script>

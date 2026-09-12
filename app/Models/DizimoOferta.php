@@ -79,7 +79,7 @@ class DizimoOferta
         ]);
     }
 
-	public function getLancamentosPorPeriodo($igrejaId, $mes, $ano)
+    public function getLancamentosPorPeriodo($igrejaId, $mes, $ano)
 	{
 		$stmt = $this->db->prepare("
 			SELECT
@@ -87,12 +87,12 @@ class DizimoOferta
 				COALESCE(sub.subcategoria_nome, cat.financeiro_categoria_nome) AS financeiro_categoria_nome,
 				fm.financeiro_movimentacao_data
 			FROM financeiro_contas fc
-			-- Tenta buscar na tabela de categorias (comportamento antigo)
+			-- Tenta buscar na tabela de categorias
 			LEFT JOIN financeiro_categorias cat
 				ON fc.financeiro_conta_financeiro_categoria_id = cat.financeiro_categoria_id
-			-- Tenta buscar na tabela de subcategorias (comportamento novo)
+			-- Ajuste na linha 84: usa o nome exato da coluna na tabela financeiro_contas
 			LEFT JOIN financeiro_subcategorias sub
-				ON fc.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
+				ON fc.financeiro_conta_financeiro_subcategoria_id = sub.subcategoria_id
 			-- Busca a data/hora exata em que o lançamento foi realizado
 			LEFT JOIN (
 				SELECT
@@ -224,10 +224,11 @@ class DizimoOferta
 			$valorTotal = $limparValor($data['valor']);
 			$data_pagamento_completa = $data['data_pagamento'] . ' ' . date('H:i:s');
 
-			// --- 1. INSERIR CONTA FINANCEIRA (PAGAMENTO) ---
+			// --- 1. INSERIR CONTA FINANCEIRA (PAGAMENTO COM CATEGORIA E SUBCATEGORIA) ---
 			$sqlConta = "INSERT INTO financeiro_contas (
 							financeiro_conta_igreja_id,
 							financeiro_conta_financeiro_categoria_id,
+							financeiro_conta_financeiro_subcategoria_id,
 							financeiro_conta_descricao,
 							financeiro_conta_valor,
 							financeiro_conta_tipo,
@@ -236,12 +237,13 @@ class DizimoOferta
 							financeiro_conta_data_pagamento,
 							conferido_por_1,
 							conferido_por_2
-						) VALUES (?, ?, ?, ?, 'entrada', ?, 1, ?, ?, ?)";
+						) VALUES (?, ?, ?, ?, ?, 'entrada', ?, 1, ?, ?, ?)";
 
 			$stmt = $this->db->prepare($sqlConta);
 			$stmt->execute([
 				$data['igreja_id'],
-				$data['subcategoria_id'] ?? $data['categoria_id'],
+				$data['categoria_id'],     // Categoria
+				$data['subcategoria_id'],  // Subcategoria (nome da coluna corrigido)
 				$data['descricao'] ?? 'Lançamento em Lote',
 				$valorTotal,
 				$data['data_pagamento'],
@@ -267,17 +269,21 @@ class DizimoOferta
 				$sqlMov = "INSERT INTO financeiro_movimentacoes (
 							financeiro_movimentacao_igreja_id,
 							financeiro_movimentacao_financeiro_conta_id,
+							financeiro_movimentacao_financeiro_categoria_id,
+							financeiro_movimentacao_financeiro_subcategoria_id,
 							financeiro_movimentacao_financeiro_conta_financeira_id,
 							financeiro_movimentacao_tipo,
 							financeiro_movimentacao_valor,
 							financeiro_movimentacao_data,
 							financeiro_movimentacao_descricao,
 							financeiro_movimentacao_origem
-						) VALUES (?, ?, ?, 'entrada', ?, ?, ?, 'pagamento')";
+						) VALUES (?, ?, ?, ?, ?, 'entrada', ?, ?, ?, 'pagamento')";
 
 				$this->db->prepare($sqlMov)->execute([
 					$data['igreja_id'],
 					$contaId,
+					$data['categoria_id'],
+					$data['subcategoria_id'],
 					$data['conta_financeira_id'],
 					$valorTotal,
 					$data_pagamento_completa,
@@ -305,7 +311,7 @@ class DizimoOferta
 					if ($valMembro > 0) {
 						$stmtMembro->execute([
 							$contaId,
-							$data['subcategoria_id'] ?? $data['categoria_id'],
+							$data['subcategoria_id'],
 							$membroId,
 							$valMembro,
 							$data_pagamento_completa
@@ -314,12 +320,11 @@ class DizimoOferta
 				}
 			}
 
-			// Se tudo ocorreu bem, confirma as alterações no banco de dados
+			// Confirma a transação
 			$this->db->commit();
 			return true;
 
 		} catch (\Exception $e) {
-			// Se houver qualquer falha, cancela todas as inserções da transação
 			if ($this->db->inTransaction()) {
 				$this->db->rollBack();
 			}
@@ -353,10 +358,11 @@ class DizimoOferta
 			// --- 1. PROCESSAR DÍZIMO (SE INFORMADO) ---
 			$dizimoValor = $limparValor($data['dizimo_valor']);
 			if ($dizimoValor > 0 && !empty($data['dizimo_conta_id'])) {
-				// Insere Conta Financeira (Dízimo = Subcategoria ID 14)
+				// Insere em financeiro_contas
 				$sqlConta = "INSERT INTO financeiro_contas (
 								financeiro_conta_igreja_id,
 								financeiro_conta_financeiro_categoria_id,
+								financeiro_conta_financeiro_subcategoria_id,
 								financeiro_conta_descricao,
 								financeiro_conta_valor,
 								financeiro_conta_tipo,
@@ -365,69 +371,99 @@ class DizimoOferta
 								financeiro_conta_data_pagamento,
 								conferido_por_1,
 								conferido_por_2
-							) VALUES (?, ?, ?, ?, 'entrada', ?, 1, ?, ?, ?)";
+							) VALUES (
+								:igreja_id, :categoria_id, :subcategoria_id, :descricao,
+								:valor, 'entrada', :vencimento, 1, :pagamento, :diacono_1, :diacono_2
+							)";
 
-				$stmt = $this->db->prepare($sqlConta);
-				$stmt->execute([
-					$data['igreja_id'],
-					$data['dizimo_subcategoria_id'], // Valor fixado em 14
-					"Dízimo - Individual",
-					$dizimoValor,
-					$data['data_pagamento'],
-					$data['data_pagamento'],
-					$data['diacono_1'],
-					$data['diacono_2']
+				$stmtConta = $this->db->prepare($sqlConta);
+				$resConta = $stmtConta->execute([
+					':igreja_id'       => $data['igreja_id'],
+					':categoria_id'    => $data['dizimo_categoria_id'] ?? 1,
+					':subcategoria_id' => $data['dizimo_subcategoria_id'] ?? 1,
+					':descricao'       => "Dízimo - Individual",
+					':valor'           => $dizimoValor,
+					':vencimento'      => $data['data_pagamento'],
+					':pagamento'       => $data['data_pagamento'],
+					':diacono_1'       => $data['diacono_1'],
+					':diacono_2'       => $data['diacono_2']
 				]);
+
+				if (!$resConta) {
+					throw new \Exception("Erro ao inserir conta de Dízimo.");
+				}
+
 				$contaIdDizimo = $this->db->lastInsertId();
 
-				// Atualiza Saldo da Conta Bancária / Caixa
+				// Atualiza Saldo Bancário/Caixa
 				$sqlSaldo = "UPDATE financeiro_contas_financeiras
-							 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + ?
-							 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
-				$this->db->prepare($sqlSaldo)->execute([$dizimoValor, $data['dizimo_conta_id'], $data['igreja_id']]);
+							 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + :valor
+							 WHERE financeiro_conta_financeira_id = :conta_id AND financeiro_conta_financeira_igreja_id = :igreja_id";
+				$this->db->prepare($sqlSaldo)->execute([
+					':valor'    => $dizimoValor,
+					':conta_id' => $data['dizimo_conta_id'],
+					':igreja_id'=> $data['igreja_id']
+				]);
 
-				// Insere Movimentação
+				// Insere em financeiro_movimentacoes
 				$sqlMov = "INSERT INTO financeiro_movimentacoes (
 							financeiro_movimentacao_igreja_id,
 							financeiro_movimentacao_financeiro_conta_id,
+							financeiro_movimentacao_financeiro_categoria_id,
+							financeiro_movimentacao_financeiro_subcategoria_id,
 							financeiro_movimentacao_financeiro_conta_financeira_id,
 							financeiro_movimentacao_tipo,
 							financeiro_movimentacao_valor,
 							financeiro_movimentacao_data,
 							financeiro_movimentacao_descricao,
 							financeiro_movimentacao_origem
-						) VALUES (?, ?, ?, 'entrada', ?, ?, 'Dízimo Individual', 'pagamento')";
-				$this->db->prepare($sqlMov)->execute([
-					$data['igreja_id'],
-					$contaIdDizimo,
-					$data['dizimo_conta_id'],
-					$dizimoValor,
-					$data_pagamento_completa
+						) VALUES (
+							:igreja_id, :conta_id, :categoria_id, :subcategoria_id,
+							:conta_financeira_id, 'entrada', :valor, :data_mov, :descricao, 'pagamento'
+						)";
+
+				$stmtMov = $this->db->prepare($sqlMov);
+				$resMov = $stmtMov->execute([
+					':igreja_id'          => $data['igreja_id'],
+					':conta_id'           => $contaIdDizimo,
+					':categoria_id'       => $data['dizimo_categoria_id'] ?? 1,
+					':subcategoria_id'    => $data['dizimo_subcategoria_id'] ?? 1,
+					':conta_financeira_id' => $data['dizimo_conta_id'],
+					':valor'              => $dizimoValor,
+					':data_mov'           => $data_pagamento_completa,
+					':descricao'          => 'Dízimo Individual'
 				]);
 
-				// Vínculo com o Membro (Dízimo)
+				if (!$resMov) {
+					throw new \Exception("Erro ao inserir movimentação de Dízimo.");
+				}
+
+				// Vínculo do Membro
 				$sqlMembro = "INSERT INTO financeiro_receita_membros (
 								receita_membro_conta_id,
 								receita_membro_subcategoria_id,
 								receita_membro_usuario_id,
 								receita_membro_valor,
 								receita_membro_data
-							) VALUES (?, ?, ?, ?, ?)";
+							) VALUES (:conta_id, :subcategoria_id, :usuario_id, :valor, :data_receita)";
+
 				$this->db->prepare($sqlMembro)->execute([
-					$contaIdDizimo,
-					$data['dizimo_subcategoria_id'], // Valor fixado em 14
-					$membroId,
-					$dizimoValor,
-					$data_pagamento_completa
+					':conta_id'       => $contaIdDizimo,
+					':subcategoria_id'=> $data['dizimo_subcategoria_id'] ?? 1,
+					':usuario_id'     => $membroId,
+					':valor'          => $dizimoValor,
+					':data_receita'   => $data_pagamento_completa
 				]);
 			}
 
 			// --- 2. PROCESSAR OFERTA (SE INFORMADA) ---
 			$ofertaValor = $limparValor($data['oferta_valor']);
 			if ($ofertaValor > 0 && !empty($data['oferta_conta_id'])) {
+				// Insere em financeiro_contas
 				$sqlConta = "INSERT INTO financeiro_contas (
 								financeiro_conta_igreja_id,
 								financeiro_conta_financeiro_categoria_id,
+								financeiro_conta_financeiro_subcategoria_id,
 								financeiro_conta_descricao,
 								financeiro_conta_valor,
 								financeiro_conta_tipo,
@@ -436,60 +472,88 @@ class DizimoOferta
 								financeiro_conta_data_pagamento,
 								conferido_por_1,
 								conferido_por_2
-							) VALUES (?, ?, ?, ?, 'entrada', ?, 1, ?, ?, ?)";
+							) VALUES (
+								:igreja_id, :categoria_id, :subcategoria_id, :descricao,
+								:valor, 'entrada', :vencimento, 1, :pagamento, :diacono_1, :diacono_2
+							)";
 
-				$stmt = $this->db->prepare($sqlConta);
-				$stmt->execute([
-					$data['igreja_id'],
-					$data['oferta_subcategoria_id'],
-					"Oferta - Individual",
-					$ofertaValor,
-					$data['data_pagamento'],
-					$data['data_pagamento'],
-					$data['diacono_1'],
-					$data['diacono_2']
+				$stmtConta = $this->db->prepare($sqlConta);
+				$resConta = $stmtConta->execute([
+					':igreja_id'       => $data['igreja_id'],
+					':categoria_id'    => $data['oferta_categoria_id'],
+					':subcategoria_id' => $data['oferta_subcategoria_id'],
+					':descricao'       => "Oferta - Individual",
+					':valor'           => $ofertaValor,
+					':vencimento'      => $data['data_pagamento'],
+					':pagamento'       => $data['data_pagamento'],
+					':diacono_1'       => $data['diacono_1'],
+					':diacono_2'       => $data['diacono_2']
 				]);
+
+				if (!$resConta) {
+					throw new \Exception("Erro ao inserir conta de Oferta.");
+				}
+
 				$contaIdOferta = $this->db->lastInsertId();
 
-				// Atualiza Saldo da Conta Bancária / Caixa
+				// Atualiza Saldo Bancário/Caixa
 				$sqlSaldo = "UPDATE financeiro_contas_financeiras
-							 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + ?
-							 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
-				$this->db->prepare($sqlSaldo)->execute([$ofertaValor, $data['oferta_conta_id'], $data['igreja_id']]);
+							 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo + :valor
+							 WHERE financeiro_conta_financeira_id = :conta_id AND financeiro_conta_financeira_igreja_id = :igreja_id";
+				$this->db->prepare($sqlSaldo)->execute([
+					':valor'    => $ofertaValor,
+					':conta_id' => $data['oferta_conta_id'],
+					':igreja_id'=> $data['igreja_id']
+				]);
 
-				// Insere Movimentação
+				// Insere em financeiro_movimentacoes
 				$sqlMov = "INSERT INTO financeiro_movimentacoes (
 							financeiro_movimentacao_igreja_id,
 							financeiro_movimentacao_financeiro_conta_id,
+							financeiro_movimentacao_financeiro_categoria_id,
+							financeiro_movimentacao_financeiro_subcategoria_id,
 							financeiro_movimentacao_financeiro_conta_financeira_id,
 							financeiro_movimentacao_tipo,
 							financeiro_movimentacao_valor,
 							financeiro_movimentacao_data,
 							financeiro_movimentacao_descricao,
 							financeiro_movimentacao_origem
-						) VALUES (?, ?, ?, 'entrada', ?, ?, 'Oferta Individual', 'pagamento')";
-				$this->db->prepare($sqlMov)->execute([
-					$data['igreja_id'],
-					$contaIdOferta,
-					$data['oferta_conta_id'],
-					$ofertaValor,
-					$data_pagamento_completa
+						) VALUES (
+							:igreja_id, :conta_id, :categoria_id, :subcategoria_id,
+							:conta_financeira_id, 'entrada', :valor, :data_mov, :descricao, 'pagamento'
+						)";
+
+				$stmtMov = $this->db->prepare($sqlMov);
+				$resMov = $stmtMov->execute([
+					':igreja_id'          => $data['igreja_id'],
+					':conta_id'           => $contaIdOferta,
+					':categoria_id'       => $data['oferta_categoria_id'],
+					':subcategoria_id'    => $data['oferta_subcategoria_id'],
+					':conta_financeira_id' => $data['oferta_conta_id'],
+					':valor'              => $ofertaValor,
+					':data_mov'           => $data_pagamento_completa,
+					':descricao'          => 'Oferta Individual'
 				]);
 
-				// Vínculo com o Membro (Oferta)
+				if (!$resMov) {
+					throw new \Exception("Erro ao inserir movimentação de Oferta.");
+				}
+
+				// Vínculo do Membro
 				$sqlMembro = "INSERT INTO financeiro_receita_membros (
 								receita_membro_conta_id,
 								receita_membro_subcategoria_id,
 								receita_membro_usuario_id,
 								receita_membro_valor,
 								receita_membro_data
-							) VALUES (?, ?, ?, ?, ?)";
+							) VALUES (:conta_id, :subcategoria_id, :usuario_id, :valor, :data_receita)";
+
 				$this->db->prepare($sqlMembro)->execute([
-					$contaIdOferta,
-					$data['oferta_subcategoria_id'],
-					$membroId,
-					$ofertaValor,
-					$data_pagamento_completa
+					':conta_id'       => $contaIdOferta,
+					':subcategoria_id'=> $data['oferta_subcategoria_id'],
+					':usuario_id'     => $membroId,
+					':valor'          => $ofertaValor,
+					':data_receita'   => $data_pagamento_completa
 				]);
 			}
 
@@ -795,10 +859,8 @@ class DizimoOferta
 	// Nome do arquivo: app/Models/DizimoOferta.php
 	// Método: getRelatorioContabil
 
-	public function getRelatorioContabil($dataInicio, $dataFim)
+    public function getRelatorioContabil($igrejaId, $dataInicio, $dataFim)
 	{
-		$igrejaId = $_SESSION['igreja_id'] ?? null;
-
 		$dataInicioFormatada = (strlen($dataInicio) <= 10) ? $dataInicio . ' 00:00:00' : $dataInicio;
 		$dataFimFormatada    = (strlen($dataFim) <= 10) ? $dataFim . ' 23:59:59' : $dataFim;
 
@@ -809,14 +871,12 @@ class DizimoOferta
 
 					SUM(sub.valor_calculado) AS valor
 				FROM (
-					/* 1. RECEITAS RATEADAS POR MEMBRO */
+					/* 1. RECEITAS RATEADAS POR MEMBRO (DÍZIMOS E OFERTAS COM IDENTIFICAÇÃO) */
 					SELECT
 						CASE
-							WHEN UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DIZIMO%'
-							  OR UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DÍZIMO%'
-							THEN 'DÍZIMO'
-
-							ELSE 'OFERTA RATEADA (COM IDENTIFICAÇÃO)'
+							WHEN UPPER(s.subcategoria_chave_sistema) = 'DIZIMO' THEN 'DÍZIMO'
+							WHEN UPPER(s.subcategoria_chave_sistema) = 'OFERTA' THEN 'OFERTA RATEADA (COM IDENTIFICAÇÃO)'
+							ELSE UPPER(COALESCE(s.subcategoria_nome, 'OUTROS'))
 						END AS nome_exibicao,
 
 						rm.receita_membro_valor AS valor_calculado
@@ -825,28 +885,26 @@ class DizimoOferta
 					INNER JOIN financeiro_contas fc
 						ON fc.financeiro_conta_id = rm.receita_membro_conta_id
 					LEFT JOIN financeiro_subcategorias s
-						ON s.subcategoria_id = COALESCE(rm.receita_membro_subcategoria_id, fc.financeiro_conta_financeiro_categoria_id)
+						ON s.subcategoria_id = COALESCE(rm.receita_membro_subcategoria_id, fc.financeiro_conta_financeiro_subcategoria_id)
 					WHERE fc.financeiro_conta_igreja_id = :igreja_id1
 					  AND fc.financeiro_conta_tipo = 'entrada'
 					  AND fc.financeiro_conta_data_pagamento BETWEEN :data_inicio1 AND :data_fim1
 
 					UNION ALL
 
-					/* 2. RECEITAS AVULSAS */
+					/* 2. RECEITAS AVULSAS (SEM MEMBRO VINCULADO) */
 					SELECT
 						CASE
-							WHEN UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DIZIMO%'
-							  OR UPPER(COALESCE(s.subcategoria_nome, fc.financeiro_conta_descricao)) LIKE '%DÍZIMO%'
-							THEN 'DÍZIMO'
-
-							ELSE 'OFERTA AVULSA'
+							WHEN UPPER(s.subcategoria_chave_sistema) = 'DIZIMO' THEN 'DÍZIMO'
+							WHEN UPPER(s.subcategoria_chave_sistema) = 'OFERTA' THEN 'OFERTA AVULSA'
+							ELSE UPPER(COALESCE(s.subcategoria_nome, 'OUTROS'))
 						END AS nome_exibicao,
 
 						fc.financeiro_conta_valor AS valor_calculado
 
 					FROM financeiro_contas fc
 					LEFT JOIN financeiro_subcategorias s
-						ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
+						ON s.subcategoria_id = fc.financeiro_conta_financeiro_subcategoria_id
 					WHERE fc.financeiro_conta_igreja_id = :igreja_id2
 					  AND fc.financeiro_conta_tipo = 'entrada'
 					  AND fc.financeiro_conta_data_pagamento BETWEEN :data_inicio2 AND :data_fim2

@@ -124,6 +124,7 @@ class Financeiro {
 		if (!empty($data['id'])) {
 			$sql = "UPDATE financeiro_contas SET
 					financeiro_conta_financeiro_categoria_id = ?,
+					financeiro_conta_financeiro_subcategoria_id = ?,
 					financeiro_conta_descricao = ?,
 					financeiro_conta_valor = ?,
 					financeiro_conta_data_vencimento = ?,
@@ -132,29 +133,31 @@ class Financeiro {
 					WHERE financeiro_conta_id = ? AND financeiro_conta_igreja_id = ?";
 			return $this->db->prepare($sql)->execute([
 				$data['categoria_id'],
+				$data['subcategoria_id'],
 				$data['descricao'],
 				$data['valor'],
 				$data['vencimento'],
 				$data['pago'],
-				$data['reembolso'], // Novo campo
+				$data['reembolso'],
 				$data['id'],
 				$data['igreja_id']
 			]);
 		} else {
 			$sql = "INSERT INTO financeiro_contas
-					(financeiro_conta_igreja_id, financeiro_conta_financeiro_categoria_id, financeiro_conta_descricao,
-					 financeiro_conta_valor, financeiro_conta_tipo, financeiro_conta_data_vencimento,
-					 financeiro_conta_pago, financeiro_conta_reembolso)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+					(financeiro_conta_igreja_id, financeiro_conta_financeiro_categoria_id, financeiro_conta_financeiro_subcategoria_id,
+					 financeiro_conta_descricao, financeiro_conta_valor, financeiro_conta_tipo,
+					 financeiro_conta_data_vencimento, financeiro_conta_pago, financeiro_conta_reembolso)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 			return $this->db->prepare($sql)->execute([
 				$data['igreja_id'],
 				$data['categoria_id'],
+				$data['subcategoria_id'],
 				$data['descricao'],
 				$data['valor'],
 				$data['tipo'],
 				$data['vencimento'],
 				$data['pago'],
-				$data['reembolso'] // Novo campo
+				$data['reembolso']
 			]);
 		}
 	}
@@ -202,18 +205,18 @@ class Financeiro {
 	}
 
 	// Busca os lançamentos filtrados por mês e ano
-	public function getContasAgendadas($igrejaId, $mes, $ano) {
+    public function getContasAgendadas($igrejaId, $mes, $ano) {
 		$sql = "SELECT
 					fc.*,
-					fc.financeiro_conta_financeiro_categoria_id AS subcategoria_id,
-					cat.financeiro_categoria_id AS categoria_pai_id,
 					cat.financeiro_categoria_nome,
 					sub.subcategoria_nome
 				FROM financeiro_contas fc
-				-- Aqui ligamos a conta à subcategoria
-				LEFT JOIN financeiro_subcategorias sub ON fc.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
-				-- Aqui subimos para a categoria pai para pegar o ID dela
-				LEFT JOIN financeiro_categorias cat ON sub.subcategoria_categoria_id = cat.financeiro_categoria_id
+				/* Relaciona a subcategoria com a coluna correta de subcategoria na conta */
+				LEFT JOIN financeiro_subcategorias sub
+					ON sub.subcategoria_id = fc.financeiro_conta_financeiro_subcategoria_id
+				/* Busca a categoria pai diretamente da conta ou através da subcategoria */
+				LEFT JOIN financeiro_categorias cat
+					ON cat.financeiro_categoria_id = COALESCE(fc.financeiro_conta_financeiro_categoria_id, sub.subcategoria_categoria_id)
 				WHERE fc.financeiro_conta_igreja_id = ?
 				AND MONTH(fc.financeiro_conta_data_vencimento) = ?
 				AND YEAR(fc.financeiro_conta_data_vencimento) = ?
@@ -312,7 +315,7 @@ class Financeiro {
 		}
 	}
 
-public function atualizarLancamentoCompleto($data) {
+    public function atualizarLancamentoCompleto($data) {
 		try {
 			$this->db->beginTransaction();
 
@@ -511,9 +514,9 @@ public function atualizarLancamentoCompleto($data) {
 	}
 
 	// Salvar Subcategoria
-	public function salvarSubcategoria($igrejaId, $catId, $nome) {
-		$sql = "INSERT INTO financeiro_subcategorias (subcategoria_igreja_id, subcategoria_categoria_id, subcategoria_nome) VALUES (?, ?, ?)";
-		return $this->db->prepare($sql)->execute([$igrejaId, $catId, $nome]);
+	public function salvarSubcategoria($igrejaId, $catId, $nome, $chaveSistema = null) {
+		$sql = "INSERT INTO financeiro_subcategorias (subcategoria_igreja_id, subcategoria_categoria_id, subcategoria_nome, subcategoria_chave_sistema) VALUES (?, ?, ?, ?)";
+		return $this->db->prepare($sql)->execute([$igrejaId, $catId, $nome, $chaveSistema]);
 	}
 
 	// Verifica se a subcategoria está em uso antes de excluir
@@ -717,13 +720,12 @@ public function atualizarLancamentoCompleto($data) {
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-    public function getComparativoReceitasAnual($igrejaId, $ano) {
+	public function getComparativoReceitasAnual($igrejaId, $ano) {
 		$anoAnterior = $ano - 1;
 
-		// Criamos as colunas de SUM(CASE...) para cada mês dinamicamente
 		$mesesSql = "";
 		for ($i = 1; $i <= 12; $i++) {
-			$mesesSql .= "SUM(CASE WHEN YEAR(rm.receita_membro_data) = $ano AND MONTH(rm.receita_membro_data) = $i THEN rm.receita_membro_valor ELSE 0 END) as mes_$i, ";
+			$mesesSql .= "SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano AND MONTH(m.financeiro_movimentacao_data) = $i THEN m.financeiro_movimentacao_valor ELSE 0 END) as mes_$i, ";
 		}
 
 		$sql = "SELECT
@@ -731,18 +733,19 @@ public function atualizarLancamentoCompleto($data) {
 					s.subcategoria_nome,
 					c.financeiro_categoria_nome,
 					$mesesSql
-					SUM(CASE WHEN YEAR(rm.receita_membro_data) = $ano THEN rm.receita_membro_valor ELSE 0 END) as total_atual,
-					SUM(CASE WHEN YEAR(rm.receita_membro_data) = $anoAnterior THEN rm.receita_membro_valor ELSE 0 END) as total_anterior
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_atual,
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $anoAnterior THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_anterior
 				FROM financeiro_subcategorias s
 				JOIN financeiro_categorias c ON s.subcategoria_categoria_id = c.financeiro_categoria_id
-				LEFT JOIN financeiro_receita_membros rm ON rm.receita_membro_subcategoria_id = s.subcategoria_id
+				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_categoria_id = s.subcategoria_id
+					AND m.financeiro_movimentacao_igreja_id = ?
 				WHERE s.subcategoria_igreja_id = ?
 				  AND c.financeiro_categoria_tipo = 'entrada'
 				GROUP BY s.subcategoria_id, s.subcategoria_nome, c.financeiro_categoria_nome
 				ORDER BY c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$igrejaId]);
+		$stmt->execute([$igrejaId, $igrejaId]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
@@ -1065,7 +1068,6 @@ public function atualizarLancamentoCompleto($data) {
 		$dataInicioFormatada = $dataInicio . ' 00:00:00';
 		$dataFimFormatada    = $dataFim . ' 23:59:59';
 
-		// Usando placeholders relacionais posicionais (?) para evitar erro de reaproveitamento de chave nomeada em UNION ALL
 		$sql = "SELECT
 					data_movimentacao,
 					tipo,
@@ -1073,77 +1075,65 @@ public function atualizarLancamentoCompleto($data) {
 					descricao,
 					SUM(valor) AS valor
 				FROM (
-					/* 1. DÍZIMOS E OFERTAS (subcategoria 13 e 14): Aglutinados por tipo/subcategoria e data */
+					/* 1. DÍZIMOS E OFERTAS: Força categoria única 'Dízimos e Ofertas' para permitir o agrupamento por dia */
 					SELECT
 						DATE(m.financeiro_movimentacao_data) AS data_movimentacao,
 						'entrada' AS tipo,
-						COALESCE(c.financeiro_categoria_nome, 'Culto - Dizimo e Ofertas') AS categoria,
+						'Dízimos e Ofertas' AS categoria,
 						CASE
-							WHEN s.subcategoria_id = 14 THEN 'Dízimo'
-							WHEN s.subcategoria_id = 13 THEN 'Oferta'
-							ELSE COALESCE(s.subcategoria_nome, 'Dízimo / Oferta')
+							WHEN COALESCE(s.subcategoria_chave_sistema, s_rm.subcategoria_chave_sistema) = 'DIZIMO' THEN 'Dízimos do Dia'
+							WHEN COALESCE(s.subcategoria_chave_sistema, s_rm.subcategoria_chave_sistema) = 'OFERTA' THEN 'Ofertas do Dia'
+							ELSE 'Dízimos e Ofertas'
 						END AS descricao,
-						CASE
-							WHEN rm.receita_membro_id IS NOT NULL THEN rm.receita_membro_valor
-							ELSE m.financeiro_movimentacao_valor
-						END AS valor
+						m.financeiro_movimentacao_valor AS valor
 					FROM financeiro_movimentacoes m
-					LEFT JOIN financeiro_contas fc
-						ON fc.financeiro_conta_id = m.financeiro_movimentacao_financeiro_conta_id
 					LEFT JOIN financeiro_subcategorias s
-						ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
-					LEFT JOIN financeiro_categorias c
-						ON c.financeiro_categoria_id = m.financeiro_movimentacao_financeiro_categoria_id
-						OR c.financeiro_categoria_id = s.subcategoria_categoria_id
-						OR c.financeiro_categoria_id = fc.financeiro_conta_financeiro_categoria_id
+						ON s.subcategoria_id = m.financeiro_movimentacao_financeiro_subcategoria_id
 					LEFT JOIN financeiro_receita_membros rm
-						ON rm.receita_membro_conta_id = fc.financeiro_conta_id
+						ON rm.receita_membro_conta_id = m.financeiro_movimentacao_financeiro_conta_id
+					LEFT JOIN financeiro_subcategorias s_rm
+						ON s_rm.subcategoria_id = rm.receita_membro_subcategoria_id
 					WHERE m.financeiro_movimentacao_igreja_id = ?
 					  AND m.financeiro_movimentacao_data BETWEEN ? AND ?
 					  AND m.financeiro_movimentacao_tipo = 'entrada'
-					  AND s.subcategoria_id IN (13, 14)
+					  AND COALESCE(s.subcategoria_chave_sistema, s_rm.subcategoria_chave_sistema) IN ('DIZIMO', 'OFERTA')
 
 					UNION ALL
 
-					/* 2. DEMAIS RECEITAS (Fora Dízimos e Ofertas) */
+					/* 2. DEMAIS RECEITAS: Entradas que não são Dízimos ou Ofertas de sistema */
 					SELECT
 						DATE(m.financeiro_movimentacao_data) AS data_movimentacao,
 						'entrada' AS tipo,
 						COALESCE(c.financeiro_categoria_nome, 'Outras Receitas') AS categoria,
-						COALESCE(m.financeiro_movimentacao_descricao, fc.financeiro_conta_descricao, 'Receita Diversa') AS descricao,
+						COALESCE(m.financeiro_movimentacao_descricao, s.subcategoria_nome, s_rm.subcategoria_nome, 'Receita Diversa') AS descricao,
 						m.financeiro_movimentacao_valor AS valor
 					FROM financeiro_movimentacoes m
-					LEFT JOIN financeiro_contas fc
-						ON fc.financeiro_conta_id = m.financeiro_movimentacao_financeiro_conta_id
 					LEFT JOIN financeiro_subcategorias s
-						ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
+						ON s.subcategoria_id = m.financeiro_movimentacao_financeiro_subcategoria_id
+					LEFT JOIN financeiro_receita_membros rm
+						ON rm.receita_membro_conta_id = m.financeiro_movimentacao_financeiro_conta_id
+					LEFT JOIN financeiro_subcategorias s_rm
+						ON s_rm.subcategoria_id = rm.receita_membro_subcategoria_id
 					LEFT JOIN financeiro_categorias c
 						ON c.financeiro_categoria_id = m.financeiro_movimentacao_financeiro_categoria_id
-						OR c.financeiro_categoria_id = s.subcategoria_categoria_id
-						OR c.financeiro_categoria_id = fc.financeiro_conta_financeiro_categoria_id
 					WHERE m.financeiro_movimentacao_igreja_id = ?
 					  AND m.financeiro_movimentacao_data BETWEEN ? AND ?
 					  AND m.financeiro_movimentacao_tipo = 'entrada'
-					  AND (s.subcategoria_id NOT IN (13, 14) OR s.subcategoria_id IS NULL)
+					  AND (COALESCE(s.subcategoria_chave_sistema, s_rm.subcategoria_chave_sistema) NOT IN ('DIZIMO', 'OFERTA')
+						   OR COALESCE(s.subcategoria_chave_sistema, s_rm.subcategoria_chave_sistema) IS NULL)
 
 					UNION ALL
 
-					/* 3. DESPESAS / SAÍDAS */
+					/* 3. DESPESAS / SAÍDAS: Lançamentos individuais */
 					SELECT
 						DATE(m.financeiro_movimentacao_data) AS data_movimentacao,
 						'saida' AS tipo,
 						COALESCE(c.financeiro_categoria_nome, 'Despesas') AS categoria,
-						COALESCE(m.financeiro_movimentacao_descricao, fc.financeiro_conta_descricao, 'Despesa Diversa') AS descricao,
+						COALESCE(m.financeiro_movimentacao_descricao, 'Despesa Diversa') AS descricao,
 						m.financeiro_movimentacao_valor AS valor
 					FROM financeiro_movimentacoes m
-					LEFT JOIN financeiro_contas fc
-						ON fc.financeiro_conta_id = m.financeiro_movimentacao_financeiro_conta_id
-					LEFT JOIN financeiro_subcategorias s
-						ON s.subcategoria_id = fc.financeiro_conta_financeiro_categoria_id
 					LEFT JOIN financeiro_categorias c
 						ON c.financeiro_categoria_id = m.financeiro_movimentacao_financeiro_categoria_id
-						OR c.financeiro_categoria_id = s.subcategoria_categoria_id
-						OR c.financeiro_categoria_id = fc.financeiro_conta_financeiro_categoria_id
 					WHERE m.financeiro_movimentacao_igreja_id = ?
 					  AND m.financeiro_movimentacao_data BETWEEN ? AND ?
 					  AND m.financeiro_movimentacao_tipo = 'saida'
@@ -1160,7 +1150,6 @@ public function atualizarLancamentoCompleto($data) {
 
 		$stmt = $this->db->prepare($sql);
 
-		// Passagem dos parâmetros na ordem exata dos 3 blocos UNION ALL (9 parâmetros no total)
 		$stmt->execute([
 			$igrejaId, $dataInicioFormatada, $dataFimFormatada,
 			$igrejaId, $dataInicioFormatada, $dataFimFormatada,

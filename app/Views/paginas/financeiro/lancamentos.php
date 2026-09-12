@@ -117,9 +117,13 @@
 									</small>
 								<?php endif; ?>
 							</td>
-							<td>
-								<small class="text-muted d-block" style="font-size: 0.7rem;"><?= $c['financeiro_categoria_nome'] ?></small>
-								<span class="badge bg-light text-dark border"><?= $c['subcategoria_nome'] ?></span>
+                            <td>
+								<?php if (!empty($c['financeiro_categoria_nome'])): ?>
+									<small class="text-muted d-block" style="font-size: 0.7rem;"><?= htmlspecialchars($c['financeiro_categoria_nome']) ?></small>
+								<?php endif; ?>
+								<?php if (!empty($c['subcategoria_nome'])): ?>
+									<span class="badge bg-light text-dark border"><?= htmlspecialchars($c['subcategoria_nome']) ?></span>
+								<?php endif; ?>
 							</td>
 							<td class="fw-bold text-<?= $c['financeiro_conta_tipo'] == 'saida' ? 'danger' : 'success' ?>">
 								R$ <?= number_format($c['financeiro_conta_valor'], 2, ',', '.') ?>
@@ -290,17 +294,18 @@
 
                         <div class="col-md-12">
                             <label class="form-label fw-bold">Classificação</label>
-                            <select name="subcategoria_id" id="edit_categoria_id" class="form-select choice-select-color">
-                                <option value="">Digite para pesquisar...</option>
-                                <?php if(!empty($categorias_formatadas)): ?>
-                                    <?php foreach($categorias_formatadas as $cat): ?>
-                                        <option value="<?= $cat['subcategoria_id'] ?>"
-                                                data-tipo="<?= $cat['financeiro_categoria_tipo'] ?>">
-                                            <?= $cat['nome_formatado'] ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </select>
+							<select name="subcategoria_id" id="edit_categoria_id" class="form-select choice-select-color">
+								<option value="">Digite para pesquisar...</option>
+								<?php if(!empty($categorias_formatadas)): ?>
+									<?php foreach($categorias_formatadas as $cat): ?>
+										<option value="<?= $cat['subcategoria_id'] ?>"
+												data-categoria-pai="<?= $cat['subcategoria_categoria_id'] ?? $cat['financeiro_categoria_id'] ?? '' ?>"
+												data-tipo="<?= $cat['financeiro_categoria_tipo'] ?? 'entrada' ?>">
+											<?= $cat['nome_formatado'] ?>
+										</option>
+									<?php endforeach; ?>
+								<?php endif; ?>
+							</select>
                         </div>
 
                         <div id="areaRateioEdicao" class="col-12 d-none">
@@ -477,7 +482,6 @@
     </div>
 </div>
 
-
 <div class="modal fade" id="modalNovaConta" tabindex="-1">
     <div class="modal-dialog">
         <form action="<?= url('financeiro/salvar_conta_agendada') ?>" method="POST" class="modal-content border-0 shadow">
@@ -494,13 +498,23 @@
                     </div>
 					<div class="col-md-12">
 						<label class="small fw-bold text-secondary">Classificação</label>
-						<select name="subcategoria_id" id="select_subcategoria_nova" class="form-select choice-select-color" onchange="atualizarTipoLancamento()">
+						<select name="categoria_sub_id" id="select_subcategoria_nova" class="form-select choice-select-color" onchange="atualizarTipoLancamento()">
 							<option value="">Digite para pesquisar...</option>
 							<?php if(!empty($categorias_formatadas)): ?>
 								<?php foreach($categorias_formatadas as $cat): ?>
-									<option value="<?= $cat['subcategoria_id'] ?>"
-											data-tipo="<?= $cat['financeiro_categoria_tipo'] ?>">
-										<?= $cat['nome_formatado'] ?>
+									<?php
+										// Identifica o ID da categoria de forma segura para evitar PHP Warning
+										$catId = $cat['subcategoria_categoria_id']
+											  ?? $cat['financeiro_categoria_id']
+											  ?? $cat['categoria_id']
+											  ?? '';
+
+										$subcatId = $cat['subcategoria_id'] ?? '';
+										$tipo = $cat['financeiro_categoria_tipo'] ?? '';
+										$nome = $cat['nome_formatado'] ?? '';
+									?>
+									<option value="<?= $catId ?>-<?= $subcatId ?>" data-tipo="<?= $tipo ?>">
+										<?= $nome ?>
 									</option>
 								<?php endforeach; ?>
 							<?php endif; ?>
@@ -508,7 +522,7 @@
 					</div>
 
 					<div class="col-md-12">
-						<div class="form-check form-switch mt-2">
+						<div class="form-check orm-switch mt-2">
 							<input class="form-check-input" type="checkbox" name="reembolso" id="check_reembolso" value="1">
 							<label class="form-check-label small fw-bold text-primary" for="check_reembolso">
 								<i class="bi bi-cash-stack"></i> Este lançamento é um Reembolso?
@@ -1208,7 +1222,7 @@ async function editarLancamento(id) {
 
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
-        // 2. Preenchimento de campos básicos
+        // 1. Preenchimento dos campos básicos
         document.getElementById('edit_id').value = dados.financeiro_conta_id;
         document.getElementById('edit_descricao').value = dados.financeiro_conta_descricao;
         document.getElementById('edit_valor').value = dados.financeiro_conta_valor;
@@ -1218,28 +1232,36 @@ async function editarLancamento(id) {
             document.getElementById('edit_data_pagamento').value = dataRef.substring(0, 10);
         }
 
-        // 3. COMBO CONTA FINANCEIRA
+        // 2. Combo Conta Financeira (Caixa/Banco)
         const idBanco = dados.financeiro_conta_financeira_id;
         const comboBanco = document.getElementById('edit_conta_financeira_id');
 
         if (comboBanco) {
-            if (idBanco) {
-                comboBanco.value = String(idBanco);
-            } else {
-                comboBanco.selectedIndex = 0;
-            }
+            if (idBanco) comboBanco.value = String(idBanco);
+            else comboBanco.selectedIndex = 0;
 
             modalEl.addEventListener('shown.bs.modal', () => {
                 if (idBanco) comboBanco.value = String(idBanco);
             }, { once: true });
         }
 
-        // 4. Combo Categoria (Choices.js)
-        const idSub = dados.financeiro_conta_financeiro_categoria_id;
-        const instCat = (window.instanciasChoices && window.instanciasChoices['edit_categoria_id']) ? window.instanciasChoices['edit_categoria_id'] : null;
-        if (instCat && idSub) instCat.setChoiceByValue(String(idSub));
+        // 3. Combo Categoria / Subcategoria (Choices.js)
+        const idSub = dados.subcategoria_id || dados.financeiro_conta_financeiro_categoria_id;
+        const instCat = (window.instanciasChoices && window.instanciasChoices['edit_categoria_id'])
+            ? window.instanciasChoices['edit_categoria_id']
+            : null;
 
-        // 5. Lógica de Rateio
+        if (instCat && idSub) {
+            instCat.removeActiveItems(); // Limpa a seleção anterior
+            instCat.setChoiceByValue(String(idSub)); // Define a subcategoria correta
+
+            // Garante que o Choices.js renderize o item selecionado ao exibir o modal
+            modalEl.addEventListener('shown.bs.modal', () => {
+                instCat.setChoiceByValue(String(idSub));
+            }, { once: true });
+        }
+
+        // 4. Lógica de Rateio por Membros
         const areaRateio = document.getElementById('areaRateioEdicao');
         const lista = document.getElementById('listaMembrosEdicao');
         if (lista) lista.innerHTML = "";
@@ -1249,17 +1271,15 @@ async function editarLancamento(id) {
             const resRateio = await fetch("<?= url('financeiro/getRateio/') ?>" + id);
             const membros = await resRateio.json();
 
-            // Se houver membros no banco, carrega eles.
-            // Se não houver, deixa a lista vazia (Opcional).
             if (membros && membros.length > 0) {
                 membros.forEach(m => adicionarMembroEdicao(m.receita_membro_usuario_id, m.receita_membro_valor));
             }
 
-            // Chama o recalcular para validar se o botão deve estar ativo ou não
             recalcularRateioEdicao();
         } else {
             areaRateio.classList.add('d-none');
-            if(document.getElementById('btnSalvarEdicao')) document.getElementById('btnSalvarEdicao').disabled = false;
+            const btnSalvar = document.getElementById('btnSalvarEdicao');
+            if (btnSalvar) btnSalvar.disabled = false;
         }
 
         modal.show();

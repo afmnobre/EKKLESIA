@@ -133,27 +133,37 @@ class FinanceiroController extends Controller {
 	// Aproveite e crie a rota para salvar o agendamento que o modal envia
 	public function salvar_conta_agendada() {
 		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$categoriaId = null;
+			$subcategoriaId = null;
+
+			$categoriaSubInput = $_POST['categoria_sub_id'] ?? $_POST['subcategoria_id'] ?? '';
+			if (!empty($categoriaSubInput)) {
+				$parts = explode('-', $categoriaSubInput);
+				$categoriaId = isset($parts[0]) ? (int)$parts[0] : null;
+				$subcategoriaId = isset($parts[1]) ? (int)$parts[1] : null;
+			}
+
 			$data = [
-				'id'           => $_POST['id'] ?? null,
-				'igreja_id'    => $_SESSION['usuario_igreja_id'],
-				'categoria_id' => $_POST['subcategoria_id'], // Pega do select 'subcategoria_id'
-				'descricao'    => $_POST['descricao'],
-				'valor'        => $_POST['valor'],
-				'tipo'         => $_POST['tipo'],
-				'vencimento'   => $_POST['vencimento'],
-				'reembolso'    => isset($_POST['reembolso']) ? 1 : 0, // Captura o checkbox
-				'pago'         => 0
+				'id'              => $_POST['id'] ?? null,
+				'igreja_id'       => $_SESSION['usuario_igreja_id'],
+				'categoria_id'    => $categoriaId,
+				'subcategoria_id' => $subcategoriaId,
+				'descricao'       => $_POST['descricao'] ?? '',
+				'valor'           => $_POST['valor'] ?? 0,
+				'tipo'            => $_POST['tipo'] ?? 'saida',
+				'vencimento'      => $_POST['vencimento'] ?? date('Y-m-d'),
+				'reembolso'       => isset($_POST['reembolso']) ? 1 : 0,
+				'pago'            => 0
 			];
 
 			if ($this->model->salvarConta($data)) {
 				header("Location: " . url('financeiro/lancamentos') . "?sucesso=agendado");
 			} else {
-				// Se falhar, você pode dar um die para ver o erro de PDO
 				die("Erro ao salvar no banco de dados.");
 			}
 			exit;
 		}
-	}
+    }
 
 	public function atualizar() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
@@ -276,18 +286,20 @@ class FinanceiroController extends Controller {
 	public function salvar_subcategoria() {
 		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$categoriaId = $_POST['categoria_id'];
+			$chaveSistema = !empty($_POST['chave_sistema']) ? $_POST['chave_sistema'] : null;
 
 			$this->model->salvarSubcategoria(
 				$_SESSION['usuario_igreja_id'],
 				$categoriaId,
-				$_POST['nome']
+				$_POST['nome'],
+				$chaveSistema
 			);
 
 			// Redireciona de volta para a mesma tela de subcategorias filtrada
 			header("Location: " . url('financeiro/subcategorias?cat_id=' . $categoriaId) . "&sucesso=1");
 			exit;
 		}
-    }
+	}
 
 	public function excluir_lancamento($id) {
 		$igrejaId = $_SESSION['usuario_igreja_id'];

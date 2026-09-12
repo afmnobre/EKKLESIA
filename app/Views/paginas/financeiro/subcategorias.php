@@ -41,8 +41,23 @@ foreach($dados as $cat) {
 
                         <div class="mb-3">
                             <label class="small fw-bold mb-1">Nome da Subcategoria</label>
-                            <input type="text" name="nome" class="form-control" placeholder="Ex: Conta de Luz, Aluguel..." required autofocus>
+                            <input type="text" name="nome" class="form-control" placeholder="Ex: Oferta de Missões, Dízimos..." required autofocus>
                         </div>
+
+                        <!-- Novo campo para definir a chave do sistema caso seja Entrada -->
+                        <?php if (($categoria_atual['tipo'] ?? '') === 'entrada'): ?>
+                        <div class="mb-3">
+                            <label class="small fw-bold mb-1">Tipo de Agrupamento (Relatórios)</label>
+                            <select name="chave_sistema" class="form-select">
+                                <option value="">-- Padrão (Sem Agrupamento) --</option>
+                                <option value="DIZIMO">DÍZIMO</option>
+                                <option value="OFERTA">OFERTA</option>
+                            </select>
+                            <div class="form-text text-muted small">
+                                Subcategorias marcadas como Dízimo ou Oferta serão agrupadas por dia nos relatórios gerais.
+                            </div>
+                        </div>
+                        <?php endif; ?>
 
                         <button type="submit" class="btn btn-primary w-100 fw-bold">
                             <i class="bi bi-plus-lg"></i> Adicionar
@@ -63,6 +78,7 @@ foreach($dados as $cat) {
                             <thead class="bg-light small">
                                 <tr>
                                     <th class="ps-4">Nome da Subcategoria</th>
+                                    <th>Agrupamento Especial</th>
                                     <th class="text-end pe-4">Ações</th>
                                 </tr>
                             </thead>
@@ -73,18 +89,30 @@ foreach($dados as $cat) {
                                         <td class="ps-4">
                                             <i class="bi bi-dot text-primary fs-4"></i> <?= $sub['nome'] ?>
                                         </td>
+                                        <td>
+                                            <?php
+                                                $chave = $sub['chave_sistema'] ?? null;
+                                                if ($chave === 'DIZIMO'):
+                                            ?>
+                                                <span class="badge bg-info text-dark"><i class="bi bi-tag-fill me-1"></i> Dízimo</span>
+                                            <?php elseif ($chave === 'OFERTA'): ?>
+                                                <span class="badge bg-warning text-dark"><i class="bi bi-tag-fill me-1"></i> Oferta</span>
+                                            <?php else: ?>
+                                                <span class="text-muted small">-</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="text-end pe-4">
-											<a href="<?= url('financeiro/excluir_subcategoria/'.$sub['id'].'?cat_id='.$cat_id_url) ?>"
-											   class="btn btn-sm btn-outline-danger border-0"
-											   onclick="return confirm('Deseja realmente excluir esta subcategoria?')">
-												<i class="bi bi-trash"></i>
-											</a>
+                                            <a href="<?= url('financeiro/excluir_subcategoria/'.$sub['id'].'?cat_id='.$cat_id_url) ?>"
+                                               class="btn btn-sm btn-outline-danger border-0"
+                                               onclick="return confirm('Deseja realmente excluir esta subcategoria?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="2" class="text-center py-5 text-muted small">
+                                        <td colspan="3" class="text-center py-5 text-muted small">
                                             Nenhuma subcategoria cadastrada para este grupo.<br>
                                             Use o formulário ao lado para começar.
                                         </td>

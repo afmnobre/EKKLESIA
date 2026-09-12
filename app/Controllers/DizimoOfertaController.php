@@ -189,24 +189,35 @@ class DizimoOfertaController extends Controller
 	{
 		header('Content-Type: application/json');
 
-		if (!isset($_POST['categoria_sub_id']) || empty($_POST['categoria_sub_id'])) {
-			echo json_encode(['success' => false, 'message' => 'Selecione a categoria/subcategoria.']);
+		$categoriaSub = $_POST['categoria_sub_id'] ?? '';
+
+		// Valida se o campo foi enviado e contém o separador "-"
+		if (empty($categoriaSub) || strpos($categoriaSub, '-') === false) {
+			echo json_encode(['success' => false, 'message' => 'Selecione uma categoria e subcategoria válidas.']);
 			exit;
 		}
 
-		$ids = explode('-', $_POST['categoria_sub_id']);
+		// Separa a Categoria Pai (index 0) e a Subcategoria (index 1)
+		$ids = explode('-', $categoriaSub);
+		$categoriaId    = (int) ($ids[0] ?? 0);
+		$subcategoriaId = (int) ($ids[1] ?? 0);
+
+		if ($categoriaId === 0 || $subcategoriaId === 0) {
+			echo json_encode(['success' => false, 'message' => 'Identificador de categoria ou subcategoria inválido.']);
+			exit;
+		}
 
 		$data = [
 			'igreja_id'           => $_SESSION['usuario_igreja_id'],
-			'categoria_id'        => $ids[1],
-			'subcategoria_id'     => $ids[1],
-			'categoria_pai_id'    => $ids[0],
+			'categoria_id'        => $categoriaId,    // Categoria Pai (ex: 1)
+			'subcategoria_id'      => $subcategoriaId, // Subcategoria (ex: 2)
+			'categoria_pai_id'    => $categoriaId,
 			'conta_financeira_id' => $_POST['conta_financeira_id'] ?? null,
 			'descricao'           => $_POST['descricao'] ?? '',
 			'valor'               => $_POST['valor'] ?? 0,
 			'data_pagamento'      => $_POST['data_pagamento'] ?? date('Y-m-d'),
-			'diacono_1'           => $_SESSION['conf_diacono_1']['id'],
-			'diacono_2'           => $_SESSION['conf_diacono_2']['id'],
+			'diacono_1'           => $_SESSION['conf_diacono_1']['id'] ?? null,
+			'diacono_2'           => $_SESSION['conf_diacono_2']['id'] ?? null,
 			'rateio_membros'      => $_POST['rateio_membro'] ?? [],
 			'rateio_valores'      => $_POST['rateio_valor'] ?? []
 		];
@@ -224,8 +235,10 @@ class DizimoOfertaController extends Controller
 	// Arquivo: App/Controllers/DizimoOfertaController.php
 	// Linha: Localize o método salvarIndividual
 
-	public function salvarIndividual(){
-		header('Content-Type: application/json');
+    public function salvarIndividual(){
+		// Limpa qualquer output/warning que possa ter sido gerado para não quebrar o JSON
+		if (ob_get_length()) ob_clean();
+		header('Content-Type: application/json; charset=utf-8');
 
 		$membroId = $_POST['membro_id'] ?? null;
 		if (!$membroId) {
@@ -233,10 +246,29 @@ class DizimoOfertaController extends Controller
 			exit;
 		}
 
-		$ofertaSubCat = null;
+		// Validação de conta destino quando houver valor preenchido
+		$limpar = fn($v) => floatval(str_replace(',', '.', str_replace('.', '', $v ?? '0')));
+		$dizimoVal = $limpar($_POST['dizimo_valor'] ?? '0');
+		$ofertaVal = $limpar($_POST['oferta_valor'] ?? '0');
+
+		if ($dizimoVal > 0 && empty($_POST['dizimo_conta_id'])) {
+			echo json_encode(['success' => false, 'message' => 'Selecione a conta destino do Dízimo.']);
+			exit;
+		}
+
+		if ($ofertaVal > 0 && empty($_POST['oferta_conta_id'])) {
+			echo json_encode(['success' => false, 'message' => 'Selecione a conta destino da Oferta.']);
+			exit;
+		}
+
+		// Linha adicionada: Define a subcategoria da oferta vinda do POST ou usa o ID padrão (ex: 15 ou null)
+		$ofertaCategoriaId = null;
+		$ofertaSubcategoriaId = null;
+
 		if (!empty($_POST['oferta_categoria_sub_id'])) {
-			$partes = explode('-', $_POST['oferta_categoria_sub_id']);
-			$ofertaSubCat = $partes[1] ?? null;
+			$parts = explode('-', $_POST['oferta_categoria_sub_id']);
+			$ofertaCategoriaId = isset($parts[0]) ? (int)$parts[0] : null;
+			$ofertaSubcategoriaId = isset($parts[1]) ? (int)$parts[1] : null;
 		}
 
 		$data = [
@@ -245,11 +277,12 @@ class DizimoOfertaController extends Controller
 			'data_pagamento'         => $_POST['data_pagamento'] ?? date('Y-m-d'),
 			'dizimo_valor'           => $_POST['dizimo_valor'] ?? 0,
 			'dizimo_conta_id'        => $_POST['dizimo_conta_id'] ?? null,
-			'dizimo_categoria_id'    => 18, // ID da categoria "Culto - Dizimo e Ofertas"
-			'dizimo_subcategoria_id' => 14, // ID da subcategoria "Dizimo"
+			'dizimo_categoria_id'    => 1, // Categoria "Culto - Dizimo e Ofertas"
+			'dizimo_subcategoria_id' => 1, // Subcategoria "Dizimo"
 			'oferta_valor'           => $_POST['oferta_valor'] ?? 0,
 			'oferta_conta_id'        => $_POST['oferta_conta_id'] ?? null,
-			'oferta_subcategoria_id' => $ofertaSubCat,
+			'oferta_categoria_id'    => $ofertaCategoriaId,
+			'oferta_subcategoria_id' => $ofertaSubcategoriaId,
 			'diacono_1'              => $_SESSION['conf_diacono_1']['id'],
 			'diacono_2'              => $_SESSION['conf_diacono_2']['id']
 		];
@@ -470,17 +503,15 @@ class DizimoOfertaController extends Controller
 
 		$igreja = $this->model->getIgrejaDetalhes($igrejaId);
 
-		// Busca o resumo contábil com o intervalo
-		$modalidades = $this->model->getResumoContabilModalidades($igrejaId, $dataInicioFormatada, $dataFimFormatada);
+        // Busca o resumo contábil com o intervalo
+        // Linha 18: Busca o resumo contábil atualizado
+		$modalidades = $this->model->getRelatorioContabil($igrejaId, $dataInicioFormatada, $dataFimFormatada);
 		$tesoureiro = $this->model->getTesoureiroIgreja($igrejaId);
 
 		$oficiais = [
 			'd1' => $_SESSION['conf_diacono_1']['nome'] ?? 'Diácono Conferente 1',
 			'd2' => $_SESSION['conf_diacono_2']['nome'] ?? 'Diácono Conferente 2'
 		];
-
-		// Busca o resumo contábil atualizado com a separação de ofertas
-		$modalidades = $this->model->getResumoContabilModalidades($igrejaId, $dataInicioFormatada, $dataFimFormatada);
 
 		// Recomputa o Total Geral (continua somando todos os itens listados)
 		$totalGeral = 0;

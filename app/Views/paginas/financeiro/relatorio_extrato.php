@@ -109,48 +109,48 @@ $dataFimFormatada    = !empty($dataFim) ? date('d/m/Y', strtotime($dataFim)) : d
     </div>
 
     <!-- TABELA DE EXTRATO AGLUTINADO COM COLUNAS SEPARADAS -->
-    <table class="tabela-extrato">
-        <thead>
-            <tr>
-                <th style="width: 10%;">DATA</th>
-                <th style="width: 22%;">CATEGORIA</th>
-                <th style="width: 26%;">SUBCATEGORIA</th>
-                <th style="width: 10%; text-align: center;">TIPO</th>
-                <th class="text-end" style="width: 16%;">VALOR RECEITA</th>
-                <th class="text-end" style="width: 16%;">VALOR DESPESA</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (!empty($lancamentos)): ?>
-                <?php foreach ($lancamentos as $item): ?>
-                    <tr>
-                        <td><?= date('d/m/Y', strtotime($item['data_movimentacao'])) ?></td>
-                        <td><strong><?= htmlspecialchars($item['categoria']) ?></strong></td>
-                        <td><?= htmlspecialchars($item['descricao']) ?></td>
-                        <td class="text-center">
-                            <?php if ($item['tipo'] === 'entrada'): ?>
-                                <span class="badge bg-success" style="font-size: 9px;">RECEITA</span>
-                            <?php else: ?>
-                                <span class="badge bg-danger" style="font-size: 9px;">DESPESA</span>
-                            <?php endif; ?>
-                        </td>
-                        <!-- Coluna Valor Receita -->
-                        <td class="text-end fw-bold text-success">
-                            <?= $item['tipo'] === 'entrada' ? 'R$ ' . number_format($item['valor'], 2, ',', '.') : '' ?>
-                        </td>
-                        <!-- Coluna Valor Despesa -->
-                        <td class="text-end fw-bold text-danger">
-                            <?= $item['tipo'] === 'saida' ? 'R$ ' . number_format($item['valor'], 2, ',', '.') : '' ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">Nenhuma movimentação encontrada no período.</td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
+	<table class="tabela-extrato">
+		<thead>
+			<tr>
+				<th style="width: 10%;">DATA</th>
+				<th style="width: 22%;">CATEGORIA</th>
+				<th style="width: 26%;">DESCRIÇÃO / SUBCATEGORIA</th>
+				<th style="width: 10%; text-align: center;">TIPO</th>
+				<th class="text-end" style="width: 16%;">VALOR RECEITA</th>
+				<th class="text-end" style="width: 16%;">VALOR DESPESA</th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php if (!empty($lancamentos)): ?>
+				<?php foreach ($lancamentos as $item): ?>
+					<tr>
+						<td><?= date('d/m/Y', strtotime($item['data_movimentacao'])) ?></td>
+						<td><strong><?= htmlspecialchars($item['categoria']) ?></strong></td>
+						<td><?= htmlspecialchars($item['descricao']) ?></td>
+						<td class="text-center">
+							<?php if ($item['tipo'] === 'entrada'): ?>
+								<span class="badge bg-success" style="font-size: 9px;">RECEITA</span>
+							<?php else: ?>
+								<span class="badge bg-danger" style="font-size: 9px;">DESPESA</span>
+							<?php endif; ?>
+						</td>
+						<!-- Coluna Valor Receita -->
+						<td class="text-end fw-bold text-success">
+							<?= $item['tipo'] === 'entrada' ? 'R$ ' . number_format($item['valor'], 2, ',', '.') : '' ?>
+						</td>
+						<!-- Coluna Valor Despesa -->
+						<td class="text-end fw-bold text-danger">
+							<?= $item['tipo'] === 'saida' ? 'R$ ' . number_format($item['valor'], 2, ',', '.') : '' ?>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			<?php else: ?>
+				<tr>
+					<td colspan="6" class="text-center py-4 text-muted">Nenhuma movimentação encontrada no período.</td>
+				</tr>
+			<?php endif; ?>
+		</tbody>
+	</table>
 
     <!-- BLOCO DE AGRUPAMENTOS DE TOTAIS NO FINAL DO RELATÓRIO -->
     <div class="row g-2 mb-3">
