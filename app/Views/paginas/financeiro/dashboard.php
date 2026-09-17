@@ -209,45 +209,57 @@ $totalGeralAno = 0;
 $totalGeralReceitas = 0;
 ?>
 
+<!-- Arquivo: app/Views/paginas/financeiro/dashboard.php -->
+<!-- Ajuste na tabela de Receitas para exibir Subcategoria como Título e Categoria como Subtítulo -->
+
 <div class="card border-0 shadow-sm mb-5">
     <div class="card-header bg-success text-white fw-bold py-3">
-        <i class="bi bi-arrow-up-circle me-2"></i>DETALHAMENTO DE RECEITAS ANUAL
+        <i class="bi bi-arrow-up-circle me-2"></i>DETALHAMENTO DE RECEITAS ANUAL (Por Subcategoria)
     </div>
     <div class="card-body p-0 text-nowrap table-responsive">
         <table class="table table-hover table-sm mb-0">
             <thead class="bg-light">
                 <tr class="text-muted" style="font-size: 0.75rem;">
-                    <th class="ps-3 py-3">RECEITAS</th>
+                    <th class="ps-3 py-3">SUBCATEGORIA / <span class="text-muted">Categoria</span></th>
                     <?php foreach($mesesNomes as $m) echo "<th class='text-center py-3'>$m</th>"; ?>
                     <th class="text-end pe-3 py-3">TOTAL GERAL</th>
                 </tr>
             </thead>
             <tbody>
-                <?php if(isset($relatorio['entrada'])): ?>
-                    <?php foreach($relatorio['entrada'] as $catId => $cat):
-                        $totalCatLinha = array_sum($cat['meses']);
-                        $totalGeralReceitas += $totalCatLinha;
-                        // Acumula para o total por mês
-                        foreach($cat['meses'] as $mesAlvo => $vMes) { $totaisMensaisEntrada[$mesAlvo] += $vMes; }
-                    ?>
-                        <tr class="fw-bold align-middle" style="background-color: #f8fff9;">
-                            <td class="ps-3 py-2"><?= $cat['nome'] ?></td>
-                            <?php foreach($cat['meses'] as $valor): ?>
-                                <td class="text-center">R$ <?= number_format($valor, 2, ',', '.') ?></td>
-                            <?php endforeach; ?>
-                            <td class="text-end pe-3 text-success">R$ <?= number_format($totalCatLinha, 2, ',', '.') ?></td>
+                <?php
+                $totaisMensaisEntrada = array_fill(1, 12, 0);
+                $totalGeralReceitas = 0;
+
+                // Garante que $relatorio['entrada'] é um array percorrível
+                $entradas = $relatorio['entrada'] ?? [];
+
+                foreach($entradas as $categoria):
+                    // Se a estrutura antiga por categoria for mantida, percorremos as subcategorias com segurança (?? [])
+                    $subcategorias = $categoria['subcategorias'] ?? [$categoria]; // Fallback caso já esteja achatado
+
+                    foreach($subcategorias as $sub):
+                        $mesesSub = $sub['meses'] ?? array_fill(1, 12, 0);
+                        $totalSubLinha = array_sum($mesesSub);
+                        $totalGeralReceitas += $totalSubLinha;
+
+                        foreach($mesesSub as $mesAlvo => $vMes) {
+                            $totaisMensaisEntrada[$mesAlvo] += ($vMes ?? 0);
+                        }
+                ?>
+                        <tr class="align-middle" style="background-color: #f8fff9;">
+                            <td class="ps-3 py-2">
+                                <span class="fw-bold text-dark d-block"><?= $sub['nome'] ?? $sub['subcategoria_nome'] ?? 'Geral' ?></span>
+                                <small class="text-muted" style="font-size: 0.75rem;">
+                                    <i class="bi bi-tag me-1"></i><?= $categoria['categoria_nome'] ?? $sub['categoria_nome'] ?? 'Categoria Principal' ?>
+                                </small>
+                            </td>
+                            <?php for($m = 1; $m <= 12; $m++): $valMes = $mesesSub[$m] ?? 0; ?>
+                                <td class="text-center">R$ <?= number_format($valMes, 2, ',', '.') ?></td>
+                            <?php endfor; ?>
+                            <td class="text-end pe-3 fw-bold text-success">R$ <?= number_format($totalSubLinha, 2, ',', '.') ?></td>
                         </tr>
-                        <?php foreach($cat['subcategorias'] as $sub): ?>
-                            <tr class="align-middle">
-                                <td class="ps-5 text-muted small"><i><?= $sub['nome'] ?></i></td>
-                                <?php foreach($sub['meses'] as $valor): ?>
-                                    <td class="text-center text-muted small">R$ <?= number_format($valor, 2, ',', '.') ?></td>
-                                <?php endforeach; ?>
-                                <td class="text-end pe-3 text-muted small">R$ <?= number_format(array_sum($sub['meses']), 2, ',', '.') ?></td>
-                            </tr>
-                        <?php endforeach; ?>
                     <?php endforeach; ?>
-                <?php endif; ?>
+                <?php endforeach; ?>
 
                 <tr class="table-success fw-bold border-top border-dark">
                     <td class="ps-3">TOTAIS POR MÊS</td>
@@ -257,51 +269,55 @@ $totalGeralReceitas = 0;
                     <td class="text-end pe-3">R$ <?= number_format($totalGeralReceitas, 2, ',', '.') ?></td>
                 </tr>
             </tbody>
-            <tfoot class="table-dark">
-                <tr class="fw-bold">
-                    <td class="ps-3 py-3">TOTAL GERAL ANUAL DE RECEITAS</td>
-                    <td colspan="12"></td>
-                    <td class="text-end pe-3 py-3 fs-5">R$ <?= number_format($totalGeralReceitas, 2, ',', '.') ?></td>
-                </tr>
-            </tfoot>
         </table>
     </div>
 </div>
 
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-danger text-white fw-bold py-3">
-        <i class="bi bi-arrow-down-circle me-2"></i>DETALHAMENTO DE DESPESAS ANUAL
+        <i class="bi bi-arrow-down-circle me-2"></i>DETALHAMENTO DE DESPESAS ANUAL (Por Subcategoria)
     </div>
     <div class="card-body p-0 text-nowrap table-responsive">
         <table class="table table-hover table-sm mb-0">
             <thead class="bg-light text-muted">
                 <tr style="font-size: 0.75rem;">
-                    <th class="ps-3 py-3">DESPESAS</th>
+                    <th class="ps-3 py-3">SUBCATEGORIA / <span class="text-muted">Categoria</span></th>
                     <?php foreach($mesesNomes as $m) echo "<th class='text-center py-3'>$m</th>"; ?>
                     <th class="text-end pe-3 py-3">TOTAL GERAL</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach($relatorio['saida'] as $catId => $cat):
-                    $totalCatLinha = array_sum($cat['meses']);
-                    $totalGeralAno += $totalCatLinha;
-                    // Acumula para o total por mês
-                    foreach($cat['meses'] as $mesAlvo => $vMes) { $totaisMensaisSaida[$mesAlvo] += $vMes; }
+                <?php
+                $totaisMensaisSaida = array_fill(1, 12, 0);
+                $totalGeralAno = 0;
+
+                $saidas = $relatorio['saida'] ?? [];
+
+                // Se a estrutura antiga agrupa por Categoria contendo subcategorias, normalizamos ou iteramos achatando
+                foreach($saidas as $categoria):
+                    // Compatibilidade tanto se vier achatado quanto se vier agrupado em subcategorias
+                    $subcategorias = $categoria['subcategorias'] ?? [$categoria];
+
+                    foreach($subcategorias as $sub):
+                        $mesesSub = $sub['meses'] ?? array_fill(1, 12, 0);
+                        $totalSubLinha = array_sum($mesesSub);
+                        $totalGeralAno += $totalSubLinha;
+
+                        foreach($mesesSub as $mesAlvo => $vMes) {
+                            $totaisMensaisSaida[$mesAlvo] += ($vMes ?? 0);
+                        }
                 ?>
-                    <tr class="fw-bold align-middle" style="background-color: #fff9f9;">
-                        <td class="ps-3 py-2"><?= $cat['nome'] ?></td>
-                        <?php foreach($cat['meses'] as $valor): ?>
-                            <td class="text-center">R$ <?= number_format($valor, 2, ',', '.') ?></td>
-                        <?php endforeach; ?>
-                        <td class="text-end pe-3 text-danger">R$ <?= number_format($totalCatLinha, 2, ',', '.') ?></td>
-                    </tr>
-                    <?php foreach($cat['subcategorias'] as $sub): ?>
-                        <tr class="align-middle">
-                            <td class="ps-5 text-muted small"><i><?= $sub['nome'] ?></i></td>
-                            <?php foreach($sub['meses'] as $valor): ?>
-                                <td class="text-center text-muted small">R$ <?= number_format($valor, 2, ',', '.') ?></td>
-                            <?php endforeach; ?>
-                            <td class="text-end pe-3 text-muted small">R$ <?= number_format(array_sum($sub['meses']), 2, ',', '.') ?></td>
+                        <tr class="align-middle" style="background-color: #fff9f9;">
+                            <td class="ps-3 py-2">
+                                <span class="fw-bold text-dark d-block"><?= $sub['nome'] ?? $sub['subcategoria_nome'] ?? 'Geral' ?></span>
+                                <small class="text-muted" style="font-size: 0.75rem;">
+                                    <i class="bi bi-tag me-1"></i><?= $categoria['categoria_nome'] ?? $categoria['nome'] ?? $sub['categoria_nome'] ?? 'Categoria Principal' ?>
+                                </small>
+                            </td>
+                            <?php for($m = 1; $m <= 12; $m++): $valMes = $mesesSub[$m] ?? 0; ?>
+                                <td class="text-center">R$ <?= number_format($valMes, 2, ',', '.') ?></td>
+                            <?php endfor; ?>
+                            <td class="text-end pe-3 fw-bold text-danger">R$ <?= number_format($totalSubLinha, 2, ',', '.') ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endforeach; ?>
@@ -390,8 +406,22 @@ document.addEventListener("DOMContentLoaded", function() {
     const ctxFluxo = document.getElementById('chartFluxo');
     if (ctxFluxo) {
         const labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-        const entradas = [<?= implode(',', array_column($fluxoAnual, 'entradas')) ?>];
-        const saidas = [<?= implode(',', array_column($fluxoAnual, 'saidas')) ?>];
+        //const entradas = [<?= implode(',', array_column($fluxoAnual, 'entradas')) ?>];
+        //const saidas = [<?= implode(',', array_column($fluxoAnual, 'saidas')) ?>];
+
+		const fluxoAnualData = <?= json_encode($fluxoAnual ?? []) ?>;
+		// A função Object.values converte o objeto JSON de volta para um Array iterável
+		const fluxoAnual = Object.values(fluxoAnualData);
+
+		const entradas = Array(12).fill(0);
+		const saidas = Array(12).fill(0);
+
+		fluxoAnual.forEach(item => {
+			// Adicionei um fallback (|| 0) caso falte a propriedade 'mes' em alguma posição
+			const mesIndex = parseInt(item.mes || 1) - 1;
+			entradas[mesIndex] = parseFloat(item.entradas || 0);
+			saidas[mesIndex] = parseFloat(item.saidas || 0);
+		});
 
         new Chart(ctxFluxo.getContext('2d'), {
             type: 'line',
@@ -434,19 +464,19 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // --- 2. GRÁFICO DE PIZZA (DESPESAS POR CATEGORIA) ---
-    const ctxPizza = document.getElementById('chartPizzaDespesas');
-    if (ctxPizza) {
-        const dadosSaida = <?= json_encode($relatorio['saida'] ?? []); ?>;
-        const labelsP = [];
-        const valoresP = [];
+	const ctxPizza = document.getElementById('chartPizzaDespesas');
+	if (ctxPizza) {
+		const dadosSaida = <?= json_encode($relatorio['saida'] ?? []); ?>;
+		const labelsP = [];
+		const valoresP = [];
 
-        Object.values(dadosSaida).forEach(cat => {
-            const total = Object.values(cat.meses).reduce((a, b) => a + b, 0);
-            if (total > 0) {
-                labelsP.push(cat.nome);
-                valoresP.push(total);
-            }
-        });
+		Object.values(dadosSaida).forEach(sub => {
+			const total = Object.values(sub.meses).reduce((a, b) => a + b, 0);
+			if (total > 0) {
+				labelsP.push(sub.nome + ' (' + sub.categoria_nome + ')');
+				valoresP.push(total);
+			}
+		});
 
         new Chart(ctxPizza.getContext('2d'), {
             type: 'pie',

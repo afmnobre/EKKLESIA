@@ -1,5 +1,3 @@
-<!-- Nome do arquivo: app/Views/liturgia/ver.php -->
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -34,16 +32,10 @@
             padding-bottom: 80px;
         }
 
-        /* --- LÓGICA OFFLINE VIA ANCORAGEM CSS (:TARGET) --- */
+        /* --- LÓGICA DE ESTADOS INDEPENDENTES COM INPUTS RADIO OCULTOS --- */
 
-        /* CONTROLE DE TAMANHO DE FONTE */
-        #font-sm:target ~ .page-wrapper { --font-base: 0.85rem; }
-        #font-md:target ~ .page-wrapper { --font-base: 1rem; }
-        #font-lg:target ~ .page-wrapper { --font-base: 1.25rem; }
-        #font-xl:target ~ .page-wrapper { --font-base: 1.5rem; }
-
-        /* CONTROLE DE TEMA (MODO ESCURO) */
-        #dark:target ~ .page-wrapper {
+        /* Rádios de Tema */
+        #theme-dark:checked ~ .page-wrapper {
             --bg-body: #121212;
             --bg-card: #1e1e1e;
             --bg-subcard: #2a2a2a;
@@ -55,8 +47,19 @@
             --accent-green: #2eca7f;
         }
 
-        /* ELEMENTOS DUMMY DE ANCORAGEM OCULTOS */
-        .anchor-state {
+        /* Rádios de Tamanho de Fonte (4 menores, Normal, 4 maiores) */
+        #font-m4:checked ~ .page-wrapper { --font-base: 0.7rem; }
+        #font-m3:checked ~ .page-wrapper { --font-base: 0.775rem; }
+        #font-m2:checked ~ .page-wrapper { --font-base: 0.85rem; }
+        #font-m1:checked ~ .page-wrapper { --font-base: 0.925rem; }
+        /* Padrão (normal) mantido no :root */
+        #font-p1:checked ~ .page-wrapper { --font-base: 1.125rem; }
+        #font-p2:checked ~ .page-wrapper { --font-base: 1.25rem; }
+        #font-p3:checked ~ .page-wrapper { --font-base: 1.375rem; }
+        #font-p4:checked ~ .page-wrapper { --font-base: 1.5rem; }
+
+        /* Ocultar os inputs radio */
+        .state-input {
             display: none;
         }
 
@@ -67,6 +70,7 @@
             min-height: 100vh;
             padding: 10px;
             font-size: var(--font-base);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .print-container {
@@ -157,18 +161,18 @@
             white-space: pre-wrap;
         }
 
-        /* BARRA DE CONTROLES FLUTUANTE COM LINKS DE ANCORAGEM */
+        /* BARRA DE CONTROLES FLUTUANTE */
         .controls-toolbar {
             position: fixed;
-            bottom: 15px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(30, 30, 30, 0.92);
-            padding: 6px 12px;
+            padding: 8px 16px;
             border-radius: 30px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 10px;
             z-index: 9999;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
@@ -177,7 +181,7 @@
             background: #333333;
             color: #ffffff;
             border: 1px solid #555555;
-            padding: 6px 12px;
+            padding: 8px 14px;
             border-radius: 20px;
             font-size: 14px;
             font-weight: bold;
@@ -185,11 +189,22 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            gap: 5px;
             user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-ctrl:hover {
+            background: #444444;
         }
 
         .btn-ctrl svg { width: 16px; height: 16px; fill: currentColor; }
+
+        /* Lógica visual para alternar o ícone e estado do tema nos labels */
+        #theme-dark:checked ~ .page-wrapper .theme-btn-dark { display: none; }
+        #theme-dark:checked ~ .page-wrapper .theme-btn-light { display: inline-flex; }
+        .theme-btn-light { display: none; }
 
         @media print {
             .controls-toolbar { display: none !important; }
@@ -202,30 +217,44 @@
 </head>
 <body>
 
-    <!-- PONTOS DE ANCORAGEM OFFLINE -->
-    <div id="font-sm" class="anchor-state"></div>
-    <div id="font-md" class="anchor-state"></div>
-    <div id="font-lg" class="anchor-state"></div>
-    <div id="font-xl" class="anchor-state"></div>
-    <div id="dark" class="anchor-state"></div>
-    <div id="light" class="anchor-state"></div>
+    <!-- INPUTS DE ESTADO (RÁDIOS OCULTOS PARA MANTER CONTROLE INDEPENDENTE) -->
+    <!-- Temas -->
+    <input type="radio" name="theme-state" id="theme-light" class="state-input" checked>
+    <input type="radio" name="theme-state" id="theme-dark" class="state-input">
 
-    <!-- BARRA DE FERRAMENTAS FIXA -->
-    <div class="controls-toolbar">
-        <a href="#font-sm" class="btn-ctrl">A-</a>
-        <a href="#font-md" class="btn-ctrl">A</a>
-        <a href="#font-lg" class="btn-ctrl">A+</a>
-        <a href="#font-xl" class="btn-ctrl">A++</a>
-        <a href="#dark" class="btn-ctrl" title="Modo Escuro">
-            <svg viewBox="0 0 16 16"><path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/></svg>
-        </a>
-        <a href="#light" class="btn-ctrl" title="Modo Claro">
-            <svg viewBox="0 0 16 16"><path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8z"/></svg>
-        </a>
-    </div>
+    <!-- Tamanhos de Fonte (4 menores, 1 normal, 4 maiores) -->
+    <input type="radio" name="font-state" id="font-m4" class="state-input">
+    <input type="radio" name="font-state" id="font-m3" class="state-input">
+    <input type="radio" name="font-state" id="font-m2" class="state-input">
+    <input type="radio" name="font-state" id="font-m1" class="state-input">
+    <input type="radio" name="font-state" id="font-normal" class="state-input" checked>
+    <input type="radio" name="font-state" id="font-p1" class="state-input">
+    <input type="radio" name="font-state" id="font-p2" class="state-input">
+    <input type="radio" name="font-state" id="font-p3" class="state-input">
+    <input type="radio" name="font-state" id="font-p4" class="state-input">
 
     <!-- CONTEÚDO PRINCIPAL -->
     <div class="page-wrapper">
+
+        <!-- BARRA DE FERRAMENTAS FIXA COM EXATAMENTE 3 BOTÕES (CONTROLADOS VIA LABELS) -->
+        <div class="controls-toolbar">
+            <!-- Botão 1: Diminuir Fonte (Cicla decrescente entre os 4 níveis menores) -->
+            <label for="font-m1" class="btn-ctrl" title="Diminuir Fonte" onclick="ciclarFonteMenor()">A-</label>
+
+            <!-- Botão 2: Aumentar Fonte (Cicla crescente entre os 4 níveis maiores) -->
+            <label for="font-p1" class="btn-ctrl" title="Aumentar Fonte" onclick="ciclarFonteMaior()">A+</label>
+
+            <!-- Botão 3: Alternador de Tema (Claro / Escuro unificado) -->
+            <label for="theme-dark" class="btn-ctrl theme-btn-dark" title="Modo Escuro">
+                <svg viewBox="0 0 16 16"><path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/></svg>
+                Tema
+            </label>
+            <label for="theme-light" class="btn-ctrl theme-btn-light" title="Modo Claro">
+                <svg viewBox="0 0 16 16"><path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8z"/></svg>
+                Tema
+            </label>
+        </div>
+
         <div class="print-container">
             <div class="header-top">
                 <div class="logo-box">
@@ -325,5 +354,32 @@
         </div>
     </div>
 
+    <!-- Script leve apenas para ciclar progressivamente os 4 níveis de fonte em cada clique do botão A- / A+ -->
+    <script>
+        const fontesMenores = ['font-m1', 'font-m2', 'font-m3', 'font-m4'];
+        const fontesMaiores = ['font-p1', 'font-p2', 'font-p3', 'font-p4'];
+
+        function ciclarFonteMenor() {
+            let atual = fontesMenores.findIndex(id => document.getElementById(id).checked);
+            let proximo;
+            if (atual === -1) {
+                proximo = fontesMenores[0]; // Se tava normal, vai pro primeiro menor
+            } else {
+                proximo = fontesMenores[(atual + 1) % fontesMenores.length]; // Cicla pelos 4 menores
+            }
+            document.getElementById(proximo).checked = true;
+        }
+
+        function ciclarFonteMaior() {
+            let atual = fontesMaiores.findIndex(id => document.getElementById(id).checked);
+            let proximo;
+            if (atual === -1) {
+                proximo = fontesMaiores[0]; // Se tava normal, vai pro primeiro maior
+            } else {
+                proximo = fontesMaiores[(atual + 1) % fontesMaiores.length]; // Cicla pelos 4 maiores
+            }
+            document.getElementById(proximo).checked = true;
+        }
+    </script>
 </body>
 </html>

@@ -165,19 +165,75 @@ class FinanceiroController extends Controller {
 		}
     }
 
+    public function salvar_lancamento() {
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$igrejaId = $_SESSION['usuario_igreja_id'];
+			$tipo = $_POST['tipo']; // 'entrada' ou 'saida'
+			$statusBaixa = $_POST['status_baixa'] ?? 'pendente'; // 'baixado' ou 'pendente'
+
+			// Tratar Upload de Comprovante caso venha na criação com baixa
+			$comprovanteNome = null;
+			if (!empty($_FILES['comprovante']['name'])) {
+				$ext = pathinfo($_FILES['comprovante']['name'], PATHINFO_EXTENSION);
+				$comprovanteNome = 'comp_' . uniqid() . '.' . $ext;
+				$destino = 'public/uploads/financeiro/' . $comprovanteNome;
+
+				if (!is_dir('public/uploads/financeiro/')) mkdir('public/uploads/financeiro/', 0777, true);
+				move_uploaded_file($_FILES['comprovante']['tmp_name'], $destino);
+			}
+
+			// Descobrir qual é a categoria pai (financeiro_categoria_id) com base na subcategoria escolhida
+			$subcategoriaId = $_POST['subcategoria_id'];
+			$categoriaId = $this->model->buscarCategoriaIdPorSubcategoria($subcategoriaId);
+
+			$dados = [
+				'igreja_id'    => $igrejaId,
+				'categoria_id' => $categoriaId,
+				'subcategoria_id' => $subcategoriaId,
+				'descricao'    => $_POST['descricao'],
+				'valor'        => $_POST['valor'],
+				'tipo'         => $tipo,
+				'vencimento'   => $_POST['vencimento'],
+				'pago'         => ($statusBaixa === 'baixado') ? 1 : 0,
+				'data_pagamento' => ($statusBaixa === 'baixado') ? ($_POST['data_pagamento'] ?? date('Y-m-d')) : null,
+				'reembolso'    => 0,
+				'comprovante'  => $comprovanteNome,
+				// Dados extras para baixa imediata
+				'baixar_agora' => ($statusBaixa === 'baixado'),
+				'conta_financeira_id' => $_POST['conta_financeira_id'] ?? null
+			];
+
+			if ($this->model->salvarContaComBaixaOpcional($dados)) {
+				header("Location: " . url('financeiro/lancamentos') . "?sucesso=1");
+			} else {
+				header("Location: " . url('financeiro/lancamentos') . "?erro=falha_salvar");
+			}
+		}
+	}
+
 	public function atualizar() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
+		$subcategoriaId = !empty($_POST['subcategoria_id']) ? $_POST['subcategoria_id'] : null;
+		$categoriaId = null;
 
-		// Monta o array exatamente como o seu método atualizarLancamentoCompleto espera
+		// Se uma subcategoria foi selecionada, buscamos a categoria pai dela na tabela
+		if ($subcategoriaId) {
+			$subcatInfo = $this->model->buscarCategoriaPorSubcategoria($subcategoriaId);
+			if ($subcatInfo) {
+				$categoriaId = $subcatInfo['subcategoria_categoria_id'];
+			}
+		}
+
 		$data = [
 			'id'                               => $_POST['id'],
 			'igreja_id'                        => $igrejaId,
-			'categoria_id'                     => $_POST['categoria_id'] ?? $_POST['subcategoria_id'],
+			'categoria_id'                     => $categoriaId, // Categoria pai correta
+			'subcategoria_id'                  => $subcategoriaId, // Subcategoria correta
 			'descricao'                        => $_POST['descricao'],
 			'valor'                            => $_POST['valor'],
 			'data_pagamento'                   => $_POST['data_pagamento'],
 			'reembolso'                        => $_POST['reembolso'] ?? 0,
-			'financeiro_conta_financeira_id'   => $_POST['financeiro_conta_financeira_id'], // CAMPO CHAVE
+			'financeiro_conta_financeira_id'   => $_POST['financeiro_conta_financeira_id'],
 			'membros'                          => $_POST['membros'] ?? [],
 			'membros_valores'                  => $_POST['membros_valores'] ?? []
 		];
@@ -185,10 +241,8 @@ class FinanceiroController extends Controller {
 		$sucesso = $this->model->atualizarLancamentoCompleto($data);
 
 		if ($sucesso) {
-			// Redireciona com mensagem de sucesso
-			header("Location: " . url('financeiro') . "?msg=atualizado");
+			header("Location: " . url('financeiro/lancamentos') . "?msg=atualizado");
 		} else {
-			// Trate o erro conforme sua estrutura
 			die("Erro ao atualizar o lançamento. Verifique os dados ou o saldo das contas.");
 		}
 	}
@@ -355,7 +409,7 @@ class FinanceiroController extends Controller {
 		exit;
 	}
 
-	public function dashboard() {
+    public function dashboard() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 		$anoAtual = date('Y');
 		$anoAnterior = $anoAtual - 1;
@@ -364,14 +418,7 @@ class FinanceiroController extends Controller {
 		$contas = $this->model->getContasBancarias($igrejaId);
 
 		// 1. DASHBOARD DE LINHA (FLUXO MENSAL)
-		$dadosRaw = $this->model->getDadosGraficoLinha($igrejaId);
-		$dadosGrafico = array_fill(1, 12, ['entradas' => 0, 'saidas' => 0]);
-		foreach ($dadosRaw as $d) {
-			$dadosGrafico[(int)$d['mes']] = [
-				'entradas' => (float)$d['entradas'],
-				'saidas' => (float)$d['saidas']
-			];
-		}
+		$fluxoAnual = $this->model->getFluxoMensalDashboard($igrejaId, $anoAtual);
 
 		// 2. RELATÓRIO ESTRUTURADO (Para as tabelas detalhadas que estavam dando erro)
 		// Este método preenche as chaves ['entrada'] e ['saida'] que a linha 282 espera
@@ -384,12 +431,12 @@ class FinanceiroController extends Controller {
 		$this->view('financeiro/dashboard', [
 			'resumo'             => $resumo,
 			'contas'             => $contas,
-			'fluxoAnual'         => $dadosGrafico,
+			'fluxoAnual'         => $fluxoAnual,
 			'anoAtual'           => $anoAtual,
 			'anoAnterior'        => $anoAnterior,
-			'relatorio'          => $relatorioCategorias, // Mantém compatibilidade com as tabelas de baixo
-			'compReceitas'       => $compReceitas,       // Novo nome para o comparativo de receitas
-			'compDespesas'       => $compDespesas        // Novo nome para o comparativo de despesas
+			'relatorio'          => $relatorioCategorias,
+			'compReceitas'       => $compReceitas,
+			'compDespesas'       => $compDespesas
 		]);
 	}
 

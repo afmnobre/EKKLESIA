@@ -315,11 +315,113 @@ class Financeiro {
 		}
 	}
 
+    public function buscarCategoriaIdPorSubcategoria($subcategoriaId) {
+		$stmt = $this->db->prepare("SELECT subcategoria_categoria_id FROM financeiro_subcategorias WHERE subcategoria_id = ?");
+		$stmt->execute([$subcategoriaId]);
+		$res = $stmt->fetch(\PDO::FETCH_ASSOC);
+		return $res ? $res['subcategoria_categoria_id'] : null;
+    }
+
+
+    public function buscarCategoriaPorSubcategoria($subId) {
+        $stmt = $this->db->prepare("SELECT subcategoria_categoria_id FROM financeiro_subcategorias WHERE subcategoria_id = ? LIMIT 1");
+        $stmt->execute([$subId]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+	public function salvarContaComBaixaOpcional($data) {
+		try {
+			$this->db->beginTransaction();
+
+			// 1. Insere a conta principal (financeiro_contas)
+			$sql = "INSERT INTO financeiro_contas
+					(financeiro_conta_igreja_id, financeiro_conta_financeiro_categoria_id, financeiro_conta_financeiro_subcategoria_id,
+					 financeiro_conta_descricao, financeiro_conta_valor, financeiro_conta_tipo,
+					 financeiro_conta_data_vencimento, financeiro_conta_pago, financeiro_conta_data_pagamento, financeiro_conta_comprovante, financeiro_conta_reembolso)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute([
+				$data['igreja_id'],
+				$data['categoria_id'],
+				$data['subcategoria_id'],
+				$data['descricao'],
+				$data['valor'],
+				$data['tipo'],
+				$data['vencimento'],
+				$data['pago'],
+				$data['data_pagamento'],
+				$data['comprovante'],
+				$data['reembolso']
+			]);
+
+			$contaId = $this->db->lastInsertId();
+
+			// 2. Se o usuário escolheu lançar já debitando/creditando (Baixado de imediato)
+			if (!empty($data['baixar_agora']) && !empty($data['conta_financeira_id'])) {
+				$data_pagamento_completa = $data['data_pagamento'];
+				if (strlen($data_pagamento_completa) <= 10) {
+					$data_pagamento_completa .= ' ' . date('H:i:s');
+				}
+
+				// A. Registra o Pagamento Detalhado
+				$sqlPag = "INSERT INTO financeiro_pagamentos
+						 (financeiro_pagamento_igreja_id, financeiro_pagamento_financeiro_conta_id, financeiro_pagamento_valor,
+						  financeiro_pagamento_conta_financeira_id, financeiro_pagamento_documentos, financeiro_pagamento_data)
+						 VALUES (?, ?, ?, ?, ?, ?)";
+				$this->db->prepare($sqlPag)->execute([
+					$data['igreja_id'], $contaId, $data['valor'],
+					$data['conta_financeira_id'], $data['comprovante'], $data_pagamento_completa
+				]);
+
+				// B. Atualiza o Saldo da Conta Financeira / Caixa / Banco
+				$operador = ($data['tipo'] == 'entrada') ? '+' : '-';
+				$sqlSaldo = "UPDATE financeiro_contas_financeiras
+						 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $operador ?
+						 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
+				$this->db->prepare($sqlSaldo)->execute([$data['valor'], $data['conta_financeira_id'], $data['igreja_id']]);
+
+				// C. Cria o Registro no Extrato (Movimentações)
+				$descMov = "Lançamento Direto (" . ($data['tipo'] == 'entrada' ? 'Receita' : 'Despesa') . "): " . $data['descricao'];
+				$sqlMov = "INSERT INTO financeiro_movimentacoes
+						 (financeiro_movimentacao_igreja_id,
+						  financeiro_movimentacao_financeiro_conta_id,
+						  financeiro_movimentacao_financeiro_categoria_id,
+						  financeiro_movimentacao_financeiro_subcategoria_id,
+						  financeiro_movimentacao_financeiro_conta_financeira_id,
+						  financeiro_movimentacao_tipo,
+						  financeiro_movimentacao_valor,
+						  financeiro_movimentacao_data,
+						  financeiro_movimentacao_descricao,
+						  financeiro_movimentacao_origem)
+						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pagamento')";
+
+				$this->db->prepare($sqlMov)->execute([
+					$data['igreja_id'],
+					$contaId,
+					$data['categoria_id'],
+					$data['subcategoria_id'],
+					$data['conta_financeira_id'],
+					$data['tipo'],
+					$data['valor'],
+					$data_pagamento_completa,
+					$descMov
+				]);
+			}
+
+			$this->db->commit();
+			return true;
+		} catch (\Exception $e) {
+			$this->db->rollBack();
+			return false;
+		}
+	}
+
     public function atualizarLancamentoCompleto($data) {
 		try {
 			$this->db->beginTransaction();
 
-			// 1. BUSCAR DADOS ATUAIS (Buscando a conta financeira também da tabela de movimentações caso o pagamento esteja nulo)
+			// 1. BUSCAR DADOS ATUAIS
 			$sqlBusca = "SELECT fc.*,
 								COALESCE(fp.financeiro_pagamento_conta_financeira_id, fm.financeiro_movimentacao_financeiro_conta_financeira_id) AS financeiro_pagamento_conta_financeira_id,
 								fp.financeiro_pagamento_valor
@@ -336,53 +438,61 @@ class Financeiro {
 
 			$tipo = $antigo['financeiro_conta_tipo'];
 			$foiPago = ($antigo['financeiro_conta_pago'] == 1);
+			$subcategoriaId = !empty($data['subcategoria_id']) ? $data['subcategoria_id'] : null;
+			$categoriaId = !empty($data['categoria_id']) ? $data['categoria_id'] : null;
 
 			// 2. ATUALIZAR A TABELA PRINCIPAL (financeiro_contas)
 			$sqlUpConta = "UPDATE financeiro_contas SET
 							financeiro_conta_financeiro_categoria_id = ?,
+							financeiro_conta_financeiro_subcategoria_id = ?,
 							financeiro_conta_descricao = ?,
 							financeiro_conta_valor = ?,
 							financeiro_conta_data_pagamento = ?,
 							financeiro_conta_reembolso = ?
-						  WHERE financeiro_conta_id = ?";
+						   WHERE financeiro_conta_id = ?";
 			$this->db->prepare($sqlUpConta)->execute([
-				$data['categoria_id'], $data['descricao'], $data['valor'],
-				$data['data_pagamento'], $data['reembolso'] ?? 0, $data['id']
+				$categoriaId,
+				$subcategoriaId,
+				$data['descricao'],
+				$data['valor'],
+				$data['data_pagamento'],
+				$data['reembolso'] ?? 0,
+				$data['id']
 			]);
 
 			// 3. ATUALIZAÇÃO DO RATEIO DE MEMBROS (Se for Entrada/Receita)
 			if ($tipo == 'entrada') {
-					$this->db->prepare("DELETE FROM financeiro_receita_membros WHERE receita_membro_conta_id = ?")
-							 ->execute([$data['id']]);
+				$this->db->prepare("DELETE FROM financeiro_receita_membros WHERE receita_membro_conta_id = ?")
+						 ->execute([$data['id']]);
 
-					if (!empty($data['membros'])) {
-						$sqlMembro = "INSERT INTO financeiro_receita_membros
-									 (receita_membro_conta_id, receita_membro_categoria_id, receita_membro_subcategoria_id,
-									  receita_membro_usuario_id, receita_membro_valor, receita_membro_data)
-									 VALUES (?, ?, ?, ?, ?, ?)";
-						$stmtMembro = $this->db->prepare($sqlMembro);
+				if (!empty($data['membros'])) {
+					$sqlMembro = "INSERT INTO financeiro_receita_membros
+								 (receita_membro_conta_id, receita_membro_categoria_id, receita_membro_subcategoria_id,
+								  receita_membro_usuario_id, receita_membro_valor, receita_membro_data)
+								 VALUES (?, ?, ?, ?, ?, ?)";
+					$stmtMembro = $this->db->prepare($sqlMembro);
 
-						foreach ($data['membros'] as $index => $membro_id) {
-							if (empty($membro_id)) continue;
+					foreach ($data['membros'] as $index => $membro_id) {
+						if (empty($membro_id)) continue;
 
-							$valorRaw = $data['membros_valores'][$index] ?? 0;
-							$valorMembro = str_replace(',', '.', $valorRaw);
+						$valorRaw = $data['membros_valores'][$index] ?? 0;
+						$valorMembro = str_replace(',', '.', $valorRaw);
 
-							if ($valorMembro <= 0) continue;
+						if ($valorMembro <= 0) continue;
 
-							$stmtMembro->execute([
-								$data['id'],
-								$data['categoria_id'],
-								$data['categoria_id'], // Subcategoria
-								$membro_id,
-								$valorMembro,
-								$data['data_pagamento']
-							]);
-						}
+						$stmtMembro->execute([
+							$data['id'],
+							$categoriaId,
+							$subcategoriaId,
+							$membro_id,
+							$valorMembro,
+							$data['data_pagamento']
+						]);
 					}
+				}
 			}
 
-			// 4. SE ESTIVER PAGO, AJUSTA O SALDO DA CONTA FINANCEIRA
+			// 4. SE ESTIVER PAGO, AJUSTA O SALDO DA CONTA FINANCEIRA E MOVIMENTAÇÕES
 			if ($foiPago) {
 				$contaFinanceiraNova = !empty($data['financeiro_conta_financeira_id']) ? $data['financeiro_conta_financeira_id'] : null;
 				$contaFinanceiraAntiga = !empty($antigo['financeiro_pagamento_conta_financeira_id']) ? $antigo['financeiro_pagamento_conta_financeira_id'] : $contaFinanceiraNova;
@@ -390,27 +500,20 @@ class Financeiro {
 				$valorAntigo = (float) $antigo['financeiro_conta_valor'];
 				$valorNovo   = (float) $data['valor'];
 
-				// Só realiza alterações no saldo se a conta financeira mudou OU se o valor mudou
 				if ($contaFinanceiraAntiga !== null && $contaFinanceiraNova !== null) {
-
-					// Caso A: A conta financeira MUDOU
 					if ((string)$contaFinanceiraAntiga !== (string)$contaFinanceiraNova) {
-						// Estorna o valor integral da conta antiga
 						$opEstorno = ($tipo == 'entrada') ? '-' : '+';
 						$this->db->prepare("UPDATE financeiro_contas_financeiras
 											SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $opEstorno ?
 											WHERE financeiro_conta_financeira_id = ?")
 								 ->execute([$valorAntigo, $contaFinanceiraAntiga]);
 
-						// Aplica o valor integral na nova conta
 						$opAplicar = ($tipo == 'entrada') ? '+' : '-';
 						$this->db->prepare("UPDATE financeiro_contas_financeiras
 											SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $opAplicar ?
 											WHERE financeiro_conta_financeira_id = ?")
 								 ->execute([$valorNovo, $contaFinanceiraNova]);
-					}
-					// Caso B: A conta é a MESMA, mas o VALOR mudou
-					else if ($valorAntigo != $valorNovo) {
+					} else if ($valorAntigo != $valorNovo) {
 						$diferenca = $valorNovo - $valorAntigo;
 
 						if ($tipo == 'entrada') {
@@ -425,10 +528,9 @@ class Financeiro {
 									 ->execute([$diferenca, $contaFinanceiraNova]);
 						}
 					}
-					// Se a conta for a mesma e o valor não mudou, nada é alterado no saldo das contas financeiras.
 				}
 
-				// C) Atualizar a tabela de Pagamentos
+				// Atualizar a tabela de Pagamentos
 				$this->db->prepare("UPDATE financeiro_pagamentos SET
 									 financeiro_pagamento_valor = ?,
 									 financeiro_pagamento_conta_financeira_id = ?,
@@ -436,12 +538,13 @@ class Financeiro {
 									 WHERE financeiro_pagamento_financeiro_conta_id = ?")
 						 ->execute([$valorNovo, $contaFinanceiraNova, $data['data_pagamento'], $data['id']]);
 
-				// D) Atualizar o Extrato (financeiro_movimentacoes)
+				// Atualizar o Extrato (financeiro_movimentacoes) com Categoria e Subcategoria
 				$novaDesc = "Correção de " . ($tipo == 'entrada' ? 'Receita' : 'Despesa') . ": " . $data['descricao'];
 
 				$sqlUpMov = "UPDATE financeiro_movimentacoes SET
 							 financeiro_movimentacao_financeiro_conta_financeira_id = ?,
 							 financeiro_movimentacao_financeiro_categoria_id = ?,
+							 financeiro_movimentacao_financeiro_subcategoria_id = ?,
 							 financeiro_movimentacao_valor = ?,
 							 financeiro_movimentacao_descricao = ?,
 							 financeiro_movimentacao_data = ?
@@ -450,7 +553,8 @@ class Financeiro {
 
 				$this->db->prepare($sqlUpMov)->execute([
 					$contaFinanceiraNova,
-					$data['categoria_id'],
+					$categoriaId,
+					$subcategoriaId,
 					$valorNovo,
 					$novaDesc,
 					$data['data_pagamento'],
@@ -694,33 +798,47 @@ class Financeiro {
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-	public function getComparativoAnual($igrejaId, $ano) {
+    public function getComparativoAnual($igrejaId, $ano) {
 		$anoAnterior = $ano - 1;
 
 		$sql = "SELECT
-					s.subcategoria_nome,
+					COALESCE(s.subcategoria_nome, 'Geral') as subcategoria_nome,
 					c.financeiro_categoria_nome,
-					-- Soma Ano Atual por Mês
-					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = ? THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_atual,
-					-- Soma Ano Anterior Total
-					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = ? THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_anterior,
-					-- Detalhamento mensal ano atual
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_atual,
+					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $anoAnterior THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_anterior,
 					" . $this->buildMonthlySumQuery($ano) . "
-				FROM financeiro_subcategorias s
-				JOIN financeiro_categorias c ON s.subcategoria_categoria_id = c.financeiro_categoria_id
-				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_categoria_id = s.subcategoria_id
-					AND m.financeiro_movimentacao_igreja_id = ?
-					AND YEAR(m.financeiro_movimentacao_data) IN (?, ?)
-				WHERE s.subcategoria_igreja_id = ? AND c.financeiro_categoria_tipo = 'entrada'
-				GROUP BY s.subcategoria_id
-				ORDER BY c.financeiro_categoria_nome, s.subcategoria_nome";
+				FROM financeiro_movimentacoes m
+				JOIN financeiro_categorias c ON m.financeiro_movimentacao_financeiro_categoria_id = c.financeiro_categoria_id
+				LEFT JOIN financeiro_subcategorias s ON m.financeiro_movimentacao_financeiro_subcategoria_id = s.subcategoria_id
+				WHERE m.financeiro_movimentacao_igreja_id = ?
+				  AND m.financeiro_movimentacao_tipo = 'entrada'
+				  AND YEAR(m.financeiro_movimentacao_data) IN (?, ?)
+				GROUP BY m.financeiro_movimentacao_financeiro_subcategoria_id, c.financeiro_categoria_id, s.subcategoria_nome, c.financeiro_categoria_nome
+				ORDER BY c.financeiro_categoria_nome ASC, subcategoria_nome ASC";
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$ano, $anoAnterior, $igrejaId, $ano, $anoAnterior, $igrejaId]);
+		$stmt->execute([$igrejaId, $ano, $anoAnterior]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-	public function getComparativoReceitasAnual($igrejaId, $ano) {
+    public function getFluxoMensalDashboard($igrejaId, $ano) {
+		$sql = "SELECT
+					MONTH(financeiro_movimentacao_data) as mes,
+					SUM(CASE WHEN financeiro_movimentacao_tipo = 'entrada' THEN financeiro_movimentacao_valor ELSE 0 END) as entradas,
+					SUM(CASE WHEN financeiro_movimentacao_tipo = 'saida' THEN financeiro_movimentacao_valor ELSE 0 END) as saidas
+				FROM financeiro_movimentacoes
+				WHERE financeiro_movimentacao_igreja_id = ?
+				  AND YEAR(financeiro_movimentacao_data) = ?
+				GROUP BY MONTH(financeiro_movimentacao_data)
+				ORDER BY mes ASC";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId, $ano]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
+
+    public function getComparativoReceitasAnual($igrejaId, $ano) {
 		$anoAnterior = $ano - 1;
 
 		$mesesSql = "";
@@ -729,63 +847,66 @@ class Financeiro {
 		}
 
 		$sql = "SELECT
-					s.subcategoria_id,
-					s.subcategoria_nome,
+					m.financeiro_movimentacao_financeiro_subcategoria_id as subcategoria_id,
+					COALESCE(s.subcategoria_nome, 'Geral') as subcategoria_nome,
 					c.financeiro_categoria_nome,
 					$mesesSql
 					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_atual,
 					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $anoAnterior THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_anterior
-				FROM financeiro_subcategorias s
-				JOIN financeiro_categorias c ON s.subcategoria_categoria_id = c.financeiro_categoria_id
-				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_categoria_id = s.subcategoria_id
-					AND m.financeiro_movimentacao_igreja_id = ?
-				WHERE s.subcategoria_igreja_id = ?
-				  AND c.financeiro_categoria_tipo = 'entrada'
-				GROUP BY s.subcategoria_id, s.subcategoria_nome, c.financeiro_categoria_nome
-				ORDER BY c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
+				FROM financeiro_movimentacoes m
+				JOIN financeiro_categorias c ON m.financeiro_movimentacao_financeiro_categoria_id = c.financeiro_categoria_id
+				LEFT JOIN financeiro_subcategorias s ON m.financeiro_movimentacao_financeiro_subcategoria_id = s.subcategoria_id
+				WHERE m.financeiro_movimentacao_igreja_id = ?
+				  AND m.financeiro_movimentacao_tipo = 'entrada'
+				  AND YEAR(m.financeiro_movimentacao_data) IN (?, ?)
+				GROUP BY m.financeiro_movimentacao_financeiro_subcategoria_id, c.financeiro_categoria_id, s.subcategoria_nome, c.financeiro_categoria_nome
+				ORDER BY c.financeiro_categoria_nome ASC, subcategoria_nome ASC";
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$igrejaId, $igrejaId]);
+		$stmt->execute([$igrejaId, $ano, $anoAnterior]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
-	public function getComparativoDespesasAnual($igrejaId, $ano) {
+    public function getComparativoDespesasAnual($igrejaId, $ano) {
 		$anoAnterior = $ano - 1;
 
 		$sql = "SELECT
-					s.subcategoria_nome,
+					m.financeiro_movimentacao_financeiro_subcategoria_id as subcategoria_id,
+					COALESCE(s.subcategoria_nome, 'Geral') as subcategoria_nome,
 					c.financeiro_categoria_nome,
 					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $ano THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_atual,
 					SUM(CASE WHEN YEAR(m.financeiro_movimentacao_data) = $anoAnterior THEN m.financeiro_movimentacao_valor ELSE 0 END) as total_anterior
-				FROM financeiro_subcategorias s
-				JOIN financeiro_categorias c ON s.subcategoria_categoria_id = c.financeiro_categoria_id
-				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_categoria_id = s.subcategoria_id
-					AND m.financeiro_movimentacao_igreja_id = ?
-				WHERE s.subcategoria_igreja_id = ?
-				  AND c.financeiro_categoria_tipo = 'saida'
-				GROUP BY s.subcategoria_id
-				HAVING total_atual > 0 OR total_anterior > 0
+				FROM financeiro_movimentacoes m
+				JOIN financeiro_categorias c ON m.financeiro_movimentacao_financeiro_categoria_id = c.financeiro_categoria_id
+				LEFT JOIN financeiro_subcategorias s ON m.financeiro_movimentacao_financeiro_subcategoria_id = s.subcategoria_id
+				WHERE m.financeiro_movimentacao_igreja_id = ?
+				  AND m.financeiro_movimentacao_tipo = 'saida'
+				  AND YEAR(m.financeiro_movimentacao_data) IN (?, ?)
+				GROUP BY m.financeiro_movimentacao_financeiro_subcategoria_id, c.financeiro_categoria_id, s.subcategoria_nome, c.financeiro_categoria_nome
 				ORDER BY total_atual DESC";
 
 		$stmt = $this->db->prepare($sql);
-		$stmt->execute([$igrejaId, $igrejaId]);
+		$stmt->execute([$igrejaId, $ano, $anoAnterior]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
-
 
 	public function getRelatorioRateioMembros($igrejaId, $ano) {
 		$sql = "SELECT
 					m.membro_nome,
 					rm.receita_membro_valor,
-					MONTH(rm.receita_membro_data) as mes,
-					-- Se não houver subcategoria, ele tenta a categoria, senão mostra Geral
-					COALESCE(sub.subcategoria_nome, cat.financeiro_categoria_nome, 'Outros') as tipo_receita
+					MONTH(rm.receita_membro_data) AS mes,
+					COALESCE(
+						sub.subcategoria_nome,
+						cat.financeiro_categoria_nome,
+						'Outros'
+					) AS tipo_receita
 				FROM financeiro_receita_membros rm
 				INNER JOIN membros m ON rm.receita_membro_usuario_id = m.membro_id
-				LEFT JOIN financeiro_subcategorias sub ON rm.receita_membro_subcategoria_id = sub.subcategoria_id
-				LEFT JOIN financeiro_categorias cat ON rm.receita_membro_categoria_id = cat.financeiro_categoria_id
+				LEFT JOIN financeiro_contas c ON rm.receita_membro_conta_id = c.financeiro_conta_id
+				LEFT JOIN financeiro_subcategorias sub ON COALESCE(rm.receita_membro_subcategoria_id, c.financeiro_conta_financeiro_subcategoria_id) = sub.subcategoria_id
+				LEFT JOIN financeiro_categorias cat ON COALESCE(rm.receita_membro_categoria_id, c.financeiro_conta_financeiro_categoria_id, sub.subcategoria_categoria_id) = cat.financeiro_categoria_id
 				WHERE m.membro_igreja_id = ?
-				AND YEAR(rm.receita_membro_data) = ?
+				  AND YEAR(rm.receita_membro_data) = ?
 				ORDER BY tipo_receita ASC, m.membro_nome ASC";
 
 		$stmt = $this->db->prepare($sql);
@@ -804,81 +925,54 @@ class Financeiro {
 		return $stmt->fetch(\PDO::FETCH_ASSOC);
 	}
 
+	// Arquivo: app/Models/Financeiro.php
+	// Ajuste na estrutura de retorno para mapear subcategorias como chave principal
+
 	public function getFluxoAnualPorCategorias($igrejaId, $ano) {
-		// 1. Busca Categorias (Pai)
-		$sqlCat = "SELECT financeiro_categoria_id as id, financeiro_categoria_nome as nome, financeiro_categoria_tipo as tipo
-				   FROM financeiro_categorias WHERE financeiro_categoria_igreja_id = ?
-				   ORDER BY financeiro_categoria_tipo DESC, id ASC";
-		$stmtC = $this->db->prepare($sqlCat);
-		$stmtC->execute([$igrejaId]);
-		$categorias = $stmtC->fetchAll(\PDO::FETCH_ASSOC);
+		// 1. Busca todas as movimentações pagas/efetivadas no ano agrupadas por Categoria e Subcategoria por mês
+		$sql = "SELECT
+					COALESCE(sub.subcategoria_id, cat.financeiro_categoria_id) as sub_id,
+					COALESCE(sub.subcategoria_nome, 'Geral / Outros') as subcategoria_nome,
+					cat.financeiro_categoria_id as categoria_id,
+					cat.financeiro_categoria_nome as categoria_nome,
+					cat.financeiro_categoria_tipo as tipo,
+					MONTH(fc.financeiro_conta_data_vencimento) as mes,
+					SUM(fc.financeiro_conta_valor) as total
+				FROM financeiro_contas fc
+				LEFT JOIN financeiro_subcategorias sub ON fc.financeiro_conta_financeiro_subcategoria_id = sub.subcategoria_id
+				LEFT JOIN financeiro_categorias cat ON COALESCE(fc.financeiro_conta_financeiro_categoria_id, sub.subcategoria_categoria_id) = cat.financeiro_categoria_id
+				WHERE fc.financeiro_conta_igreja_id = ?
+				  AND YEAR(fc.financeiro_conta_data_vencimento) = ?
+				  AND fc.financeiro_conta_pago = 1
+				GROUP BY sub_id, cat.financeiro_categoria_id, mes";
 
-		// 2. Busca Subcategorias e seus IDs de Pai
-		$sqlSub = "SELECT subcategoria_id as id, subcategoria_nome as nome, subcategoria_categoria_id as pai_id
-				   FROM financeiro_subcategorias WHERE subcategoria_igreja_id = ?";
-		$stmtS = $this->db->prepare($sqlSub);
-		$stmtS->execute([$igrejaId]);
-		$subcategorias = $stmtS->fetchAll(\PDO::FETCH_ASSOC);
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId, $ano]);
+		$resultados = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-		// 3. Busca os Valores Reais (Março está aqui)
-		$sqlDados = "SELECT financeiro_conta_financeiro_categoria_id as cat_id,
-							MONTH(financeiro_conta_data_pagamento) as mes,
-							SUM(financeiro_conta_valor) as total
-					 FROM financeiro_contas
-					 WHERE financeiro_conta_igreja_id = ? AND YEAR(financeiro_conta_data_pagamento) = ?
-					 GROUP BY cat_id, mes";
-		$stmtD = $this->db->prepare($sqlDados);
-		$stmtD->execute([$igrejaId, $ano]);
-		$valores = $stmtD->fetchAll(\PDO::FETCH_ASSOC);
+		// Organiza a estrutura: [tipo]['subcategorias'][sub_id] = [ 'nome' => ..., 'categoria_nome' => ..., 'meses' => [...] ]
+		$estruturado = [
+			'entrada' => [],
+			'saida' => []
+		];
 
-		$mapa = [];
-		foreach($valores as $v) {
-			$mapa[(int)$v['cat_id']][(int)$v['mes']] = (float)$v['total'];
+		// Inicializa estrutura vazia ou preenche dinamicamente
+		foreach ($resultados as $row) {
+			$tipo = $row['tipo'] === 'entrada' ? 'entrada' : 'saida';
+			$subId = $row['sub_id'];
+			$mes = (int)$row['mes'];
+
+			if (!isset($estruturado[$tipo][$subId])) {
+				$estruturado[$tipo][$subId] = [
+					'nome' => $row['subcategoria_nome'],
+					'categoria_nome' => $row['categoria_nome'] ?? 'Sem Categoria',
+					'meses' => array_fill(1, 12, 0)
+				];
+			}
+			$estruturado[$tipo][$subId]['meses'][$mes] = (float)$row['total'];
 		}
 
-		$relatorio = ['entrada' => [], 'saida' => []];
-
-		// 4. Montagem da Estrutura
-		foreach($categorias as $c) {
-			$cID = (int)$c['id'];
-			$tipo = $c['tipo'];
-
-			$mesesPai = array_fill(1, 12, 0);
-			// Se houver valor direto no ID do Pai, soma
-			if(isset($mapa[$cID])) {
-				foreach($mapa[$cID] as $m => $val) { $mesesPai[$m] += $val; }
-			}
-
-			$subsFinal = [];
-			foreach($subcategorias as $s) {
-				if((int)$s['pai_id'] === $cID) {
-					$sID = (int)$s['id'];
-					$mesesSub = array_fill(1, 12, 0);
-
-					// IMPORTANTE: Se o lançamento foi feito no ID da subcategoria (ex: ID 5),
-					// somamos na subcategoria E no total do Pai para Março aparecer!
-					if(isset($mapa[$sID])) {
-						foreach($mapa[$sID] as $m => $val) {
-							$mesesSub[$m] = $val;
-							$mesesPai[$m] += $val; // Soma o valor da subcategoria no total da categoria pai
-						}
-					}
-
-					$subsFinal[] = [
-						'nome' => $s['nome'],
-						'meses' => $mesesSub
-					];
-				}
-			}
-
-			$relatorio[$tipo][$cID] = [
-				'nome' => $c['nome'],
-				'meses' => $mesesPai,
-				'subcategorias' => $subsFinal
-			];
-		}
-
-		return $relatorio;
+		return $estruturado;
 	}
 
 	public function getSaldosPorConta($igrejaId) {

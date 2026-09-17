@@ -11,7 +11,24 @@
 		font-weight: bold;
 	}
 
+    /* Cores personalizadas para o Choices.js com base no tipo */
+    .choices__item.receita-item, .choices__input.receita-item {
+        color: #198754 !important; /* Verde Bootstrap */
+        font-weight: 500;
+    }
+    .choices__item.despesa-item, .choices__input.despesa-item {
+        color: #dc3545 !important; /* Vermelho Bootstrap */
+        font-weight: 500;
+    }
+    /* Estilo para destacar o nome da Categoria pai dentro dos grupos do combo */
+    .choices__group-heading {
+        font-weight: bold;
+        color: #495057;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
 </style>
+
 
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-3">
@@ -57,7 +74,7 @@
 </div>
 
 <div class="container-fluid py-4">
-	<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
 		<h3 class="fw-bold"><i class="bi bi-calendar-check me-2 text-primary"></i>Contas a Pagar/Receber</h3>
 		<div>
             <a href="<?= url('financeiro/baixar_anexos_zip?mes='.$mesSelecionado.'&ano='.$anoSelecionado) ?>"
@@ -72,6 +89,11 @@
 
             <button class="btn btn-outline-dark shadow-sm me-2" onclick="abrirModalRelatorioConferencia()">
                 <i class="bi bi-printer"></i> Relatório de Conferência
+            </button>
+
+            <!-- Novo Botão para Lançamento com Baixa Imediata -->
+            <button class="btn btn-success shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#modalNovoLancamento">
+                <i class="bi bi-plus-circle"></i> Novo Lançamento Teste
             </button>
 
 			<button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNovaConta">
@@ -334,6 +356,250 @@
         </div>
     </div>
 </div>
+
+
+<!-- Modal Novo Lançamento -->
+<div class="modal fade" id="modalNovoLancamento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Novo Lançamento Financeiro</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formNovoLancamento" action="<?= url('financeiro/salvar_lancamento') ?>" method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Tipo de Lançamento (Entrada / Saída) -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tipo de Lançamento</label>
+                            <select name="tipo" id="novo_tipo" class="form-select" required onchange="filtrarCategoriasChoices()">
+                                <option value="entrada">Receita (Entrada)</option>
+                                <option value="saida">Despesa (Saída)</option>
+                            </select>
+                        </div>
+
+                        <!-- Valor -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Valor (R$)</label>
+                            <input type="number" step="0.01" name="valor" id="novo_valor" class="form-control" required>
+                        </div>
+
+                        <!-- Descrição -->
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Descrição</label>
+                            <input type="text" name="descricao" id="novo_descricao" class="form-control" required placeholder="Ex: Doação Anônima ou Conta de Luz">
+                        </div>
+
+                        <!-- Data de Vencimento -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Data de Vencimento</label>
+                            <input type="date" name="vencimento" id="novo_vencimento" class="form-control" required value="<?= date('Y-m-d') ?>">
+                        </div>
+
+                        <!-- Opção de Baixa Imediata -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Situação Inicial</label>
+                            <select name="status_baixa" id="novo_status_baixa" class="form-select" onchange="toggleCamposBaixa()">
+                                <option value="pendente">Provisionado (Em aberto)</option>
+                                <option value="baixado" selected>Pago / Recebido Agora (Baixado)</option>
+                            </select>
+                        </div>
+
+                        <!-- Bloco Dinâmico de Conta Bancária -->
+                        <div id="blocoBaixaImediata" class="row g-3 mt-0">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Conta Bancária / Caixa (Destino/Origem)</label>
+                                <select name="conta_financeira_id" id="novo_conta_financeira_id" class="form-select">
+                                    <option value="">Selecione a conta...</option>
+                                    <?php if(!empty($contas_bancarias)): ?>
+                                        <?php foreach($contas_bancarias as $cb): ?>
+                                            <option value="<?= $cb['financeiro_conta_financeira_id'] ?>">
+                                                <?= $cb['financeiro_conta_financeira_nome'] ?> (Saldo: R$ <?= number_format($cb['financeiro_conta_financeira_saldo'], 2, ',', '.') ?>)
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Data do Pagamento/Recebimento</label>
+                                <input type="date" name="data_pagamento" id="novo_data_pagamento" class="form-control" value="<?= date('Y-m-d') ?>">
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Comprovante (Opcional)</label>
+                                <input type="file" name="comprovante" class="form-control">
+                            </div>
+                        </div>
+
+                        <!-- Classificação (Categorias / Subcategorias com Choices.js agrupado) -->
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Classificação</label>
+                            <select name="subcategoria_id" id="novo_subcategoria_id" class="form-select" required>
+                                <option value="">Digite para pesquisar categoria ou subcategoria...</option>
+                                <?php if(!empty($categorias_formatadas)): ?>
+                                    <?php foreach($categorias_formatadas as $cat): ?>
+                                        <option value="<?= $cat['subcategoria_id'] ?>"
+                                                data-tipo="<?= $cat['financeiro_categoria_tipo'] ?? 'entrada' ?>"
+                                                data-categoria-nome="<?= htmlspecialchars($cat['financeiro_categoria_nome'] ?? 'Geral') ?>"
+                                                data-subcat-nome="<?= htmlspecialchars($cat['subcategoria_nome'] ?? $cat['nome_formatado']) ?>">
+                                            <?= $cat['nome_formatado'] ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar Lançamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Script de Inicialização, Cores e Agrupamento do Choices.js -->
+<script>
+let choicesContaModal = null;
+let choicesSubcatModal = null;
+let todasOpcoesSubcat = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Inicializa o Choices.js na Conta Financeira
+    const elConta = document.getElementById('novo_conta_financeira_id');
+    if (elConta && typeof Choices !== 'undefined') {
+        choicesContaModal = new Choices(elConta, {
+            searchEnabled: true,
+            itemSelectText: '',
+            shouldSort: false,
+            placeholder: true
+        });
+    }
+
+    // 2. Faz backup estruturado de todas as opções de subcategorias do HTML
+    const elSubcat = document.getElementById('novo_subcategoria_id');
+    if (elSubcat) {
+        const options = elSubcat.querySelectorAll('option');
+        options.forEach(opt => {
+            if (opt.value) {
+                todasOpcoesSubcat.push({
+                    value: opt.value,
+                    tipo: opt.getAttribute('data-tipo') || 'entrada',
+                    categoriaNome: opt.getAttribute('data-categoria-nome') || 'Geral',
+                    subcatNome: opt.getAttribute('data-subcat-nome') || opt.text.trim(),
+                    labelFull: opt.text.trim()
+                });
+            }
+        });
+    }
+
+    // 3. Inicializa o Choices.js na Subcategoria
+    if (elSubcat && typeof Choices !== 'undefined') {
+        choicesSubcatModal = new Choices(elSubcat, {
+            searchEnabled: true,
+            itemSelectText: '',
+            shouldSort: false,
+            placeholder: true,
+            noResultsText: 'Nenhum resultado encontrado',
+            noChoicesText: 'Não há opções disponíveis'
+        });
+    }
+
+    // Aplica cor inicial ao header do modal e inputs
+    atualizarCoresVisuais();
+    toggleCamposBaixa();
+    filtrarCategoriasChoices();
+});
+
+function toggleCamposBaixa() {
+    const status = document.getElementById('novo_status_baixa').value;
+    const bloco = document.getElementById('blocoBaixaImediata');
+    const elConta = document.getElementById('novo_conta_financeira_id');
+
+    if (status === 'baixado') {
+        bloco.classList.remove('d-none');
+        elConta.setAttribute('required', 'required');
+    } else {
+        bloco.classList.add('d-none');
+        elConta.removeAttribute('required');
+    }
+}
+
+function atualizarCoresVisuais() {
+    const tipo = document.getElementById('novo_tipo').value;
+    const modalHeader = document.querySelector('#modalNovoLancamento .modal-header');
+
+    // Altera a cor do cabeçalho do modal (Verde para Receita, Vermelho para Despesa)
+    if (tipo === 'saida') {
+        modalHeader.classList.remove('bg-success');
+        modalHeader.classList.add('bg-danger');
+    } else {
+        modalHeader.classList.remove('bg-danger');
+        modalHeader.classList.add('bg-success');
+    }
+
+    // Aplica classes de cor no elemento ativo/input do Choices de subcategorias
+    setTimeout(() => {
+        const container = document.querySelector('#modalNovoLancamento .choices');
+        if (container) {
+            container.classList.remove('receita-item', 'despesa-item');
+            if (tipo === 'saida') {
+                container.classList.add('despesa-item');
+            } else {
+                container.classList.add('receita-item');
+            }
+        }
+    }, 50);
+}
+
+function filtrarCategoriasChoices() {
+    const tipoSelecionado = document.getElementById('novo_tipo').value;
+    atualizarCoresVisuais();
+
+    // Filtra os itens correspondentes ao tipo selecionado
+    const itensFiltrados = todasOpcoesSubcat.filter(item => item.tipo === tipoSelecionado);
+
+    // Agrupa os itens por Categoria Principal para exibir estruturado no combo
+    let gruposMap = {};
+    itensFiltrados.forEach(item => {
+        if (!gruposMap[item.categoriaNome]) {
+            gruposMap[item.categoriaNome] = [];
+        }
+        gruposMap[item.categoriaNome].push({
+            value: item.value,
+            label: item.subcatNome,
+            selected: false,
+            customProperties: { tipo: item.tipo }
+        });
+    });
+
+    // Formata a estrutura exigida pelo método setChoices para grupos (optgroups)
+    let estruturaChoices = [];
+    estruturaChoices.push({
+        value: '',
+        label: 'Digite para pesquisar categoria ou subcategoria...',
+        selected: true,
+        disabled: true
+    });
+
+    for (let catNome in gruposMap) {
+        estruturaChoices.push({
+            label: `📁 Categoria: ${catNome}`,
+            id: catNome,
+            choices: gruposMap[catNome]
+        });
+    }
+
+    // Atualiza o Choices.js mantendo a pesquisa livre em %livre%
+    if (choicesSubcatModal) {
+        choicesSubcatModal.clearChoices();
+        choicesSubcatModal.setChoices(estruturaChoices, 'value', 'label', false);
+    }
+}
+</script>
 
 <div class="modal fade" id="modalQRCode" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -1246,18 +1512,26 @@ async function editarLancamento(id) {
         }
 
         // 3. Combo Categoria / Subcategoria (Choices.js)
-        const idSub = dados.subcategoria_id || dados.financeiro_conta_financeiro_categoria_id;
+        // Alterne para a propriedade correta que vem do seu JSON do PHP (ex: subcategoria_id ou financeiro_conta_financeiro_subcategoria_id)
+        const idSub = dados.subcategoria_id
+                   || dados.financeiro_conta_financeiro_subcategoria_id
+                   || dados.financeiro_subcategoria_id;
+
         const instCat = (window.instanciasChoices && window.instanciasChoices['edit_categoria_id'])
             ? window.instanciasChoices['edit_categoria_id']
             : null;
 
-        if (instCat && idSub) {
+        if (instCat) {
             instCat.removeActiveItems(); // Limpa a seleção anterior
-            instCat.setChoiceByValue(String(idSub)); // Define a subcategoria correta
+            if (idSub) {
+                instCat.setChoiceByValue(String(idSub)); // Define a subcategoria correta
+            }
 
-            // Garante que o Choices.js renderize o item selecionado ao exibir o modal
+            // Garante que o Choices.js renderize o item correto ao exibir o modal
             modalEl.addEventListener('shown.bs.modal', () => {
-                instCat.setChoiceByValue(String(idSub));
+                if (idSub) {
+                    instCat.setChoiceByValue(String(idSub));
+                }
             }, { once: true });
         }
 
