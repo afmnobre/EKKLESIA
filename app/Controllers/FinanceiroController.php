@@ -118,9 +118,15 @@ class FinanceiroController extends Controller {
 		$membros = $this->model->getMembrosAtivos($igrejaId);
 		$oficiais = $this->model->getOficiaisConferentes($igrejaId);
 
+		// Adicione a busca simples das categorias e subcategorias puras (ajuste os métodos do Model conforme sua estrutura)
+		$categorias_simples = $this->model->getCategorias($igrejaId);
+		$subcategorias_todas = $this->model->getSubcategoriasTodas($igrejaId) ?? []; // Método que traga um select * de subcategorias
+
 		$this->view('financeiro/lancamentos', [
-			'contas_agendadas'      => $contas, // Agora cada conta tem a chave ['membros']
-			'categorias_formatadas' => $categorias,
+			'contas_agendadas'      => $contas,
+			'categorias_formatadas' => $categorias, // Mantém a existente para o modal NOVO
+			'categorias'            => $categorias_simples, // Envia para o edit_categoria_id
+			'subcategorias_todas'   => $subcategorias_todas, // Envia para o edit_subcategoria_id
 			'contas_bancarias'      => $contasBancarias,
 			'membros'               => $membros,
 			'oficiais'              => $oficiais,
@@ -213,29 +219,23 @@ class FinanceiroController extends Controller {
 
 	public function atualizar() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
-		$subcategoriaId = !empty($_POST['subcategoria_id']) ? $_POST['subcategoria_id'] : null;
-		$categoriaId = null;
 
-		// Se uma subcategoria foi selecionada, buscamos a categoria pai dela na tabela
-		if ($subcategoriaId) {
-			$subcatInfo = $this->model->buscarCategoriaPorSubcategoria($subcategoriaId);
-			if ($subcatInfo) {
-				$categoriaId = $subcatInfo['subcategoria_categoria_id'];
-			}
-		}
+		// Captura direta dos dois selects do modal
+		$categoriaId = !empty($_POST['financeiro_conta_financeiro_categoria_id']) ? $_POST['financeiro_conta_financeiro_categoria_id'] : null;
+		$subcategoriaId = !empty($_POST['subcategoria_id']) ? $_POST['subcategoria_id'] : null;
 
 		$data = [
-			'id'                               => $_POST['id'],
-			'igreja_id'                        => $igrejaId,
-			'categoria_id'                     => $categoriaId, // Categoria pai correta
-			'subcategoria_id'                  => $subcategoriaId, // Subcategoria correta
-			'descricao'                        => $_POST['descricao'],
-			'valor'                            => $_POST['valor'],
-			'data_pagamento'                   => $_POST['data_pagamento'],
-			'reembolso'                        => $_POST['reembolso'] ?? 0,
+			'id'                              => $_POST['id'],
+			'igreja_id'                       => $igrejaId,
+			'categoria_id'                    => $categoriaId,
+			'subcategoria_id'                 => $subcategoriaId,
+			'descricao'                       => $_POST['descricao'],
+			'valor'                           => $_POST['valor'],
+			'data_pagamento'                  => $_POST['data_pagamento'],
+			'reembolso'                       => $_POST['reembolso'] ?? 0,
 			'financeiro_conta_financeira_id'   => $_POST['financeiro_conta_financeira_id'],
-			'membros'                          => $_POST['membros'] ?? [],
-			'membros_valores'                  => $_POST['membros_valores'] ?? []
+			'membros'                         => $_POST['membros'] ?? [],
+			'membros_valores'                 => $_POST['membros_valores'] ?? []
 		];
 
 		$sucesso = $this->model->atualizarLancamentoCompleto($data);
@@ -1082,6 +1082,24 @@ class FinanceiroController extends Controller {
 			'saldoCaixaAtual'            => $saldoCaixaAtual,
 			'saldoTotalAtualConsolidado' => $saldoTotalAtualConsolidado
 		]);
+	}
+
+    public function getSubcategorias($categoriaId) {
+		// Garante que o usuário está logado e pega o ID da igreja
+		if (!isset($_SESSION['usuario_igreja_id'])) {
+			echo json_encode([]);
+			exit;
+		}
+
+		$igrejaId = $_SESSION['usuario_igreja_id'];
+
+		// Busca os dados no model
+		$dados = $this->model->getSubcategoriasByCategoria($categoriaId, $igrejaId);
+
+		// Retorna em formato JSON para o Javascript ler
+		header('Content-Type: application/json');
+		echo json_encode($dados);
+		exit;
 	}
 
 

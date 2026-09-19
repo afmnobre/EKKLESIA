@@ -189,11 +189,10 @@ class Financeiro {
 					c.*,
 					cat.financeiro_categoria_nome,
 					sub.subcategoria_nome,
-					-- Este alias precisa ser EXATAMENTE igual ao que o JS procura
 					m.financeiro_movimentacao_financeiro_conta_financeira_id as financeiro_conta_financeira_id
 				FROM financeiro_contas c
 				LEFT JOIN financeiro_categorias cat ON c.financeiro_conta_financeiro_categoria_id = cat.financeiro_categoria_id
-				LEFT JOIN financeiro_subcategorias sub ON c.financeiro_conta_financeiro_categoria_id = sub.subcategoria_id
+				LEFT JOIN financeiro_subcategorias sub ON c.financeiro_conta_financeiro_subcategoria_id = sub.subcategoria_id
 				LEFT JOIN financeiro_movimentacoes m ON m.financeiro_movimentacao_financeiro_conta_id = c.financeiro_conta_id
 					AND m.financeiro_movimentacao_origem = 'pagamento'
 				WHERE c.financeiro_conta_id = ? AND c.financeiro_conta_igreja_id = ?
@@ -328,6 +327,24 @@ class Financeiro {
         $stmt->execute([$subId]);
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
+
+
+	public function getSubcategoriasTodas($igrejaId) {
+		$sql = "SELECT
+					s.*,
+					c.financeiro_categoria_nome,
+					c.financeiro_categoria_tipo
+				FROM financeiro_subcategorias s
+				INNER JOIN financeiro_categorias c ON c.financeiro_categoria_id = s.subcategoria_categoria_id
+				WHERE s.subcategoria_igreja_id = ?
+				  AND c.financeiro_categoria_igreja_id = ?
+				ORDER BY c.financeiro_categoria_nome ASC, s.subcategoria_nome ASC";
+
+		$stmt = $this->db->prepare($sql);
+		// Passamos o $igrejaId duas vezes porque há duas interrogações no WHERE
+		$stmt->execute([$igrejaId, $igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
 
 	public function salvarContaComBaixaOpcional($data) {
 		try {
@@ -548,8 +565,7 @@ class Financeiro {
 							 financeiro_movimentacao_valor = ?,
 							 financeiro_movimentacao_descricao = ?,
 							 financeiro_movimentacao_data = ?
-							 WHERE financeiro_movimentacao_financeiro_conta_id = ?
-							 AND financeiro_movimentacao_origem = 'pagamento'";
+							 WHERE financeiro_movimentacao_financeiro_conta_id = ?";
 
 				$this->db->prepare($sqlUpMov)->execute([
 					$contaFinanceiraNova,
@@ -1331,6 +1347,16 @@ class Financeiro {
 		return (float)($result['saldo_anterior'] ?? 0);
 	}
 
+    public function getSubcategoriasByCategoria($categoriaId, $igrejaId) {
+		$sql = "SELECT *
+				FROM financeiro_subcategorias
+				WHERE subcategoria_categoria_id = ?
+				  AND subcategoria_igreja_id = ?
+				ORDER BY subcategoria_nome ASC";
 
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$categoriaId, $igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
 
 }

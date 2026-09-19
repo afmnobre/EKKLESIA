@@ -207,12 +207,10 @@
 										<i class="bi bi-qr-code-scan"></i>
 									</button>
 
-									<button type="button"
-											class="btn btn-sm btn-outline-primary"
-											onclick="editarLancamento(<?= $c['financeiro_conta_id'] ?>)"
-											title="Editar Lançamento">
-										<i class="bi bi-pencil"></i>
-									</button>
+<!-- Procure o seu botão de editar e deixe o onclick assim: -->
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="abrirModalEdicao(<?= is_array($c) ? $c['financeiro_conta_id'] : $c->financeiro_conta_id ?>)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
 								</div>
 							<?php endif; ?>
 
@@ -270,6 +268,7 @@
 	</div>
 </div>
 
+<!-- Arquivo: Modal de Edição -->
 <div class="modal fade" id="modalEditarLancamento" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -304,7 +303,6 @@
                             <select name="financeiro_conta_financeira_id" id="edit_conta_financeira_id" class="form-select" required>
                                 <?php foreach($contas_bancarias as $cb): ?>
                                     <?php
-                                        // Formata o saldo para exibição (ex: 1.250,50)
                                         $saldoFormatado = number_format($cb['financeiro_conta_financeira_saldo'], 2, ',', '.');
                                     ?>
                                     <option value="<?= $cb['financeiro_conta_financeira_id'] ?>">
@@ -314,20 +312,34 @@
                             </select>
                         </div>
 
-                        <div class="col-md-12">
-                            <label class="form-label fw-bold">Classificação</label>
-							<select name="subcategoria_id" id="edit_categoria_id" class="form-select choice-select-color">
-								<option value="">Digite para pesquisar...</option>
-								<?php if(!empty($categorias_formatadas)): ?>
-									<?php foreach($categorias_formatadas as $cat): ?>
-										<option value="<?= $cat['subcategoria_id'] ?>"
-												data-categoria-pai="<?= $cat['subcategoria_categoria_id'] ?? $cat['financeiro_categoria_id'] ?? '' ?>"
-												data-tipo="<?= $cat['financeiro_categoria_tipo'] ?? 'entrada' ?>">
-											<?= $cat['nome_formatado'] ?>
-										</option>
-									<?php endforeach; ?>
-								<?php endif; ?>
-							</select>
+                        <!-- 1. COMBO DE CATEGORIA -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Categoria</label>
+                            <select name="financeiro_conta_financeiro_categoria_id" id="edit_categoria_id" class="form-select" onchange="carregarSubcategoriasEdit(this.value)" required>
+                                <option value="">Selecione a Categoria...</option>
+                                <?php if(!empty($categorias)): ?>
+                                    <?php foreach($categorias as $cat): ?>
+                                        <option value="<?= $cat['financeiro_categoria_id'] ?>">
+                                            <?= $cat['financeiro_categoria_nome'] ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+
+                        <!-- 2. COMBO DE SUBCATEGORIA -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Subcategoria</label>
+                            <select name="subcategoria_id" id="edit_subcategoria_id" class="form-select" required>
+                                <option value="">Selecione a Subcategoria...</option>
+                                <?php if(!empty($subcategorias_todas)): ?>
+                                    <?php foreach($subcategorias_todas as $sub): ?>
+                                        <option value="<?= $sub['subcategoria_id'] ?>" data-categoria-id="<?= $sub['subcategoria_categoria_id'] ?>">
+                                            <?= $sub['subcategoria_nome'] ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
                         </div>
 
                         <div id="areaRateioEdicao" class="col-12 d-none">
@@ -339,7 +351,7 @@
                                 </button>
                             </div>
                             <div id="listaMembrosEdicao" class="border rounded p-3 bg-light">
-                                </div>
+                            </div>
                             <div class="text-end mt-2">
                                 <span class="small fw-bold">Restante: </span>
                                 <span id="labelRestanteEdicao" class="badge bg-success">R$ 0,00</span>
@@ -599,6 +611,43 @@ function filtrarCategoriasChoices() {
         choicesSubcatModal.setChoices(estruturaChoices, 'value', 'label', false);
     }
 }
+
+
+async function carregarSubcategoriasEdit(categoriaId) {
+    const comboSub = document.getElementById('edit_subcategoria_id');
+
+    if (!categoriaId) {
+        comboSub.innerHTML = '<option value="">Selecione uma Categoria primeiro</option>';
+        return;
+    }
+
+    comboSub.innerHTML = '<option value="">Carregando...</option>';
+
+    try {
+        // Usa a mesma rota que criamos no passo anterior
+        const res = await fetch("<?= url('financeiro/getSubcategorias/') ?>" + categoriaId);
+
+        if (res.ok) {
+            const subcategorias = await res.json();
+            comboSub.innerHTML = '<option value="">Selecione a Subcategoria</option>';
+
+            // Popula usando os nomes exatos das colunas do seu banco
+            subcategorias.forEach(sub => {
+                const opt = document.createElement('option');
+                opt.value = sub.subcategoria_id;
+                opt.textContent = sub.subcategoria_nome;
+                comboSub.appendChild(opt);
+            });
+        } else {
+            comboSub.innerHTML = '<option value="">Erro na resposta do servidor</option>';
+        }
+    } catch (error) {
+        console.error("Erro ao atualizar subcategorias:", error);
+        comboSub.innerHTML = '<option value="">Erro ao carregar</option>';
+    }
+}
+
+
 </script>
 
 <div class="modal fade" id="modalQRCode" tabindex="-1" aria-hidden="true">
@@ -1283,68 +1332,142 @@ function executarUploadManual(botao) {
     });
 }
 
+function filtrarSubcategoriasEdicao(subcategoriaIdParaSelecionar = null) {
+    const comboCat = document.getElementById('edit_categoria_id');
+    const comboSub = document.getElementById('edit_subcategoria_id');
 
-	function executarUploadAsync(botao) {
-		// Busca o formulário pai deste botão específico
-		const form = botao.closest('.form-upload-membro');
-		if (!form) return;
+    if (!comboCat || !comboSub) return;
 
-		// Busca o input de arquivo dentro DESTE formulário
-		const inputArquivo = form.querySelector('.input-arquivo-membro');
-		const membroId = form.querySelector('input[name="membro_id"]').value;
+    const idCatSelecionada = String(comboCat.value);
 
-		if (!inputArquivo || inputArquivo.files.length === 0) {
-			Swal.fire('Atenção', 'Selecione um arquivo para este membro.', 'warning');
-			return;
-		}
+    // Oculta/Mostra as subcategorias com base na categoria pai
+    Array.from(comboSub.options).forEach(opt => {
+        if (opt.value === "") return; // Ignora a opção "Selecione..."
 
-		// Cria o FormData APENAS com os dados deste formulário
-		const formData = new FormData(form);
+        const catIdDaSub = String(opt.getAttribute('data-categoria-id'));
 
-		// Feedback visual no botão
-		const iconOriginal = botao.innerHTML;
-		botao.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-		botao.disabled = true;
+        if (catIdDaSub === idCatSelecionada) {
+            opt.style.display = '';
+            opt.hidden = false;
+        } else {
+            opt.style.display = 'none';
+            opt.hidden = true;
+        }
+    });
 
-		fetch(form.action, {
-			method: 'POST',
-			body: formData,
-			headers: { 'X-Requested-With': 'XMLHttpRequest' }
-		})
-		.then(response => response.json())
-		.then(data => {
-			if (data.success) {
-				Swal.fire({
-					icon: 'success',
-					title: 'Sucesso!',
-					text: 'Upload concluído para este membro.',
-					timer: 1500,
-					showConfirmButton: false
-				}).then(() => {
-					// Em vez de atualizar o HTML manualmente e arriscar erro de JS,
-					// vamos recarregar para garantir que o banco e a tela estejam iguais.
-					location.reload();
-				});
-			} else {
-				Swal.fire('Erro', data.message, 'error');
-				botao.innerHTML = iconOriginal;
-				botao.disabled = false;
-			}
-		})
-		.catch(error => {
-			console.error('Erro:', error);
-			Swal.fire('Erro', 'Falha na comunicação com o servidor.', 'error');
-			botao.innerHTML = iconOriginal;
-			botao.disabled = false;
-		});
-	}
-
-// Recarregar se houve mudanças
-document.getElementById('modalAnexo').addEventListener('hidden.bs.modal', function () {
-    if (this.getAttribute('data-refresh') === 'true') {
-        location.reload();
+    // Se a função recebeu um ID (veio do banco na edição), seleciona ele. Senão, limpa.
+    if (subcategoriaIdParaSelecionar !== null && subcategoriaIdParaSelecionar !== undefined && subcategoriaIdParaSelecionar !== "") {
+        comboSub.value = String(subcategoriaIdParaSelecionar);
+    } else {
+        comboSub.value = "";
     }
-});
+}
+
+async function abrirModalEdicao(id) {
+    try {
+        const modalEl = document.getElementById('modalEditarLancamento');
+        if (!modalEl || !id) return;
+
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        // 1. Busca os dados completos no backend (usando seu Model com os JOINs)
+        const response = await fetch("<?= url('financeiro/getContaJson/') ?>" + id);
+        if (!response.ok) throw new Error("Erro ao buscar dados no servidor");
+        const conta = await response.json();
+
+        // 2. Campos básicos
+        document.getElementById('edit_id').value = conta.financeiro_conta_id;
+        document.getElementById('edit_descricao').value = conta.financeiro_conta_descricao;
+        document.getElementById('edit_valor').value = conta.financeiro_conta_valor;
+
+        const dataRef = conta.financeiro_conta_data_pagamento || conta.financeiro_conta_data_vencimento;
+        if (dataRef && dataRef !== '0000-00-00') {
+            document.getElementById('edit_data_pagamento').value = dataRef.substring(0, 10);
+        }
+
+        // 3. Conta Bancária / Caixa (veio do alias 'financeiro_conta_financeira_id' no JOIN)
+        const comboBanco = document.getElementById('edit_conta_financeira_id');
+        if (comboBanco && conta.financeiro_conta_financeira_id) {
+            comboBanco.value = conta.financeiro_conta_financeira_id;
+        }
+
+        // 4. Preenchimento de Categoria e Subcategoria
+        const comboCat = document.getElementById('edit_categoria_id');
+        const comboSub = document.getElementById('edit_subcategoria_id');
+
+        if (comboCat && conta.financeiro_conta_financeiro_categoria_id) {
+            // 4.1 Seta a categoria principal
+            comboCat.value = conta.financeiro_conta_financeiro_categoria_id;
+
+            // 4.2 Limpa o combo de subcategorias enquanto carrega e mostra um aviso
+            if (comboSub) {
+                comboSub.innerHTML = '<option value="">Carregando...</option>';
+
+                try {
+                    // 4.3 Faz a requisição no banco para buscar as subcategorias dessa categoria
+                    // ATENÇÃO: Ajuste a URL abaixo para a exata rota que você usa no seu sistema para listar as subcategorias
+                    const resSub = await fetch("<?= url('financeiro/getSubcategorias/') ?>" + conta.financeiro_conta_financeiro_categoria_id);
+
+                    if (resSub.ok) {
+                        const subcategorias = await resSub.json();
+                        comboSub.innerHTML = '<option value="">Selecione a Subcategoria</option>';
+
+                        // 4.4 Cria as <option> dinamicamente
+                        subcategorias.forEach(sub => {
+                            const opt = document.createElement('option');
+                            opt.value = sub.subcategoria_id;
+                            // Usa o nome da coluna conforme sua modelagem padrão
+                            opt.textContent = sub.subcategoria_nome;
+                            comboSub.appendChild(opt);
+                        });
+
+                        // 4.5 Agora sim, com as <option> criadas na tela, setamos o valor que veio do banco de dados!
+                        if (conta.financeiro_conta_financeiro_subcategoria_id) {
+                            comboSub.value = conta.financeiro_conta_financeiro_subcategoria_id;
+                        }
+                    }
+                } catch (errorSub) {
+                    console.error("Erro ao buscar subcategorias:", errorSub);
+                    comboSub.innerHTML = '<option value="">Erro ao carregar</option>';
+                }
+            }
+        }
+
+        // 5. Rateio por Membros (Entradas)
+        const areaRateio = document.getElementById('areaRateioEdicao');
+        const lista = document.getElementById('listaMembrosEdicao');
+        if (lista) lista.innerHTML = "";
+
+        if (conta.financeiro_conta_tipo === 'entrada') {
+            if (areaRateio) areaRateio.classList.remove('d-none');
+
+            const resRateio = await fetch("<?= url('financeiro/getRateio/') ?>" + conta.financeiro_conta_id);
+            if (resRateio.ok) {
+                const membros = await resRateio.json();
+                if (membros && membros.length > 0) {
+                    membros.forEach(m => {
+                        if (typeof adicionarMembroEdicao === 'function') {
+                            adicionarMembroEdicao(m.receita_membro_usuario_id, m.receita_membro_valor);
+                        }
+                    });
+                }
+                if (typeof recalcularRateioEdicao === 'function') {
+                    recalcularRateioEdicao();
+                }
+            }
+        } else {
+            if (areaRateio) areaRateio.classList.add('d-none');
+            const btnSalvar = document.getElementById('btnSalvarEdicao');
+            if (btnSalvar) btnSalvar.disabled = false;
+        }
+
+        modal.show();
+
+    } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        alert("Erro ao processar dados do lançamento.");
+    }
+}
 
 function abrirModalRelatorioConferencia() {
     new bootstrap.Modal(document.getElementById('modalRelatorioConferencia')).show();
@@ -1512,7 +1635,10 @@ async function editarLancamento(id) {
         }
 
         // 3. Combo Categoria / Subcategoria (Choices.js)
-        // Alterne para a propriedade correta que vem do seu JSON do PHP (ex: subcategoria_id ou financeiro_conta_financeiro_subcategoria_id)
+        const idCat = dados.categoria_id
+                   || dados.financeiro_conta_financeiro_categoria_id
+                   || dados.financeiro_categoria_id;
+
         const idSub = dados.subcategoria_id
                    || dados.financeiro_conta_financeiro_subcategoria_id
                    || dados.financeiro_subcategoria_id;
@@ -1521,19 +1647,35 @@ async function editarLancamento(id) {
             ? window.instanciasChoices['edit_categoria_id']
             : null;
 
-        if (instCat) {
-            instCat.removeActiveItems(); // Limpa a seleção anterior
-            if (idSub) {
-                instCat.setChoiceByValue(String(idSub)); // Define a subcategoria correta
-            }
+        const instSub = (window.instanciasChoices && window.instanciasChoices['edit_subcategoria_id'])
+            ? window.instanciasChoices['edit_subcategoria_id']
+            : null;
 
-            // Garante que o Choices.js renderize o item correto ao exibir o modal
-            modalEl.addEventListener('shown.bs.modal', () => {
-                if (idSub) {
-                    instCat.setChoiceByValue(String(idSub));
-                }
-            }, { once: true });
+        if (instCat) {
+            instCat.removeActiveItems();
+            if (idCat) {
+                instCat.setChoiceByValue(String(idCat));
+                // Chama a função para carregar as subcategorias correspondentes à categoria selecionada
+                carregarSubcategoriasEdit(idCat);
+            }
         }
+
+        if (instSub) {
+            instSub.removeActiveItems();
+            // Um pequeno delay pode ser necessário caso as subcategorias sejam carregadas via Ajax no carregarSubcategoriasEdit
+            setTimeout(() => {
+                if (idSub) {
+                    instSub.setChoiceByValue(String(idSub));
+                }
+            }, 300);
+        }
+
+        modalEl.addEventListener('shown.bs.modal', () => {
+            if (instCat && idCat) instCat.setChoiceByValue(String(idCat));
+            setTimeout(() => {
+                if (instSub && idSub) instSub.setChoiceByValue(String(idSub));
+            }, 300);
+        }, { once: true });
 
         // 4. Lógica de Rateio por Membros
         const areaRateio = document.getElementById('areaRateioEdicao');
