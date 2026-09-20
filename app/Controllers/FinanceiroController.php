@@ -201,8 +201,8 @@ class FinanceiroController extends Controller {
 				'tipo'         => $tipo,
 				'vencimento'   => $_POST['vencimento'],
 				'pago'         => ($statusBaixa === 'baixado') ? 1 : 0,
-				'data_pagamento' => ($statusBaixa === 'baixado') ? ($_POST['data_pagamento'] ?? date('Y-m-d')) : null,
-				'reembolso'    => 0,
+                'data_pagamento' => ($statusBaixa === 'baixado') ? ($_POST['data_pagamento'] ?? date('Y-m-d')) : null,
+                'reembolso'    => !empty($_POST['reembolso']) ? 1 : 0,
 				'comprovante'  => $comprovanteNome,
 				// Dados extras para baixa imediata
 				'baixar_agora' => ($statusBaixa === 'baixado'),
@@ -214,6 +214,34 @@ class FinanceiroController extends Controller {
 			} else {
 				header("Location: " . url('financeiro/lancamentos') . "?erro=falha_salvar");
 			}
+		}
+	}
+
+    public function excluir() {
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$contaId = !empty($_POST['conta_id']) ? intval($_POST['conta_id']) : null;
+			$justificativa = !empty($_POST['justificativa']) ? trim($_POST['justificativa']) : null;
+
+			// Ajustado para usar a mesma chave de sessão do seu sistema
+			$igrejaId = $_SESSION['usuario_igreja_id'] ?? null;
+			$usuarioId = $_SESSION['usuario_id'] ?? null;
+
+			if ($contaId && $justificativa && $igrejaId) {
+				$sucesso = $this->model->excluirLancamento($contaId, $justificativa, $igrejaId, $usuarioId);
+
+				if ($sucesso) {
+					// Cabeçalho para garantir que a resposta seja interpretada como JSON
+					header('Content-Type: application/json');
+					echo json_encode(['status' => 'sucesso', 'mensagem' => 'Lançamento excluído e valores estornados com sucesso.']);
+				} else {
+					header('Content-Type: application/json');
+					echo json_encode(['status' => 'erro', 'mensagem' => 'Erro ao excluir o lançamento no banco de dados.']);
+				}
+			} else {
+				header('Content-Type: application/json');
+				echo json_encode(['status' => 'erro', 'mensagem' => 'A justificativa é obrigatória para a exclusão ou sessão inválida.']);
+			}
+			exit;
 		}
 	}
 
@@ -232,7 +260,7 @@ class FinanceiroController extends Controller {
 			'descricao'                       => $_POST['descricao'],
 			'valor'                           => $_POST['valor'],
 			'data_pagamento'                  => $_POST['data_pagamento'],
-			'reembolso'                       => $_POST['reembolso'] ?? 0,
+            'reembolso'                       => !empty($_POST['reembolso']) ? 1 : 0,
 			'financeiro_conta_financeira_id'   => $_POST['financeiro_conta_financeira_id'],
 			'membros'                         => $_POST['membros'] ?? [],
 			'membros_valores'                 => $_POST['membros_valores'] ?? []
@@ -742,12 +770,10 @@ class FinanceiroController extends Controller {
 		]);
 	}
 
-	public function exportar_excel_dashboard() {
+    public function exportar_excel_dashboard() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
 		$ano = date('Y');
 
-		// 1. Instancia o Model (ajuste conforme seu framework se necessário)
-		// Se estiver dentro do Controller Financeiro, geralmente é $this->financeiroModel ou similar
 		$relatorio = $this->model->getFluxoAnualPorCategorias($igrejaId, $ano);
 		$contas = $this->model->getContasBancarias($igrejaId);
 		$mesesNomes = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
@@ -781,26 +807,30 @@ class FinanceiroController extends Controller {
 		echo "      <th>TOTAL GERAL</th>
 				</tr>";
 
-		if(isset($relatorio['entrada'])) {
+		if(!empty($relatorio['entrada']) && is_array($relatorio['entrada'])) {
 			foreach($relatorio['entrada'] as $cat) {
-				$totalAnualCat = array_sum($cat['meses']);
+				$mesesCat = $cat['meses'] ?? [];
+				$totalAnualCat = array_sum($mesesCat);
 				echo "<tr>
 						<td style='font-weight:bold; background-color: #f8fff9;'>{$cat['nome']}</td>";
-						foreach($cat['meses'] as $valor) {
+						foreach($mesesCat as $valor) {
 							echo "<td align='right'>" . number_format($valor, 2, ',', '.') . "</td>";
 						}
 				echo "  <td align='right' class='total-linha'>" . number_format($totalAnualCat, 2, ',', '.') . "</td>
 					  </tr>";
 
-				// Subcategorias
-				foreach($cat['subcategorias'] as $sub) {
-					echo "<tr>
-							<td class='subcategoria'>&nbsp;&nbsp;&nbsp;{$sub['nome']}</td>";
-							foreach($sub['meses'] as $vSub) {
-								echo "<td align='right' style='color:#666; font-size: 0.9em;'>" . number_format($vSub, 2, ',', '.') . "</td>";
-							}
-					echo "  <td align='right' style='color:#666;'>" . number_format(array_sum($sub['meses']), 2, ',', '.') . "</td>
-						  </tr>";
+				// Subcategorias (verificação adicionada para evitar Warning)
+				if(!empty($cat['subcategorias']) && is_array($cat['subcategorias'])) {
+					foreach($cat['subcategorias'] as $sub) {
+						$mesesSub = $sub['meses'] ?? [];
+						echo "<tr>
+								<td class='subcategoria'>&nbsp;&nbsp;&nbsp;{$sub['nome']}</td>";
+								foreach($mesesSub as $vSub) {
+									echo "<td align='right' style='color:#666; font-size: 0.9em;'>" . number_format($vSub, 2, ',', '.') . "</td>";
+								}
+						echo "  <td align='right' style='color:#666;'>" . number_format(array_sum($mesesSub), 2, ',', '.') . "</td>
+							  </tr>";
+					}
 				}
 			}
 		}
@@ -815,26 +845,30 @@ class FinanceiroController extends Controller {
 		echo "      <th>TOTAL GERAL</th>
 				</tr>";
 
-		if(isset($relatorio['saida'])) {
+		if(!empty($relatorio['saida']) && is_array($relatorio['saida'])) {
 			foreach($relatorio['saida'] as $cat) {
-				$totalAnualCat = array_sum($cat['meses']);
+				$mesesCat = $cat['meses'] ?? [];
+				$totalAnualCat = array_sum($mesesCat);
 				echo "<tr>
 						<td style='font-weight:bold; background-color: #fff9f9;'>{$cat['nome']}</td>";
-						foreach($cat['meses'] as $valor) {
+						foreach($mesesCat as $valor) {
 							echo "<td align='right'>" . number_format($valor, 2, ',', '.') . "</td>";
 						}
 				echo "  <td align='right' class='total-linha'>" . number_format($totalAnualCat, 2, ',', '.') . "</td>
 					  </tr>";
 
-				// Subcategorias
-				foreach($cat['subcategorias'] as $sub) {
-					echo "<tr>
-							<td class='subcategoria'>&nbsp;&nbsp;&nbsp;{$sub['nome']}</td>";
-							foreach($sub['meses'] as $vSub) {
-								echo "<td align='right' style='color:#666; font-size: 0.9em;'>" . number_format($vSub, 2, ',', '.') . "</td>";
-							}
-					echo "  <td align='right' style='color:#666;'>" . number_format(array_sum($sub['meses']), 2, ',', '.') . "</td>
-						  </tr>";
+				// Subcategorias (verificação adicionada para evitar Warning)
+				if(!empty($cat['subcategorias']) && is_array($cat['subcategorias'])) {
+					foreach($cat['subcategorias'] as $sub) {
+						$mesesSub = $sub['meses'] ?? [];
+						echo "<tr>
+								<td class='subcategoria'>&nbsp;&nbsp;&nbsp;{$sub['nome']}</td>";
+								foreach($mesesSub as $vSub) {
+									echo "<td align='right' style='color:#666; font-size: 0.9em;'>" . number_format($vSub, 2, ',', '.') . "</td>";
+								}
+						echo "  <td align='right' style='color:#666;'>" . number_format(array_sum($mesesSub), 2, ',', '.') . "</td>
+							  </tr>";
+					}
 				}
 			}
 		}
@@ -844,12 +878,15 @@ class FinanceiroController extends Controller {
 		echo "<table border='1'>
 				<tr><th colspan='3' style='background-color:#343a40; color:#ffffff;'>DISPONIBILIDADE POR CONTA</th></tr>
 				<tr><th>Conta</th><th>Tipo</th><th>Saldo Atual</th></tr>";
-		foreach($contas as $c) {
-			echo "<tr>
-					<td>{$c['financeiro_conta_financeira_nome']}</td>
-					<td>{$c['financeiro_conta_financeira_tipo']}</td>
-					<td align='right'>R$ " . number_format($c['financeiro_conta_financeira_saldo'], 2, ',', '.') . "</td>
-				  </tr>";
+
+		if(!empty($contas) && is_array($contas)) {
+			foreach($contas as $c) {
+				echo "<tr>
+						<td>{$c['financeiro_conta_financeira_nome']}</td>
+						<td>{$c['financeiro_conta_financeira_tipo']}</td>
+						<td align='right'>R$ " . number_format($c['financeiro_conta_financeira_saldo'], 2, ',', '.') . "</td>
+					  </tr>";
+			}
 		}
 		echo "</table>";
 

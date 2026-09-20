@@ -346,6 +346,71 @@ class Financeiro {
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
 
+    public function excluirLancamento($contaId, $justificativa, $igrejaId, $usuarioId) {
+		try {
+			$this->db->beginTransaction();
+
+			// 1. Busca a conta original para saber o tipo (entrada/saida) e se foi paga
+			$sqlConta = "SELECT * FROM financeiro_contas WHERE financeiro_conta_id = ? AND financeiro_conta_igreja_id = ?";
+			$stmt = $this->db->prepare($sqlConta);
+			$stmt->execute([$contaId, $igrejaId]);
+			$conta = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+			if (!$conta) {
+				throw new \Exception("Lançamento não encontrado.");
+			}
+
+			// 2. Se a conta foi paga/baixada, precisamos estornar o saldo e limpar tabelas filhas
+			if ($conta['financeiro_conta_pago'] == 1) {
+
+				// Busca os pagamentos vinculados para saber de qual conta bancária/caixa estornar
+				$sqlPag = "SELECT * FROM financeiro_pagamentos WHERE financeiro_pagamento_financeiro_conta_id = ?";
+				$stmtPag = $this->db->prepare($sqlPag);
+				$stmtPag->execute([$contaId]);
+				$pagamentos = $stmtPag->fetchAll(\PDO::FETCH_ASSOC);
+
+				foreach ($pagamentos as $pag) {
+					// Inverte o operador: Se era Entrada (+), agora tira (-). Se era Saída (-), agora devolve (+)
+					$operador = ($conta['financeiro_conta_tipo'] == 'entrada') ? '-' : '+';
+
+					$sqlSaldo = "UPDATE financeiro_contas_financeiras
+								 SET financeiro_conta_financeira_saldo = financeiro_conta_financeira_saldo $operador ?
+								 WHERE financeiro_conta_financeira_id = ? AND financeiro_conta_financeira_igreja_id = ?";
+					$this->db->prepare($sqlSaldo)->execute([
+						$pag['financeiro_pagamento_valor'],
+						$pag['financeiro_pagamento_conta_financeira_id'],
+						$igrejaId
+					]);
+				}
+
+				// A. Deleta do Extrato (Movimentações)
+				$this->db->prepare("DELETE FROM financeiro_movimentacoes WHERE financeiro_movimentacao_financeiro_conta_id = ?")->execute([$contaId]);
+
+				// B. Deleta os Pagamentos detalhados
+				$this->db->prepare("DELETE FROM financeiro_pagamentos WHERE financeiro_pagamento_financeiro_conta_id = ?")->execute([$contaId]);
+			}
+
+			// 3. Deleta vínculo de receitas de membros (caso seja dízimo/oferta para não deixar registro orfão)
+			$this->db->prepare("DELETE FROM financeiro_receita_membros WHERE receita_membro_conta_id = ?")->execute([$contaId]);
+
+			// 4. Deleta a conta principal
+			$this->db->prepare("DELETE FROM financeiro_contas WHERE financeiro_conta_id = ?")->execute([$contaId]);
+
+			// 5. Registra o log da exclusão
+			$sqlLog = "INSERT INTO financeiro_logs (log_igreja_id, log_conta_id, log_acao, log_justificativa, log_usuario_id)
+					   VALUES (?, ?, 'exclusao', ?, ?)";
+			$this->db->prepare($sqlLog)->execute([$igrejaId, $contaId, $justificativa, $usuarioId]);
+
+			$this->db->commit();
+			return true;
+		} catch (\Exception $e) {
+			$this->db->rollBack();
+			return false;
+		}
+	}
+
+
+
 	public function salvarContaComBaixaOpcional($data) {
 		try {
 			$this->db->beginTransaction();

@@ -116,22 +116,22 @@
 							<th class="text-end pe-4">Ações</th>
 						</tr>
 					</thead>
-					<tbody>
-						<?php foreach($contas_agendadas as $c):
+                    <tbody>
+						<?php
+						// 1. Helper closure para renderizar as linhas de lançamentos sem duplicar HTML/Ações
+						$renderLinha = function($c, $extraClass = '') {
 							$hoje = date('Y-m-d');
 							$atrasado = ($c['financeiro_conta_data_vencimento'] < $hoje && !$c['financeiro_conta_pago']);
-
-							// Verifica se existe data de pagamento válida
 							$dataPagamento = (!empty($c['financeiro_conta_data_pagamento']) && $c['financeiro_conta_data_pagamento'] != '0000-00-00')
 											 ? date('d/m/Y', strtotime($c['financeiro_conta_data_pagamento']))
 											 : null;
 						?>
-						<tr>
+						<tr class="<?= $extraClass ?>">
 							<td class="ps-4 <?= $atrasado ? 'text-danger fw-bold' : '' ?>">
 								<?= date('d/m/Y', strtotime($c['financeiro_conta_data_vencimento'])) ?>
 							</td>
 							<td>
-								<span class="d-block fw-bold text-dark"><?= $c['financeiro_conta_descricao'] ?></span>
+								<span class="d-block fw-bold text-dark"><?= htmlspecialchars($c['financeiro_conta_descricao'] ?? '') ?></span>
 								<?php if (!empty($c['membros']) && is_array($c['membros'])): ?>
 									<small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
 										<i class="bi bi-person-fill text-primary me-1"></i>
@@ -164,73 +164,79 @@
 							</td>
 
 							<td class="text-end pe-4">
+								<?php if($c['financeiro_conta_pago']): ?>
+									<div class="btn-group">
+										<!-- BOTÃO DE REEMBOLSO PARA CONTAS JÁ PAGAS -->
+										<?php if (strtolower($c['financeiro_conta_tipo'] ?? '') == 'saida' && ($c['financeiro_conta_reembolso'] ?? 0) == 1): ?>
+											<a href="<?= url('financeiro/gerar_recibo_reembolso/' . $c['financeiro_conta_id']) ?>"
+											   target="_blank"
+											   class="btn btn-sm btn-outline-success"
+											   title="Gerar Recibo de Reembolso">
+												<i class="bi bi-file-earmark-pdf"></i>
+											</a>
+										<?php endif; ?>
 
-							<?php if($c['financeiro_conta_pago']): ?>
-								<div class="btn-group">
-									<?php
-										// Usamos json_encode para que o JS receba a string limpa e segura
-										$arqComp = json_encode($c['financeiro_conta_comprovante'] ?? '');
-										$arqNF = json_encode($c['financeiro_conta_nota_fiscal'] ?? '');
+										<?php
+											$arqComp = json_encode($c['financeiro_conta_comprovante'] ?? '');
+											$arqNF = json_encode($c['financeiro_conta_nota_fiscal'] ?? '');
 
-										// 1. Verifica comprovante no lançamento principal
-										$temComprovante = !empty($c['financeiro_conta_comprovante']);
-
-										// 2. Se não tem no principal, verifica se algum membro do rateio tem comprovante anexado
-										if (!$temComprovante && !empty($c['membros']) && is_array($c['membros'])) {
-											foreach ($c['membros'] as $membro) {
-												if (!empty($membro['receita_membro_comprovante'])) {
-													$temComprovante = true;
-													break;
+											$temComprovante = !empty($c['financeiro_conta_comprovante']);
+											if (!$temComprovante && !empty($c['membros']) && is_array($c['membros'])) {
+												foreach ($c['membros'] as $membro) {
+													if (!empty($membro['receita_membro_comprovante'])) {
+														$temComprovante = true;
+														break;
+													}
 												}
 											}
-										}
+											$temNotaFiscal = !empty($c['financeiro_conta_nota_fiscal']);
+										?>
+										<button type="button"
+												class="btn btn-sm <?= $temComprovante ? 'btn-success text-white' : 'btn-outline-secondary text-secondary' ?>"
+												onclick='abrirModalAnexo(<?= json_encode($c) ?>, "comprovante")'
+												title="Comprovante">
+											<i class="bi bi-receipt"></i>
+										</button>
 
-										$temNotaFiscal = !empty($c['financeiro_conta_nota_fiscal']);
-									?>
-									<button type="button"
-											class="btn btn-sm <?= $temComprovante ? 'btn-success text-white' : 'btn-outline-secondary text-secondary' ?>"
-											onclick='abrirModalAnexo(<?= json_encode($c) ?>, "comprovante")'
-											title="Comprovante">
-										<i class="bi bi-receipt"></i>
-									</button>
+										<button type="button"
+												class="btn btn-sm <?= $temNotaFiscal ? 'btn-info text-white' : 'btn-outline-secondary text-secondary' ?>"
+												onclick='abrirModalAnexo(<?= json_encode($c) ?>, "notafiscal")'
+												title="Nota Fiscal">
+											<i class="bi bi-file-earmark-text"></i>
+										</button>
 
-									<button type="button"
-											class="btn btn-sm <?= $temNotaFiscal ? 'btn-info text-white' : 'btn-outline-secondary text-secondary' ?>"
-											onclick='abrirModalAnexo(<?= json_encode($c) ?>, "notafiscal")'
-											title="Nota Fiscal">
-										<i class="bi bi-file-earmark-text"></i>
-									</button>
+										<button type="button" class="btn btn-sm btn-outline-primary"
+											onclick="abrirModalQR('<?= $c['financeiro_conta_id'] ?>', 'comprovante')"
+											title="Upload via Celular">
+											<i class="bi bi-qr-code-scan"></i>
+										</button>
 
-									<button type="button" class="btn btn-sm btn-outline-primary"
-										onclick="abrirModalQR('<?= $c['financeiro_conta_id'] ?>', 'comprovante')"
-										title="Upload via Celular">
-										<i class="bi bi-qr-code-scan"></i>
-									</button>
+										<button type="button" class="btn btn-sm btn-primary" onclick="abrirModalEdicao(<?= is_array($c) ? $c['financeiro_conta_id'] : $c->financeiro_conta_id ?>)" title="Editar Lançamento">
+											<i class="bi bi-pencil"></i>
+										</button>
 
-<!-- Procure o seu botão de editar e deixe o onclick assim: -->
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="abrirModalEdicao(<?= is_array($c) ? $c['financeiro_conta_id'] : $c->financeiro_conta_id ?>)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-								</div>
-							<?php endif; ?>
+										<button type="button" class="btn btn-sm btn-danger" onclick="abrirModalExclusao(<?= is_array($c) ? $c['financeiro_conta_id'] : $c->financeiro_conta_id ?>)" title="Excluir Lançamento">
+											<i class="bi bi-trash"></i>
+										</button>
+									</div>
+								<?php else: ?>
+									<div class="btn-group">
+										<!-- BOTÃO DE REEMBOLSO -->
+										<?php if (strtolower($c['financeiro_conta_tipo'] ?? '') == 'saida' && ($c['financeiro_conta_reembolso'] ?? 0) == 1): ?>
+											<a href="<?= url('financeiro/gerar_recibo_reembolso/' . $c['financeiro_conta_id']) ?>"
+											   target="_blank"
+											   class="btn btn-sm btn-outline-success"
+											   title="Gerar Recibo de Reembolso">
+												<i class="bi bi-file-earmark-pdf"></i>
+											</a>
+										<?php endif; ?>
 
-
-								<div class="btn-group">
-									<?php if($c['financeiro_conta_tipo'] == 'saida' && isset($c['financeiro_conta_reembolso']) && $c['financeiro_conta_reembolso'] == 1): ?>
-										<a href="<?= url('financeiro/gerar_recibo_reembolso/'.$c['financeiro_conta_id']) ?>"
-										   target="_blank"
-										   class="btn btn-sm btn-outline-success"
-										   title="Gerar Recibo de Reembolso">
-											<i class="bi bi-file-earmark-pdf"></i>
-										</a>
-									<?php endif; ?>
-									<?php if(!$c['financeiro_conta_pago']): ?>
 										<button class="btn btn-sm btn-success px-3" title="Dar Baixa"
 												onclick="pagarConta(<?= $c['financeiro_conta_id'] ?>, <?= $c['financeiro_conta_valor'] ?>)">
 											<i class="bi bi-check2-circle"></i>
 										</button>
 
-										<?php if($c['financeiro_conta_tipo'] == 'entrada'):
+										<?php if ($c['financeiro_conta_tipo'] == 'entrada'):
 											$subId = $c['financeiro_conta_financeiro_subcategoria_id']
 													 ?? $c['financeiro_subcategoria_id']
 													 ?? $c['financeiro_conta_financeiro_categoria_id']
@@ -247,19 +253,114 @@
 											<i class="bi bi-pencil"></i>
 										</button>
 
-										<a href="<?= url('financeiro/excluir_lancamento/'.$c['financeiro_conta_id']) ?>"
+										<a href="<?= url('financeiro/excluir_lancamento/' . $c['financeiro_conta_id']) ?>"
 										   class="btn btn-sm btn-outline-danger" title="Excluir"
 										   onclick="return confirm('Tem certeza que deseja excluir este agendamento?')">
 											<i class="bi bi-trash"></i>
 										</a>
-									<?php else: ?>
-										<span class="badge bg-light text-muted border py-2 px-3">
-											<i class="bi bi-lock-fill me-1"></i> Conciliado
-										</span>
-									<?php endif; ?>
-								</div>
+									</div>
+								<?php endif; ?>
 							</td>
 						</tr>
+						<?php
+						};
+
+						// 2. Agrupamento dos lançamentos por data de vencimento
+						$agrupadoPorDia = [];
+						if (!empty($contas_agendadas)) {
+							foreach ($contas_agendadas as $c) {
+								$data = $c['financeiro_conta_data_vencimento'] ?? '0000-00-00';
+								$agrupadoPorDia[$data][] = $c;
+							}
+						}
+
+						// 3. Renderização agrupada por dia com Collapse para Dízimos e Ofertas
+						foreach ($agrupadoPorDia as $dataVenc => $itensDoDia):
+							$dataSlug = str_replace('-', '_', $dataVenc);
+
+							$dizimos = [];
+							$ofertas = [];
+							$outros  = [];
+
+							foreach ($itensDoDia as $item) {
+								$catId = $item['financeiro_conta_financeiro_categoria_id'] ?? $item['financeiro_categoria_id'] ?? 0;
+								$subId = $item['financeiro_conta_financeiro_subcategoria_id'] ?? $item['financeiro_subcategoria_id'] ?? $item['subcategoria_id'] ?? 0;
+
+								if ($catId == 1 && $subId == 1) {
+									$dizimos[] = $item;
+								} elseif ($catId == 1 && $subId == 2) {
+									$ofertas[] = $item;
+								} else {
+									$outros[] = $item;
+								}
+							}
+						?>
+
+							<!-- AGRUPAMENTO DE DÍZIMOS -->
+							<?php if (!empty($dizimos)):
+								$totalDizimos = array_sum(array_column($dizimos, 'financeiro_conta_valor'));
+								$collapseDizimosId = 'collapse_dizimos_' . $dataSlug;
+							?>
+								<tr class="table-primary-subtle fw-bold" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target=".<?= $collapseDizimosId ?>">
+									<td class="ps-4">
+										<i class="bi bi-chevron-expand me-2 text-primary"></i>
+										<?= date('d/m/Y', strtotime($dataVenc)) ?>
+									</td>
+									<td>
+										<span class="badge bg-primary text-white me-2"><i class="bi bi-heart-fill me-1"></i> Dízimos</span>
+										<small class="text-muted fw-normal">(<?= count($dizimos) ?> item(s))</small>
+									</td>
+									<td><small class="text-muted">Total Dízimos do Dia</small></td>
+									<td class="fw-bold text-success">
+										R$ <?= number_format($totalDizimos, 2, ',', '.') ?>
+									</td>
+									<td><span class="badge bg-light text-dark border">Agrupado</span></td>
+									<td class="text-end pe-4">
+										<button type="button" class="btn btn-sm btn-outline-primary py-0" style="font-size: 0.8rem;" data-bs-toggle="collapse" data-bs-target=".<?= $collapseDizimosId ?>">
+											<i class="bi bi-list-ul"></i> Ver Detalhes
+										</button>
+									</td>
+								</tr>
+								<?php foreach ($dizimos as $c): ?>
+									<?php $renderLinha($c, "collapse {$collapseDizimosId} bg-light"); ?>
+								<?php endforeach; ?>
+							<?php endif; ?>
+
+							<!-- AGRUPAMENTO DE OFERTAS -->
+							<?php if (!empty($ofertas)):
+								$totalOfertas = array_sum(array_column($ofertas, 'financeiro_conta_valor'));
+								$collapseOfertasId = 'collapse_ofertas_' . $dataSlug;
+							?>
+								<tr class="table-success-subtle fw-bold" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target=".<?= $collapseOfertasId ?>">
+									<td class="ps-4">
+										<i class="bi bi-chevron-expand me-2 text-success"></i>
+										<?= date('d/m/Y', strtotime($dataVenc)) ?>
+									</td>
+									<td>
+										<span class="badge bg-success text-white me-2"><i class="bi bi-gift-fill me-1"></i> Ofertas</span>
+										<small class="text-muted fw-normal">(<?= count($ofertas) ?> item(s))</small>
+									</td>
+									<td><small class="text-muted">Total Ofertas do Dia</small></td>
+									<td class="fw-bold text-success">
+										R$ <?= number_format($totalOfertas, 2, ',', '.') ?>
+									</td>
+									<td><span class="badge bg-light text-dark border">Agrupado</span></td>
+									<td class="text-end pe-4">
+										<button type="button" class="btn btn-sm btn-outline-success py-0" style="font-size: 0.8rem;" data-bs-toggle="collapse" data-bs-target=".<?= $collapseOfertasId ?>">
+											<i class="bi bi-list-ul"></i> Ver Detalhes
+										</button>
+									</td>
+								</tr>
+								<?php foreach ($ofertas as $c): ?>
+									<?php $renderLinha($c, "collapse {$collapseOfertasId} bg-light"); ?>
+								<?php endforeach; ?>
+							<?php endif; ?>
+
+							<!-- DEMAIS LANÇAMENTOS DO DIA -->
+							<?php foreach ($outros as $c): ?>
+								<?php $renderLinha($c); ?>
+							<?php endforeach; ?>
+
 						<?php endforeach; ?>
 					</tbody>
 				</table>
@@ -267,6 +368,84 @@
 		</div>
 	</div>
 </div>
+
+
+<!-- Modal de Exclusão -->
+<div class="modal fade" id="modalExcluirLancamento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Excluir Lançamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-danger"><strong>Atenção:</strong> Esta ação apagará o registro e estornará os valores dos caixas/bancos envolvidos.</p>
+        <form id="formExcluirLancamento">
+          <input type="hidden" name="conta_id" id="excluir_conta_id">
+          <div class="mb-3">
+            <label for="justificativa" class="form-label">Justificativa da Exclusão <span class="text-danger">*</span></label>
+            <textarea class="form-control" name="justificativa" id="justificativa_exclusao" rows="3" required placeholder="Por que este lançamento está sendo excluído?"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" onclick="confirmarExclusaoLancamento()">Confirmar Exclusão</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// 1. Função chamada ao clicar no botão de excluir na tabela
+function abrirModalExclusao(contaId) {
+    document.getElementById('excluir_conta_id').value = contaId;
+    document.getElementById('justificativa_exclusao').value = '';
+
+    // Abre o modal (Assumindo uso do Bootstrap 5)
+    var modalExclusao = new bootstrap.Modal(document.getElementById('modalExcluirLancamento'));
+    modalExclusao.show();
+}
+
+// 2. Função chamada ao clicar no botão "Confirmar Exclusão" dentro do modal
+function confirmarExclusaoLancamento() {
+    const contaId = document.getElementById('excluir_conta_id').value;
+    const justificativa = document.getElementById('justificativa_exclusao').value;
+
+    if (justificativa.trim() === '') {
+        alert('A justificativa é obrigatória.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('conta_id', contaId);
+    formData.append('justificativa', justificativa);
+
+    fetch('<?= url("financeiro/excluir") ?>', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro de rede: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'sucesso') {
+            alert(data.mensagem);
+            location.reload();
+        } else {
+            alert(data.mensagem);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Ocorreu um erro ao tentar excluir o lançamento.');
+    });
+}
+</script>
 
 <!-- Arquivo: Modal de Edição -->
 <div class="modal fade" id="modalEditarLancamento" tabindex="-1" aria-hidden="true">
@@ -341,6 +520,15 @@
                                 <?php endif; ?>
                             </select>
                         </div>
+
+						<div class="col-md-12 mt-3">
+							<div class="form-check form-switch bg-light p-2 ps-5 border rounded">
+								<input class="form-check-input" type="checkbox" name="reembolso" id="edit_reembolso" value="1">
+								<label class="form-check-label fw-bold text-dark" for="edit_reembolso">
+									<i class="bi bi-arrow-counterclockwise text-warning me-1"></i> Este lançamento é um Reembolso
+								</label>
+							</div>
+						</div>
 
                         <div id="areaRateioEdicao" class="col-12 d-none">
                             <hr>
@@ -461,6 +649,16 @@
                                 <?php endif; ?>
                             </select>
                         </div>
+
+						<div class="col-md-12 mt-2">
+							<div class="form-check form-switch bg-light p-2 ps-5 border rounded">
+								<input class="form-check-input" type="checkbox" name="reembolso" id="novo_reembolso" value="1">
+								<label class="form-check-label fw-bold text-dark" for="novo_reembolso">
+									<i class="bi bi-arrow-counterclockwise text-warning me-1"></i> Este lançamento é um Reembolso
+								</label>
+							</div>
+						</div>
+
                     </div>
                 </div>
 
@@ -1379,6 +1577,7 @@ async function abrirModalEdicao(id) {
         document.getElementById('edit_id').value = conta.financeiro_conta_id;
         document.getElementById('edit_descricao').value = conta.financeiro_conta_descricao;
         document.getElementById('edit_valor').value = conta.financeiro_conta_valor;
+        document.getElementById('edit_reembolso').checked = (conta.financeiro_conta_reembolso == 1 || conta.reembolso == 1);
 
         const dataRef = conta.financeiro_conta_data_pagamento || conta.financeiro_conta_data_vencimento;
         if (dataRef && dataRef !== '0000-00-00') {
