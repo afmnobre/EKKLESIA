@@ -581,7 +581,7 @@ function confirmarExclusaoLancamento() {
                         <!-- Valor -->
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Valor (R$)</label>
-                            <input type="number" step="0.01" name="valor" id="novo_valor" class="form-control" required>
+                            <input type="text" name="valor" id="novo_valor" class="form-control" required placeholder="0,00" oninput="mascaraMoeda(this)">
                         </div>
 
                         <!-- Descrição -->
@@ -670,6 +670,36 @@ function confirmarExclusaoLancamento() {
         </div>
     </div>
 </div>
+
+<script>
+function mascaraMoeda(campo) {
+    // Remove tudo que não for dígito
+    let valor = campo.value.replace(/\D/g, "");
+
+    // Retorna vazio se não houver números
+    if (valor === "") {
+        campo.value = "";
+        return;
+    }
+
+    // Converte para inteiro para remover zeros à esquerda (ex: "0050" vira "50")
+    valor = parseInt(valor, 10).toString();
+
+    // Preenche com zeros à esquerda para garantir no mínimo 3 dígitos (ex: "5" vira "005" -> 0,05)
+    valor = valor.padStart(3, '0');
+
+    // Separa a parte inteira dos decimais (últimos 2 dígitos)
+    let decimal = valor.slice(-2);
+    let inteiro = valor.slice(0, -2);
+
+    // Adiciona ponto como separador de milhares a cada 3 dígitos
+    inteiro = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    // Atualiza o valor do campo no formato 1.234,56
+    campo.value = inteiro + "," + decimal;
+}
+</script>
+
 
 <!-- Script de Inicialização, Cores e Agrupamento do Choices.js -->
 <script>

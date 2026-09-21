@@ -192,12 +192,13 @@ class FinanceiroController extends Controller {
 			$subcategoriaId = $_POST['subcategoria_id'];
 			$categoriaId = $this->model->buscarCategoriaIdPorSubcategoria($subcategoriaId);
 
-			$dados = [
+            $dados = [
 				'igreja_id'    => $igrejaId,
 				'categoria_id' => $categoriaId,
 				'subcategoria_id' => $subcategoriaId,
 				'descricao'    => $_POST['descricao'],
-				'valor'        => $_POST['valor'],
+				// Converte de "1.500,50" para "1500.50" para o banco de dados
+				'valor'        => str_replace(['.', ','], ['', '.'], $_POST['valor']),
 				'tipo'         => $tipo,
 				'vencimento'   => $_POST['vencimento'],
 				'pago'         => ($statusBaixa === 'baixado') ? 1 : 0,
