@@ -102,6 +102,13 @@ foreach($dados as $cat) {
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-end pe-4">
+                                            <!-- Botão Editar -->
+                                            <button type="button" class="btn btn-sm btn-outline-primary border-0 me-1"
+                                                onclick="abrirModalEdicao(<?= $sub['id'] ?>, '<?= htmlspecialchars($sub['nome'], ENT_QUOTES) ?>', '<?= $sub['chave_sistema'] ?? '' ?>')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+
+                                            <!-- Botão Excluir -->
                                             <a href="<?= url('financeiro/excluir_subcategoria/'.$sub['id'].'?cat_id='.$cat_id_url) ?>"
                                                class="btn btn-sm btn-outline-danger border-0"
                                                onclick="return confirm('Deseja realmente excluir esta subcategoria?')">
@@ -126,3 +133,63 @@ foreach($dados as $cat) {
         </div>
     </div>
 </div>
+
+<!-- Modal de Edição de Subcategoria -->
+<div class="modal fade" id="modalEditarSubcategoria" tabindex="-1" aria-labelledby="modalEditarSubcategoriaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalEditarSubcategoriaLabel">Editar Subcategoria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="<?= url('financeiro/atualizar_subcategoria') ?>" method="POST">
+                <div class="modal-body">
+                    <!-- Campos Ocultos -->
+                    <input type="hidden" name="categoria_id" value="<?= $cat_id_url ?>">
+                    <input type="hidden" name="subcategoria_id" id="edit_subcategoria_id">
+
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1">Nome da Subcategoria</label>
+                        <input type="text" name="nome" id="edit_nome" class="form-control" required>
+                    </div>
+
+                    <?php if (($categoria_atual['tipo'] ?? '') === 'entrada'): ?>
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1">Tipo de Agrupamento (Relatórios)</label>
+                        <select name="chave_sistema" id="edit_chave_sistema" class="form-select">
+                            <option value="">-- Padrão (Sem Agrupamento) --</option>
+                            <option value="DIZIMO">DÍZIMO</option>
+                            <option value="OFERTA">OFERTA</option>
+                        </select>
+                        <div class="form-text text-muted small">
+                            Altere a chave para agrupar ou deixe padrão para remover do agrupamento especial.
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalEdicao(id, nome, chaveSistema) {
+    // Preenche os campos do modal
+    document.getElementById('edit_subcategoria_id').value = id;
+    document.getElementById('edit_nome').value = nome;
+
+    // Se o select de chave do sistema existir na DOM (tipo entrada), seleciona a opção correta
+    let selectChave = document.getElementById('edit_chave_sistema');
+    if (selectChave) {
+        selectChave.value = chaveSistema || "";
+    }
+
+    // Abre o modal usando o Bootstrap
+    var myModal = new bootstrap.Modal(document.getElementById('modalEditarSubcategoria'));
+    myModal.show();
+}
+</script>

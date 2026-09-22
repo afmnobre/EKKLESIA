@@ -329,6 +329,16 @@ class Financeiro {
     }
 
 
+    public function atualizarSubcategoria($igrejaId, $subcategoriaId, $nome, $chaveSistema) {
+		$sql = "UPDATE financeiro_subcategorias
+				SET subcategoria_nome = ?, subcategoria_chave_sistema = ?
+				WHERE subcategoria_id = ? AND subcategoria_igreja_id = ?";
+
+		$stmt = $this->db->prepare($sql);
+		return $stmt->execute([$nome, $chaveSistema, $subcategoriaId, $igrejaId]);
+	}
+
+
 	public function getSubcategoriasTodas($igrejaId) {
 		$sql = "SELECT
 					s.*,
@@ -664,7 +674,8 @@ class Financeiro {
 					c.financeiro_categoria_nome,
 					c.financeiro_categoria_tipo,
 					s.subcategoria_id,
-					s.subcategoria_nome
+					s.subcategoria_nome,
+					s.subcategoria_chave_sistema /* INCLUÍDO AQUI: Faltava buscar a coluna no banco */
 				FROM financeiro_categorias c
 				LEFT JOIN financeiro_subcategorias s ON c.financeiro_categoria_id = s.subcategoria_categoria_id
 				WHERE c.financeiro_categoria_igreja_id = ?
@@ -691,7 +702,8 @@ class Financeiro {
 			if ($linha['subcategoria_id']) {
 				$agrupado[$catId]['subs'][] = [
 					'id'   => $linha['subcategoria_id'],
-					'nome' => $linha['subcategoria_nome']
+					'nome' => $linha['subcategoria_nome'],
+					'chave_sistema' => $linha['subcategoria_chave_sistema'] // CORRIGIDO AQUI: de $row para $linha
 				];
 			}
 		}
@@ -1423,5 +1435,22 @@ class Financeiro {
 		$stmt->execute([$categoriaId, $igrejaId]);
 		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
 	}
+
+    // Busca estatísticas de Categorias x Subcategorias (Entradas e Saídas) para o Gráfico
+	public function getEstatisticasCategorias($igrejaId) {
+		$sql = "SELECT
+					c.financeiro_categoria_tipo as tipo,
+					COUNT(DISTINCT c.financeiro_categoria_id) as total_categorias,
+					COUNT(s.subcategoria_id) as total_subcategorias
+				FROM financeiro_categorias c
+				LEFT JOIN financeiro_subcategorias s ON c.financeiro_categoria_id = s.subcategoria_categoria_id
+				WHERE c.financeiro_categoria_igreja_id = ?
+				GROUP BY c.financeiro_categoria_tipo";
+
+		$stmt = $this->db->prepare($sql);
+		$stmt->execute([$igrejaId]);
+		return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+	}
+
 
 }

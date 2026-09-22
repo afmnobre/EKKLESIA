@@ -1,12 +1,15 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold"><i class="bi bi-tags me-2 text-primary"></i>Categorias Financeiras</h3>
-        <button class="btn btn-primary btn-sm" onclick="novaCat()">
-            <i class="bi bi-plus-lg"></i> Nova Categoria
-        </button>
-    </div>
-
-    <div class="row">
+        <div>
+            <button class="btn btn-outline-primary btn-sm me-2" onclick="abrirGrafico()">
+                <i class="bi bi-bar-chart-line"></i> Ver Gráfico
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="novaCat()">
+                <i class="bi bi-plus-lg"></i> Nova Categoria
+            </button>
+        </div>
+    </div>    <div class="row">
         <div class="col-md-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-0">
@@ -96,5 +99,104 @@ function editCat(id, nome, tipo) {
     document.getElementById('cat_nome').value = nome;
     document.getElementById('cat_tipo').value = tipo;
     new bootstrap.Modal(document.getElementById('modalCat')).show();
+}
+</script>
+
+
+<!-- Modal da Árvore de Categorias -->
+<div class="modal fade" id="modalGrafico" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-diagram-3-fill me-2 text-primary"></i>Árvore de Categorias e Subcategorias
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row">
+
+                    <!-- COLUNA DE ENTRADAS -->
+                    <div class="col-md-6 mb-4 mb-md-0">
+                        <h5 class="text-success fw-bold border-bottom pb-2 mb-4">
+                            <i class="bi bi-arrow-down-circle-fill me-2"></i>Entradas (Receitas)
+                        </h5>
+
+                        <?php foreach($arvore as $cat): ?>
+                            <?php if($cat['tipo'] == 'entrada'): ?>
+                                <div class="mb-3">
+                                    <!-- Categoria Pai -->
+                                    <div class="fw-bold text-dark fs-6">
+                                        <i class="bi bi-folder2-open text-success me-2"></i><?= $cat['nome'] ?>
+                                    </div>
+
+                                    <!-- Filhas (Subcategorias) -->
+                                    <?php if(empty($cat['subs'])): ?>
+                                        <div class="ps-4 text-muted small fst-italic mt-1">
+                                            <i class="bi bi-arrow-return-right me-1"></i>Vazia
+                                        </div>
+                                    <?php else: ?>
+                                        <ul class="list-unstyled ps-4 border-start border-success border-2 ms-2 mb-0 mt-1">
+                                        <?php foreach($cat['subs'] as $sub): ?>
+                                            <li class="py-1 text-secondary small">
+                                                <i class="bi bi-dash me-1"></i><?= $sub['nome'] ?>
+                                                <?php if(!empty($sub['chave_sistema'])): ?>
+                                                    <span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;"><?= $sub['chave_sistema'] ?></span>
+                                                <?php endif; ?>
+                                            </li>
+                                        <?php endforeach; ?>
+                                        </ul>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- COLUNA DE SAÍDAS -->
+                    <div class="col-md-6">
+                        <h5 class="text-danger fw-bold border-bottom pb-2 mb-4">
+                            <i class="bi bi-arrow-up-circle-fill me-2"></i>Saídas (Despesas)
+                        </h5>
+
+                        <?php foreach($arvore as $cat): ?>
+                            <?php if($cat['tipo'] == 'saida'): ?>
+                                <div class="mb-3">
+                                    <!-- Categoria Pai -->
+                                    <div class="fw-bold text-dark fs-6">
+                                        <i class="bi bi-folder2-open text-danger me-2"></i><?= $cat['nome'] ?>
+                                    </div>
+
+                                    <!-- Filhas (Subcategorias) -->
+                                    <?php if(empty($cat['subs'])): ?>
+                                        <div class="ps-4 text-muted small fst-italic mt-1">
+                                            <i class="bi bi-arrow-return-right me-1"></i>Vazia
+                                        </div>
+                                    <?php else: ?>
+                                        <ul class="list-unstyled ps-4 border-start border-danger border-2 ms-2 mb-0 mt-1">
+                                        <?php foreach($cat['subs'] as $sub): ?>
+                                            <li class="py-1 text-secondary small">
+                                                <i class="bi bi-dash me-1"></i><?= $sub['nome'] ?>
+                                            </li>
+                                        <?php endforeach; ?>
+                                        </ul>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// A função abrirGrafico() agora só precisa abrir o modal, pois o PHP e o HTML já fizeram todo o desenho da árvore
+function abrirGrafico() {
+    new bootstrap.Modal(document.getElementById('modalGrafico')).show();
 }
 </script>

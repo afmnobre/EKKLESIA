@@ -47,10 +47,12 @@ class FinanceiroController extends Controller {
         }
     }
 
-	public function categorias() {
+public function categorias() {
 		$igrejaId = $_SESSION['usuario_igreja_id'];
+
 		$this->view('financeiro/categorias', [
-			'categorias' => $this->model->getCategorias($igrejaId)
+			'categorias' => $this->model->getCategorias($igrejaId),
+			'arvore'     => $this->model->getCategoriasAgrupadas($igrejaId) // INCLUÍDO AQUI: Busca os dados em formato de árvore
 		]);
 	}
 
@@ -375,6 +377,26 @@ class FinanceiroController extends Controller {
 				$_SESSION['usuario_igreja_id'],
 				$categoriaId,
 				$_POST['nome'],
+				$chaveSistema
+			);
+
+			// Redireciona de volta para a mesma tela de subcategorias filtrada
+			header("Location: " . url('financeiro/subcategorias?cat_id=' . $categoriaId) . "&sucesso=1");
+			exit;
+		}
+	}
+
+    public function atualizar_subcategoria() {
+		if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+			$subcategoriaId = $_POST['subcategoria_id'];
+			$categoriaId = $_POST['categoria_id'];
+			$nome = $_POST['nome'];
+			$chaveSistema = !empty($_POST['chave_sistema']) ? $_POST['chave_sistema'] : null;
+
+			$this->model->atualizarSubcategoria(
+				$_SESSION['usuario_igreja_id'],
+				$subcategoriaId,
+				$nome,
 				$chaveSistema
 			);
 
