@@ -275,13 +275,13 @@ $totalGeralReceitas = 0;
 
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-danger text-white fw-bold py-3">
-        <i class="bi bi-arrow-down-circle me-2"></i>DETALHAMENTO DE DESPESAS ANUAL (Por Subcategoria)
+        <i class="bi bi-arrow-down-circle me-2"></i>DETALHAMENTO DE DESPESAS ANUAL (Por Categoria / Subcategoria)
     </div>
     <div class="card-body p-0 text-nowrap table-responsive">
         <table class="table table-hover table-sm mb-0">
             <thead class="bg-light text-muted">
                 <tr style="font-size: 0.75rem;">
-                    <th class="ps-3 py-3">SUBCATEGORIA / <span class="text-muted">Categoria</span></th>
+                    <th class="ps-3 py-3" style="min-width: 250px;">CATEGORIA / SUBCATEGORIA</th>
                     <?php foreach($mesesNomes as $m) echo "<th class='text-center py-3'>$m</th>"; ?>
                     <th class="text-end pe-3 py-3">TOTAL GERAL</th>
                 </tr>
@@ -291,37 +291,86 @@ $totalGeralReceitas = 0;
                 $totaisMensaisSaida = array_fill(1, 12, 0);
                 $totalGeralAno = 0;
 
-                $saidas = $relatorio['saida'] ?? [];
+                // 1. AGRUPAMENTO EM MEMÓRIA (Garante que a Categoria só apareça 1 vez)
+                $saidasBrutas = $relatorio['saida'] ?? [];
+                $categoriasAgrupadas = [];
 
-                // Se a estrutura antiga agrupa por Categoria contendo subcategorias, normalizamos ou iteramos achatando
-                foreach($saidas as $categoria):
-                    // Compatibilidade tanto se vier achatado quanto se vier agrupado em subcategorias
-                    $subcategorias = $categoria['subcategorias'] ?? [$categoria];
+                foreach ($saidasBrutas as $item) {
+                    $nomeCat = $item['categoria_nome'] ?? $item['nome'] ?? 'Categoria Principal';
 
-                    foreach($subcategorias as $sub):
+                    if (!isset($categoriasAgrupadas[$nomeCat])) {
+                        $categoriasAgrupadas[$nomeCat] = [
+                            'nome' => $nomeCat,
+                            'subcategorias' => []
+                        ];
+                    }
+
+                    if (!empty($item['subcategorias']) && is_array($item['subcategorias'])) {
+                        foreach ($item['subcategorias'] as $sub) {
+                            $categoriasAgrupadas[$nomeCat]['subcategorias'][] = $sub;
+                        }
+                    } else {
+                        $categoriasAgrupadas[$nomeCat]['subcategorias'][] = $item;
+                    }
+                }
+
+                // 2. RENDERIZAÇÃO ESTRUTURADA
+                foreach($categoriasAgrupadas as $categoria):
+                    $totaisCategoriaMes = array_fill(1, 12, 0);
+                    $totalCategoriaAno = 0;
+                ?>
+                    <!-- TITULO DA CATEGORIA (Exibido apenas uma vez) -->
+                    <tr class="table-secondary fw-bold border-top border-bottom">
+                        <td colspan="14" class="ps-3 py-2 text-uppercase text-danger bg-light">
+                            <i class="bi bi-folder2-open me-2"></i><?= htmlspecialchars($categoria['nome']) ?>
+                        </td>
+                    </tr>
+
+                    <!-- SUBCATEGORIAS PERTENCENTES À CATEGORIA -->
+                    <?php foreach($categoria['subcategorias'] as $sub):
+                        $nomeSub = $sub['nome'] ?? $sub['subcategoria_nome'] ?? 'Geral';
                         $mesesSub = $sub['meses'] ?? array_fill(1, 12, 0);
                         $totalSubLinha = array_sum($mesesSub);
+
                         $totalGeralAno += $totalSubLinha;
+                        $totalCategoriaAno += $totalSubLinha;
 
                         foreach($mesesSub as $mesAlvo => $vMes) {
                             $totaisMensaisSaida[$mesAlvo] += ($vMes ?? 0);
+                            $totaisCategoriaMes[$mesAlvo] += ($vMes ?? 0);
                         }
-                ?>
-                        <tr class="align-middle" style="background-color: #fff9f9;">
-                            <td class="ps-3 py-2">
-                                <span class="fw-bold text-dark d-block"><?= $sub['nome'] ?? $sub['subcategoria_nome'] ?? 'Geral' ?></span>
-                                <small class="text-muted" style="font-size: 0.75rem;">
-                                    <i class="bi bi-tag me-1"></i><?= $categoria['categoria_nome'] ?? $categoria['nome'] ?? $sub['categoria_nome'] ?? 'Categoria Principal' ?>
-                                </small>
+                    ?>
+                        <tr class="align-middle">
+                            <td class="ps-4 py-2">
+                                <i class="bi bi-arrow-return-right text-muted me-2"></i>
+                                <span class="text-dark fw-semibold"><?= htmlspecialchars($nomeSub) ?></span>
                             </td>
                             <?php for($m = 1; $m <= 12; $m++): $valMes = $mesesSub[$m] ?? 0; ?>
-                                <td class="text-center">R$ <?= number_format($valMes, 2, ',', '.') ?></td>
+                                <td class="text-center">
+                                    <?= $valMes > 0 ? 'R$ ' . number_format($valMes, 2, ',', '.') : '<span class="text-muted small">-</span>' ?>
+                                </td>
                             <?php endfor; ?>
                             <td class="text-end pe-3 fw-bold text-danger">R$ <?= number_format($totalSubLinha, 2, ',', '.') ?></td>
                         </tr>
                     <?php endforeach; ?>
+
+                    <!-- SUBTOTAL DA CATEGORIA -->
+                    <tr class="fw-bold bg-white text-dark small border-bottom" style="border-bottom: 2px solid #dee2e6 !important;">
+                        <td class="ps-3 text-uppercase text-muted" style="font-size: 0.75rem;">
+                            Subtotal: <?= htmlspecialchars($categoria['nome']) ?>
+                        </td>
+                        <?php for($m = 1; $m <= 12; $m++): ?>
+                            <td class="text-center text-secondary" style="font-size: 0.8rem;">
+                                R$ <?= number_format($totaisCategoriaMes[$m], 2, ',', '.') ?>
+                            </td>
+                        <?php endfor; ?>
+                        <td class="text-end pe-3 text-danger" style="font-size: 0.85rem;">
+                            R$ <?= number_format($totalCategoriaAno, 2, ',', '.') ?>
+                        </td>
+                    </tr>
                 <?php endforeach; ?>
 
+                <!-- TOTAIS CONSOLIDADOS POR MÊS -->
                 <tr class="table-warning fw-bold border-top border-dark text-dark">
                     <td class="ps-3">TOTAIS POR MÊS</td>
                     <?php foreach($totaisMensaisSaida as $totalMes): ?>
